@@ -181,6 +181,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .admin-delete-btn{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:.9rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.5);transition:transform .15s}
 .admin-delete-btn:hover{transform:scale(1.15)}
 body.admin-mode .admin-delete-btn{display:flex}
+.admin-edit-btn{position:absolute;top:6px;left:36px;width:26px;height:26px;border-radius:50%;background:var(--gold);border:none;color:#000;font-size:.8rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.5);transition:transform .15s}
+.admin-edit-btn:hover{transform:scale(1.15)}
+body.admin-mode .admin-edit-btn{display:flex}
 .admin-only{display:none !important}
 body.admin-mode .admin-only{display:inline-flex !important}
 #adminToggleBtn{font-size:1rem;padding:0}

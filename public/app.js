@@ -25,7 +25,7 @@ let clipToDelete = null;
 let viewerImages = [];
 let viewerIndex = 0;
 
-const ADMIN_PASSWORD = 'sakugapiece2026';
+const ADMIN_PASSWORD = 'jefp1ece2005';
 
 // ===== HELPERS =====
 const $ = s => document.querySelector(s);
@@ -78,6 +78,7 @@ function renderClipCard(clip, i) {
   return `<div class="clip-card" data-id="${clip.id}" style="animation-delay:${i*0.04}s">
     <div class="clip-thumb">
       <button class="admin-delete-btn" data-delete-id="${clip.id}" title="Удалить">&times;</button>
+      <button class="admin-edit-btn" data-edit-id="${clip.id}" title="Редактировать">✎</button>
       ${thumbContent}
       ${clip.duration ? `<span class="clip-duration">${clip.duration}</span>` : ''}
       ${badge ? `<span class="clip-hd-badge">${badge}</span>` : ''}
@@ -99,6 +100,7 @@ function attachClipEvents(container) {
   container.querySelectorAll('.clip-card').forEach(card => {
     card.addEventListener('click', e => {
       if (e.target.closest('.admin-delete-btn')) { e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
+      if (e.target.closest('.admin-edit-btn')) { e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
       if (e.target.closest('.clip-tag.animator')) { e.stopPropagation(); navigateTo('animator-profile', e.target.closest('.clip-tag.animator').dataset.animator); return; }
       const clip = allClips.find(c => c.id === parseInt(card.dataset.id));
       if (!clip) return;
@@ -312,8 +314,14 @@ $('#imgPrevBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex
 $('#imgNextBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}});
 
 // ===== ADMIN =====
+// Restore admin session
+if (sessionStorage.getItem('sp_admin') === ADMIN_PASSWORD) {
+  isAdmin = true;
+  document.body.classList.add('admin-mode');
+}
+
 $('#adminToggleBtn').addEventListener('click',()=>{
-  if(isAdmin){isAdmin=false;document.body.classList.remove('admin-mode');notify('Вышли из режима админа')}
+  if(isAdmin){isAdmin=false;document.body.classList.remove('admin-mode');sessionStorage.removeItem('sp_admin');notify('Вышли из режима админа')}
   else{$('#adminLoginModal').classList.add('visible');document.body.style.overflow='hidden';$('#adminPasswordInput').value='';$('#adminLoginError').style.display='none';setTimeout(()=>$('#adminPasswordInput').focus(),100)}
 });
 $('#closeAdminLoginBtn').addEventListener('click',()=>{$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''});
@@ -322,9 +330,68 @@ $('#adminLoginBtn').addEventListener('click',tryLogin);
 $('#adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
 
 function tryLogin(){
-  if($('#adminPasswordInput').value===ADMIN_PASSWORD){isAdmin=true;document.body.classList.add('admin-mode');$('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';notify('Режим админа включён')}
+  if($('#adminPasswordInput').value===ADMIN_PASSWORD){isAdmin=true;document.body.classList.add('admin-mode');sessionStorage.setItem('sp_admin',ADMIN_PASSWORD);$('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';notify('Режим админа включён')}
   else{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
 }
+
+// ===== EDIT CLIP =====
+let editingClipId = null;
+
+function openEditModal(id) {
+  const clip = allClips.find(c => c.id === id);
+  if (!clip) return;
+  editingClipId = id;
+  $('#editTitleInput').value = clip.title;
+  $('#editAnimatorInput').value = clip.animators.join(', ');
+  $('#editEpisodeInput').value = clip.episode;
+  $('#editArcSelect').value = clip.arc;
+  $('#editTagsInput').value = clip.tags.join(', ');
+  $('#editNotesInput').value = clip.notes || '';
+  $('#editModal').classList.add('visible');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+  $('#editModal').classList.remove('visible');
+  document.body.style.overflow = '';
+  editingClipId = null;
+}
+
+$('#closeEditBtn').addEventListener('click', closeEditModal);
+$('#editModal').addEventListener('click', e => { if (e.target === $('#editModal')) closeEditModal(); });
+$('#editCancelBtn').addEventListener('click', closeEditModal);
+
+$('#editSaveBtn').addEventListener('click', async () => {
+  if (!editingClipId) return;
+  const body = {
+    title: $('#editTitleInput').value.trim(),
+    animators: $('#editAnimatorInput').value.trim(),
+    episode: $('#editEpisodeInput').value.trim(),
+    arc: $('#editArcSelect').value,
+    tags: $('#editTagsInput').value.trim(),
+    notes: $('#editNotesInput').value.trim()
+  };
+  if (!body.title || !body.animators || !body.episode) {
+    notify('Заполните название, аниматора и эпизод', true);
+    return;
+  }
+  try {
+    const res = await fetch(`/api/clips/${editingClipId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': ADMIN_PASSWORD },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      notify('Клип обновлён');
+      closeEditModal();
+      await loadClips();
+      if (currentPage === 'animator-profile' && currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
+    } else {
+      notify(data.error || 'Ошибка', true);
+    }
+  } catch { notify('Ошибка сети', true); }
+});
 
 function confirmDeleteClip(id){
   const clip=allClips.find(c=>c.id===id);if(!clip)return;clipToDelete=id;
@@ -348,7 +415,7 @@ let nt;function notify(t,err){$('#notificationText').textContent=t;$('#notificat
 
 // ===== KEYBOARD =====
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeUploadModal();closePlayer();closeImageViewer();closeDeleteModal();$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}
+  if(e.key==='Escape'){closeUploadModal();closePlayer();closeImageViewer();closeDeleteModal();closeEditModal();$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}
   if(e.key==='/'&&!e.target.closest('input,textarea,select')){e.preventDefault();if(currentPage==='animators')$('#animatorSearchInput').focus();else $('#searchInput').focus()}
   if($('#imageViewerOverlay').classList.contains('visible')){if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;updateImageViewer()}if(e.key==='ArrowRight'&&viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}}
 });

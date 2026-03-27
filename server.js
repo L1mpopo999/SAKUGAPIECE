@@ -59,7 +59,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
 // ===== API =====
-const ADMIN_PASSWORD = 'sakugapiece2026';
+const ADMIN_PASSWORD = 'jefp1ece2005';
 
 function checkAdmin(req, res) {
   const pwd = req.headers['x-admin-password'];
@@ -131,6 +131,29 @@ app.post('/api/clips', uploadHandler, (req, res) => {
   saveClips(clips);
 
   res.json({ success: true, clip: newClip });
+});
+
+// Edit a clip (admin only)
+app.put('/api/clips/:id', express.json(), (req, res) => {
+  if (!checkAdmin(req, res)) return;
+
+  const clips = loadClips();
+  const id = parseInt(req.params.id);
+  const clip = clips.find(c => c.id === id);
+
+  if (!clip) return res.status(404).json({ error: 'Клип не найден' });
+
+  const { title, animators, episode, arc, tags, notes } = req.body;
+
+  if (title !== undefined) clip.title = title.trim();
+  if (animators !== undefined) clip.animators = animators.split(',').map(a => a.trim()).filter(Boolean);
+  if (episode !== undefined) clip.episode = episode.trim();
+  if (arc !== undefined) clip.arc = arc;
+  if (tags !== undefined) clip.tags = tags.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean);
+  if (notes !== undefined) clip.notes = notes;
+
+  saveClips(clips);
+  res.json({ success: true, clip });
 });
 
 // Delete a clip (admin only)
