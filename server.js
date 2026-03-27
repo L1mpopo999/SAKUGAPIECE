@@ -6,8 +6,15 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ===== DATA FILE =====
-const DATA_FILE = path.join(__dirname, 'clips.json');
+// ===== DATA & UPLOADS — use volume if available =====
+const VOLUME_PATH = '/app/data';
+const useVolume = fs.existsSync(VOLUME_PATH);
+
+const dataDir = useVolume ? VOLUME_PATH : __dirname;
+const uploadsDir = path.join(dataDir, 'uploads');
+const DATA_FILE = path.join(dataDir, 'clips.json');
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 function loadClips() {
   if (!fs.existsSync(DATA_FILE)) return [];
@@ -19,9 +26,7 @@ function saveClips(clips) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(clips, null, 2), 'utf-8');
 }
 
-// ===== UPLOADS =====
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+console.log(`Storage: ${useVolume ? 'Volume (/app/data)' : 'Local (non-persistent)'}`);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
