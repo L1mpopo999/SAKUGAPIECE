@@ -11,11 +11,8 @@ const DATA_FILE = path.join(__dirname, 'clips.json');
 
 function loadClips() {
   if (!fs.existsSync(DATA_FILE)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')); }
+  catch { return []; }
 }
 
 function saveClips(clips) {
@@ -35,18 +32,26 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({
+// Allow both video and image files
+const uploadFiles = multer({
   storage,
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = /video\/(mp4|webm|quicktime|x-msvideo|x-matroska)/;
-    if (allowed.test(file.mimetype)) {
+    const videoTypes = /video\/(mp4|webm|quicktime|x-msvideo|x-matroska)/;
+    const imageTypes = /image\/(jpeg|jpg|png|gif|webp|bmp)/;
+    if (videoTypes.test(file.mimetype) || imageTypes.test(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Разрешены только видеофайлы (MP4, WebM, MOV, AVI, MKV)'));
+      cb(new Error('Разрешены видео (MP4, WebM, MOV) и изображения (JPG, PNG, GIF, WebP)'));
     }
   }
 });
+
+// Multiple fields: 1 video + up to 20 images
+const uploadHandler = uploadFiles.fields([
+  { name: 'video', maxCount: 1 },
+  { name: 'images', maxCount: 20 }
+]);
 
 // ===== MIDDLEWARE =====
 app.use(express.json());
@@ -54,8 +59,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
 // ===== API =====
-
-// Admin password — must match the one in app.js
 const ADMIN_PASSWORD = 'sakugapiece2026';
 
 function checkAdmin(req, res) {
@@ -69,26 +72,34 @@ function checkAdmin(req, res) {
 
 // Get all clips
 app.get('/api/clips', (req, res) => {
-  const clips = loadClips();
-  res.json(clips);
+  res.json(loadClips());
 });
 
 // Upload a new clip (admin only)
-app.post('/api/clips', upload.single('video'), (req, res) => {
+app.post('/api/clips', uploadHandler, (req, res) => {
   if (!checkAdmin(req, res)) {
-    if (req.file) fs.unlinkSync(req.file.path);
+    // Clean up uploaded files
+    if (req.files) {
+      Object.values(req.files).flat().forEach(f => {
+        if (fs.existsSync(f.path)) fs.unlinkSync(f.path);
+      });
+    }
     return;
   }
 
-  if (!req.file) {
-    return res.status(400).json({ error: 'Видеофайл обязателен' });
+  const videoFile = req.files?.video?.[0];
+  const imageFiles = req.files?.images || [];
+
+  if (!videoFile && imageFiles.length === 0) {
+    return res.status(400).json({ error: 'Загрузите видео или хотя бы одно изображение' });
   }
 
   const { title, animators, episode, arc, tags, notes } = req.body;
 
   if (!title || !animators || !episode) {
-    // Remove uploaded file if validation fails
-    fs.unlinkSync(req.file.path);
+    // Clean up
+    if (videoFile && fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+    imageFiles.forEach(f => { if (fs.existsSync(f.path)) fs.unlinkSync(f.path); });
     return res.status(400).json({ error: 'Заполните название, аниматора и номер эпизода' });
   }
 
@@ -102,10 +113,17 @@ app.post('/api/clips', upload.single('video'), (req, res) => {
     arc: arc || 'Unknown',
     tags: tags ? tags.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean) : [],
     notes: notes || '',
-    filename: req.file.filename,
-    videoUrl: '/uploads/' + req.file.filename,
-    quality: '1080p',
-    size: req.file.size,
+    // Video
+    filename: videoFile ? videoFile.filename : null,
+    videoUrl: videoFile ? '/uploads/' + videoFile.filename : null,
+    // Images
+    images: imageFiles.map(f => ({
+      filename: f.filename,
+      url: '/uploads/' + f.filename
+    })),
+    quality: videoFile ? '1080p' : null,
+    type: videoFile ? 'video' : 'images',
+    size: videoFile ? videoFile.size : imageFiles.reduce((sum, f) => sum + f.size, 0),
     uploadedAt: new Date().toISOString()
   };
 
@@ -123,37 +141,35 @@ app.delete('/api/clips/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const clip = clips.find(c => c.id === id);
 
-  if (!clip) {
-    return res.status(404).json({ error: 'Клип не найден' });
+  if (!clip) return res.status(404).json({ error: 'Клип не найден' });
+
+  // Remove video
+  if (clip.filename) {
+    const fp = path.join(uploadsDir, clip.filename);
+    if (fs.existsSync(fp)) fs.unlinkSync(fp);
+  }
+  // Remove images
+  if (clip.images) {
+    clip.images.forEach(img => {
+      const fp = path.join(uploadsDir, img.filename);
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    });
   }
 
-  // Remove video file
-  const filePath = path.join(uploadsDir, clip.filename);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-
-  const filtered = clips.filter(c => c.id !== id);
-  saveClips(filtered);
-
+  saveClips(clips.filter(c => c.id !== id));
   res.json({ success: true });
 });
 
 // ===== ERROR HANDLING =====
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Файл слишком большой (максимум 200 МБ)' });
-    }
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Файл слишком большой (максимум 200 МБ)' });
     return res.status(400).json({ error: err.message });
   }
-  if (err) {
-    return res.status(400).json({ error: err.message });
-  }
+  if (err) return res.status(400).json({ error: err.message });
   next();
 });
 
-// ===== START =====
 app.listen(PORT, () => {
   console.log(`\n  ⚓ Sakuga Piece запущен: http://localhost:${PORT}\n`);
 });

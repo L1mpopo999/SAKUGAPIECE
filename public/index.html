@@ -2,15 +2,16 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Sakuga Piece — Архив анимации One Piece</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Noto+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+<link rel="apple-touch-icon" href="data:,">
+<meta name="theme-color" content="#0a0a0f">
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="header">
   <div class="header-inner">
     <a class="logo" href="/" onclick="navigateTo('browse');return false;">
@@ -22,20 +23,20 @@
       <button class="nav-link active" data-page="browse">Обзор</button>
       <button class="nav-link" data-page="animators">Аниматоры</button>
       <button class="nav-link" data-page="about">О сайте</button>
-      <button class="btn-upload admin-only" id="openUploadBtn">+ Загрузить клип</button>
+      <button class="btn-upload admin-only" id="openUploadBtn">+ Загрузить</button>
       <button class="nav-link" id="adminToggleBtn" title="Админ">🔒</button>
     </nav>
   </div>
 </header>
 
-<!-- ===== PAGE: BROWSE ===== -->
+<!-- PAGE: BROWSE -->
 <div id="page-browse" class="page active">
   <section class="hero">
     <h1 class="hero-title">ONE PIECE <span class="hl">SAKUGA</span> АРХИВ</h1>
     <p class="hero-sub">Клипы с крутой анимацией из One Piece в высоком качестве — поиск по аниматорам, аркам и эпизодам</p>
     <div class="search-wrapper">
       <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="search-input" id="searchInput" type="text" placeholder="Поиск по аниматорам, эпизодам, аркам, тегам..." autocomplete="off">
+      <input class="search-input" id="searchInput" type="text" placeholder="Поиск по аниматорам, эпизодам, аркам..." autocomplete="off">
       <div class="search-suggestions" id="searchSuggestions"></div>
     </div>
   </section>
@@ -60,7 +61,7 @@
   </div>
 </div>
 
-<!-- ===== PAGE: ANIMATORS ===== -->
+<!-- PAGE: ANIMATORS -->
 <div id="page-animators" class="page">
   <section class="hero">
     <h1 class="hero-title"><span class="hl">АНИМАТОРЫ</span></h1>
@@ -70,13 +71,12 @@
       <input class="search-input" id="animatorSearchInput" type="text" placeholder="Найти аниматора..." autocomplete="off">
     </div>
   </section>
-
   <div class="grid-container">
     <div class="animator-grid" id="animatorGrid"></div>
   </div>
 </div>
 
-<!-- ===== PAGE: ANIMATOR PROFILE ===== -->
+<!-- PAGE: ANIMATOR PROFILE -->
 <div id="page-animator-profile" class="page">
   <section class="animator-profile-header">
     <button class="back-btn" id="backToAnimatorsBtn">
@@ -92,7 +92,7 @@
   </div>
 </div>
 
-<!-- ===== PAGE: ABOUT ===== -->
+<!-- PAGE: ABOUT -->
 <div id="page-about" class="page">
   <section class="hero">
     <h1 class="hero-title">О <span class="hl">САЙТЕ</span></h1>
@@ -104,24 +104,25 @@
     <h3>Как пользоваться</h3>
     <p><strong>Обзор</strong> — все загруженные клипы с фильтрацией по категориям и аркам.</p>
     <p><strong>Аниматоры</strong> — список всех аниматоров. Нажмите на карточку чтобы увидеть все клипы этого аниматора.</p>
-    <p><strong>Загрузить клип</strong> — загрузите видео, укажите аниматора из списка, эпизод и теги.</p>
+    <p><strong>Загрузить</strong> — загрузите видео и/или фотографии раскадровки.</p>
     <h3>Горячие клавиши</h3>
     <p><kbd>/</kbd> — фокус на поиске &nbsp;&nbsp; <kbd>Esc</kbd> — закрыть окна</p>
   </div>
 </div>
 
-<!-- ===== UPLOAD MODAL ===== -->
+<!-- UPLOAD MODAL -->
 <div class="modal-overlay" id="uploadModal">
   <div class="modal">
     <button class="modal-close" id="closeUploadBtn">&times;</button>
     <h2 class="modal-title">Загрузить клип</h2>
     <form id="uploadForm" enctype="multipart/form-data">
+
       <div class="form-group">
-        <label class="form-label">Видеофайл</label>
+        <label class="form-label">Видеофайл (необязательно если есть фото)</label>
         <div class="drop-zone" id="dropZone">
           <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div class="drop-zone-text">Перетащите видео сюда или нажмите для выбора</div>
-          <div class="drop-zone-hint">MP4, WebM, MOV — до 200 МБ — рекомендуется 1080p+</div>
+          <div class="drop-zone-text">Перетащите видео или нажмите</div>
+          <div class="drop-zone-hint">MP4, WebM, MOV — до 200 МБ</div>
         </div>
         <div class="file-info" id="fileInfo">
           <span class="file-info-name" id="fileName"></span>
@@ -132,63 +133,63 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Название клипа</label>
-        <input class="form-input" id="clipTitleInput" name="title" type="text" placeholder="напр. Luffy vs Kaido — Gear 5 Transformation">
+        <label class="form-label">Фотографии / раскадровка (до 20 штук)</label>
+        <div class="drop-zone" id="imageDropZone">
+          <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div class="drop-zone-text">Перетащите фото или нажмите</div>
+          <div class="drop-zone-hint">JPG, PNG, GIF, WebP — до 20 файлов</div>
+        </div>
+        <div class="image-previews" id="imagePreviews"></div>
+        <input type="file" id="imageInput" name="images" accept="image/*" multiple hidden>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Аниматор(ы) — выберите из списка или введите имя</label>
+        <label class="form-label">Название</label>
+        <input class="form-input" id="clipTitleInput" type="text" placeholder="напр. Luffy vs Kaido — Gear 5 Transformation">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Аниматор(ы)</label>
         <div class="animator-select-wrapper">
           <div class="animator-chips" id="animatorChips"></div>
-          <input class="form-input" id="animatorInput" type="text" placeholder="Начните вводить имя аниматора..." autocomplete="off">
+          <input class="form-input" id="animatorInput" type="text" placeholder="Начните вводить имя..." autocomplete="off">
           <div class="animator-dropdown" id="animatorDropdown"></div>
         </div>
       </div>
 
-      <div style="display:flex;gap:0.8rem;">
+      <div class="form-row">
         <div class="form-group" style="flex:1;">
           <label class="form-label">Эпизод</label>
-          <input class="form-input" id="episodeInput" name="episode" type="text" placeholder="напр. 1071">
+          <input class="form-input" id="episodeInput" type="text" placeholder="напр. 1071">
         </div>
         <div class="form-group" style="flex:1;">
           <label class="form-label">Арка</label>
-          <select class="form-select" id="arcSelect" name="arc">
+          <select class="form-select" id="arcSelect">
             <option value="">Выберите арку...</option>
-            <option>East Blue</option>
-            <option>Alabasta</option>
-            <option>Skypiea</option>
-            <option>Water 7 / Enies Lobby</option>
-            <option>Thriller Bark</option>
-            <option>Sabaody / Amazon Lily</option>
-            <option>Impel Down</option>
-            <option>Marineford</option>
-            <option>Fishman Island</option>
-            <option>Punk Hazard</option>
-            <option>Dressrosa</option>
-            <option>Whole Cake Island</option>
-            <option>Wano</option>
-            <option>Egghead</option>
-            <option>Elbaf</option>
+            <option>East Blue</option><option>Alabasta</option><option>Skypiea</option>
+            <option>Water 7 / Enies Lobby</option><option>Thriller Bark</option>
+            <option>Sabaody / Amazon Lily</option><option>Impel Down</option>
+            <option>Marineford</option><option>Fishman Island</option><option>Punk Hazard</option>
+            <option>Dressrosa</option><option>Whole Cake Island</option>
+            <option>Wano</option><option>Egghead</option><option>Elbaf</option>
           </select>
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Теги (через запятую)</label>
-        <input class="form-input" id="tagsInput" name="tags" type="text" placeholder="напр. fighting, effects, gear5, haki">
+        <input class="form-input" id="tagsInput" type="text" placeholder="напр. fighting, effects, gear5">
       </div>
 
       <div class="form-group">
         <label class="form-label">Заметки (необязательно)</label>
-        <textarea class="form-textarea" id="notesInput" name="notes" placeholder="Любая дополнительная информация о клипе..."></textarea>
+        <textarea class="form-textarea" id="notesInput" placeholder="Дополнительная информация..."></textarea>
       </div>
 
-      <button type="submit" class="btn-submit" id="submitBtn">Загрузить клип</button>
+      <button type="submit" class="btn-submit" id="submitBtn">Загрузить</button>
 
       <div class="upload-progress" id="uploadProgress">
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="progressBarFill"></div>
-        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBarFill"></div></div>
         <div class="progress-text" id="progressText">Загрузка... 0%</div>
       </div>
     </form>
@@ -207,19 +208,24 @@
   </div>
 </div>
 
-<!-- NOTIFICATION -->
-<div class="notification" id="notification">
-  <span class="notification-icon">✦</span>
-  <span class="notification-text" id="notificationText"></span>
+<!-- IMAGE VIEWER -->
+<div class="player-overlay" id="imageViewerOverlay">
+  <button class="player-close" id="imageViewerCloseBtn">&times;</button>
+  <div class="image-viewer-wrapper">
+    <button class="image-viewer-nav prev" id="imgPrevBtn">‹</button>
+    <img class="image-viewer-img" id="imageViewerImg" alt="">
+    <button class="image-viewer-nav next" id="imgNextBtn">›</button>
+  </div>
+  <div class="image-viewer-counter" id="imageViewerCounter"></div>
+  <div class="player-info">
+    <div class="player-title" id="imageViewerTitle"></div>
+    <div class="player-details" id="imageViewerDetails"></div>
+  </div>
 </div>
 
-<footer class="footer">
-  <p class="footer-text">SAKUGA PIECE — Архив анимации One Piece — Не аффилирован с Toei Animation или Эйитиро Одой</p>
-</footer>
-
-<!-- ADMIN LOGIN MODAL -->
+<!-- ADMIN LOGIN -->
 <div class="modal-overlay" id="adminLoginModal">
-  <div class="modal" style="max-width:380px;">
+  <div class="modal modal-sm">
     <button class="modal-close" id="closeAdminLoginBtn">&times;</button>
     <h2 class="modal-title">Вход для админа</h2>
     <div class="form-group">
@@ -231,18 +237,28 @@
   </div>
 </div>
 
-<!-- DELETE CONFIRMATION MODAL -->
+<!-- DELETE CONFIRM -->
 <div class="modal-overlay" id="deleteConfirmModal">
-  <div class="modal" style="max-width:400px;">
+  <div class="modal modal-sm">
     <button class="modal-close" id="closeDeleteConfirmBtn">&times;</button>
     <h2 class="modal-title">Удалить клип?</h2>
     <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1.2rem;" id="deleteConfirmText"></p>
-    <div style="display:flex;gap:0.8rem;">
-      <button class="btn-submit" style="background:var(--bg-card);box-shadow:none;" id="deleteCancelBtn">Отмена</button>
+    <div class="form-row">
+      <button class="btn-submit btn-cancel" id="deleteCancelBtn">Отмена</button>
       <button class="btn-submit" id="deleteConfirmBtn">Удалить</button>
     </div>
   </div>
 </div>
+
+<!-- NOTIFICATION -->
+<div class="notification" id="notification">
+  <span class="notification-icon">✦</span>
+  <span class="notification-text" id="notificationText"></span>
+</div>
+
+<footer class="footer">
+  <p class="footer-text">SAKUGA PIECE — Архив анимации One Piece — Не аффилирован с Toei Animation или Эйитиро Одой</p>
+</footer>
 
 <script src="/app.js"></script>
 </body>
