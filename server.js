@@ -55,14 +55,31 @@ app.use('/uploads', express.static(uploadsDir));
 
 // ===== API =====
 
+// Admin password — must match the one in app.js
+const ADMIN_PASSWORD = 'sakugapiece2026';
+
+function checkAdmin(req, res) {
+  const pwd = req.headers['x-admin-password'];
+  if (pwd !== ADMIN_PASSWORD) {
+    res.status(403).json({ error: 'Доступ запрещён. Войдите как админ.' });
+    return false;
+  }
+  return true;
+}
+
 // Get all clips
 app.get('/api/clips', (req, res) => {
   const clips = loadClips();
   res.json(clips);
 });
 
-// Upload a new clip
+// Upload a new clip (admin only)
 app.post('/api/clips', upload.single('video'), (req, res) => {
+  if (!checkAdmin(req, res)) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    return;
+  }
+
   if (!req.file) {
     return res.status(400).json({ error: 'Видеофайл обязателен' });
   }
@@ -98,8 +115,10 @@ app.post('/api/clips', upload.single('video'), (req, res) => {
   res.json({ success: true, clip: newClip });
 });
 
-// Delete a clip
+// Delete a clip (admin only)
 app.delete('/api/clips/:id', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+
   const clips = loadClips();
   const id = parseInt(req.params.id);
   const clip = clips.find(c => c.id === id);

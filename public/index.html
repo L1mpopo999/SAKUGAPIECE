@@ -22,7 +22,7 @@
       <button class="nav-link active" data-page="browse">Обзор</button>
       <button class="nav-link" data-page="animators">Аниматоры</button>
       <button class="nav-link" data-page="about">О сайте</button>
-      <button class="btn-upload" id="openUploadBtn">+ Загрузить клип</button>
+      <button class="btn-upload admin-only" id="openUploadBtn">+ Загрузить клип</button>
       <button class="nav-link" id="adminToggleBtn" title="Админ">🔒</button>
     </nav>
   </div>
@@ -85,7 +85,7 @@
     </button>
     <h1 class="animator-profile-name" id="animatorProfileName"></h1>
     <p class="animator-profile-stats" id="animatorProfileStats"></p>
-    <button class="btn-upload btn-upload-for-animator" id="uploadForAnimatorBtn">+ Загрузить клип для этого аниматора</button>
+    <button class="btn-upload btn-upload-for-animator admin-only" id="uploadForAnimatorBtn">+ Загрузить клип для этого аниматора</button>
   </section>
   <div class="grid-container">
     <div class="clip-grid" id="animatorClipGrid"></div>

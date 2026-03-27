@@ -293,11 +293,13 @@ function renderAnimatorProfile(name) {
 
 // Upload for specific animator
 $('#uploadForAnimatorBtn').addEventListener('click', () => {
+  if (!isAdmin) { notify('Войдите как админ чтобы загружать клипы', true); return; }
   openUploadModal(currentAnimatorProfile);
 });
 
 // ===== UPLOAD MODAL =====
 function openUploadModal(presetAnimator) {
+  if (!isAdmin) { notify('Войдите как админ чтобы загружать клипы', true); return; }
   $('#uploadModal').classList.add('visible');
   document.body.style.overflow = 'hidden';
 
@@ -451,6 +453,7 @@ $('#uploadForm').addEventListener('submit', async (e) => {
       };
       xhr.onerror = () => reject(new Error('Ошибка сети'));
       xhr.open('POST', '/api/clips');
+      xhr.setRequestHeader('X-Admin-Password', ADMIN_PASSWORD);
       xhr.send(formData);
     });
 
@@ -614,7 +617,10 @@ $('#deleteConfirmBtn').addEventListener('click', async () => {
   closeDeleteModal();
 
   try {
-    const res = await fetch(`/api/clips/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/clips/${id}`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Password': ADMIN_PASSWORD }
+    });
     const data = await res.json();
     if (data.success) {
       notify('Клип удалён');
