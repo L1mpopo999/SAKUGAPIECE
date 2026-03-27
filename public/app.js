@@ -121,7 +121,13 @@ function renderClips(clips) {
 function applyFilters() {
   const q = ($('#searchInput')?.value||'').toLowerCase().trim();
   let clips = allClips;
-  if (currentFilter !== 'all') clips = clips.filter(c => c.tags.includes(currentFilter) || c.arc.toLowerCase() === currentFilter.toLowerCase());
+  if (currentFilter === 'type:video') {
+    clips = clips.filter(c => c.videoUrl);
+  } else if (currentFilter === 'type:images') {
+    clips = clips.filter(c => !c.videoUrl && c.images && c.images.length > 0);
+  } else if (currentFilter !== 'all') {
+    clips = clips.filter(c => c.tags.includes(currentFilter) || c.arc.toLowerCase() === currentFilter.toLowerCase());
+  }
   if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
   renderClips(clips);
 }
