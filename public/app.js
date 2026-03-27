@@ -324,6 +324,14 @@ $('#adminToggleBtn').addEventListener('click',()=>{
   if(isAdmin){isAdmin=false;document.body.classList.remove('admin-mode');sessionStorage.removeItem('sp_admin');notify('Вышли из режима админа')}
   else{$('#adminLoginModal').classList.add('visible');document.body.style.overflow='hidden';$('#adminPasswordInput').value='';$('#adminLoginError').style.display='none';setTimeout(()=>$('#adminPasswordInput').focus(),100)}
 });
+$('#passwordToggleBtn').addEventListener('click', () => {
+  const inp = $('#adminPasswordInput');
+  const isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  $('#eyeOpen').style.display = isHidden ? 'none' : 'block';
+  $('#eyeClosed').style.display = isHidden ? 'block' : 'none';
+});
+
 $('#closeAdminLoginBtn').addEventListener('click',()=>{$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''});
 $('#adminLoginModal').addEventListener('click',e=>{if(e.target===$('#adminLoginModal')){$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}});
 $('#adminLoginBtn').addEventListener('click',tryLogin);

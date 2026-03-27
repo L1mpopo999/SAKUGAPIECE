@@ -189,6 +189,11 @@ body.admin-mode .admin-only{display:inline-flex !important}
 #adminToggleBtn{font-size:1rem;padding:0}
 body.admin-mode #adminToggleBtn{color:var(--accent)}
 
+.password-wrapper{position:relative}
+.password-wrapper .form-input{padding-right:2.5rem}
+.password-toggle{position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;display:flex;align-items:center;transition:color .2s}
+.password-toggle:hover{color:var(--text-primary)}
+
 /* Footer */
 .footer{border-top:1px solid var(--border);padding:1.5rem 1rem;text-align:center;position:relative;z-index:1}
 .footer-text{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--text-muted);letter-spacing:.04em}
