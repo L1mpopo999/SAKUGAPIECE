@@ -28,10 +28,13 @@ function saveClips(clips) {
 
 console.log(`Storage: ${useVolume ? 'Volume (/app/data)' : 'Local (non-persistent)'}`);
 
+let fileCounter = 0;
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e6);
+    fileCounter++;
+    const unique = Date.now() + '-' + fileCounter + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     cb(null, unique + ext);
   }
