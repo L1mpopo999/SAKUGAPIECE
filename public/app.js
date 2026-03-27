@@ -217,8 +217,17 @@ function handleVideoFile(f) {
   if(!f.type.startsWith('video/')){notify('Выберите видеофайл',true);return}
   if(f.size>200*1024*1024){notify('Видео слишком большое (макс 200 МБ)',true);return}
   selectedFile=f;$('#fileName').textContent=f.name;$('#fileSize').textContent=formatBytes(f.size);$('#fileInfo').classList.add('visible');
+  // Show video preview
+  const preview=$('#uploadPreviewPlayer');
+  preview.src=URL.createObjectURL(f);
+  $('#uploadVideoPreview').style.display='block';
 }
-function removeVideoFile(){selectedFile=null;fileInput.value='';$('#fileInfo').classList.remove('visible')}
+function removeVideoFile(){
+  const preview=$('#uploadPreviewPlayer');
+  if(preview.src){preview.pause();URL.revokeObjectURL(preview.src);preview.removeAttribute('src')}
+  $('#uploadVideoPreview').style.display='none';
+  selectedFile=null;fileInput.value='';$('#fileInfo').classList.remove('visible');
+}
 
 // ===== FILE HANDLING — IMAGES =====
 const imageDropZone=$('#imageDropZone'), imageInput=$('#imageInput');
@@ -274,6 +283,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
       xhr.open('POST','/api/clips');xhr.setRequestHeader('X-Admin-Password',ADMIN_PASSWORD);xhr.send(fd);
     });
     $('#uploadForm').reset();selectedAnimators=[];selectedImages=[];selectedFile=null;renderAnimatorChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');
+    const p=$('#uploadPreviewPlayer');if(p.src){p.pause();URL.revokeObjectURL(p.src);p.removeAttribute('src')}$('#uploadVideoPreview').style.display='none';
     closeUploadModal();notify(`«${title}» загружен!`);await loadClips();
     if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile);
   }catch(err){notify(err.message||'Ошибка загрузки',true)}
