@@ -177,6 +177,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .player-title{font-size:1rem;font-weight:600;margin-bottom:.3rem}
 .player-details{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
 
+/* Timecodes */
+.timecode-bar{position:relative;height:6px;margin-top:-2px;pointer-events:none}
+.timecode-marker{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid var(--bg-primary);transform:translateX(-50%);z-index:5;cursor:pointer;pointer-events:all;box-shadow:0 0 6px var(--gold-glow);transition:transform .15s}
+.timecode-marker:hover{transform:translateX(-50%) scale(1.4)}
+.timecode-marker-tooltip{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.65rem;padding:.2rem .5rem;border-radius:4px;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none}
+.timecode-marker:hover .timecode-marker-tooltip{opacity:1}
+.timecode-list{margin-top:.8rem;display:flex;flex-direction:column;gap:.3rem}
+.timecode-item{display:flex;align-items:center;gap:.6rem;cursor:pointer;padding:.35rem .6rem;border-radius:var(--radius);transition:background .15s}
+.timecode-item:hover{background:var(--bg-card)}
+.timecode-item.active{background:var(--bg-card);border-left:3px solid var(--gold)}
+.timecode-time{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--gold);min-width:3rem;flex-shrink:0}
+.timecode-name{font-size:.85rem;color:var(--text-primary)}
+.player-current-animator{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--gold);margin-bottom:.4rem;min-height:1.1rem}
+.form-hint{font-size:.7rem;color:var(--text-muted);margin-top:.3rem}
+
 /* Admin */
 .admin-delete-btn{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:.9rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.5);transition:transform .15s}
 .admin-delete-btn:hover{transform:scale(1.15)}

@@ -182,6 +182,12 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">Таймкоды аниматоров (необязательно)</label>
+        <textarea class="form-textarea" id="timecodesInput" placeholder="Каждый с новой строки, формат:&#10;0:00 - Vincent Chansard&#10;0:15 - Tu Yong-Ce&#10;0:42 - Naotoshi Shida"></textarea>
+        <div class="form-hint">Укажите кто какой момент анимировал по таймкодам</div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Заметки (необязательно)</label>
         <textarea class="form-textarea" id="notesInput" placeholder="Дополнительная информация..."></textarea>
       </div>
@@ -201,10 +207,13 @@
   <button class="player-close" id="playerCloseBtn">&times;</button>
   <div class="player-video-wrapper">
     <video class="player-video" id="playerVideo" controls></video>
+    <div class="timecode-bar" id="timecodeBar"></div>
   </div>
   <div class="player-info">
     <div class="player-title" id="playerTitle"></div>
+    <div class="player-current-animator" id="playerCurrentAnimator"></div>
     <div class="player-details" id="playerDetails"></div>
+    <div class="timecode-list" id="timecodeList"></div>
   </div>
 </div>
 
@@ -261,6 +270,11 @@
     <div class="form-group">
       <label class="form-label">Заметки</label>
       <textarea class="form-textarea" id="editNotesInput"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Таймкоды аниматоров</label>
+      <textarea class="form-textarea" id="editTimecodesInput" placeholder="0:00 - Vincent Chansard&#10;0:15 - Tu Yong-Ce"></textarea>
+      <div class="form-hint">Каждый с новой строки: 0:00 - Имя</div>
     </div>
     <div class="form-row">
       <button class="btn-submit btn-cancel" id="editCancelBtn">Отмена</button>

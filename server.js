@@ -94,7 +94,7 @@ app.post('/api/clips', uploadHandler, (req, res) => {
     return res.status(400).json({ error: 'Загрузите видео или хотя бы одно изображение' });
   }
 
-  const { title, animators, episode, arc, tags, notes } = req.body;
+  const { title, animators, episode, arc, tags, notes, timecodes } = req.body;
 
   if (!title || !animators || !episode) {
     // Clean up
@@ -113,6 +113,7 @@ app.post('/api/clips', uploadHandler, (req, res) => {
     arc: arc || 'Unknown',
     tags: tags ? tags.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean) : [],
     notes: notes || '',
+    timecodes: timecodes || '',
     // Video
     filename: videoFile ? videoFile.filename : null,
     videoUrl: videoFile ? '/uploads/' + videoFile.filename : null,
@@ -143,7 +144,7 @@ app.put('/api/clips/:id', express.json(), (req, res) => {
 
   if (!clip) return res.status(404).json({ error: 'Клип не найден' });
 
-  const { title, animators, episode, arc, tags, notes } = req.body;
+  const { title, animators, episode, arc, tags, notes, timecodes } = req.body;
 
   if (title !== undefined) clip.title = title.trim();
   if (animators !== undefined) clip.animators = animators.split(',').map(a => a.trim()).filter(Boolean);
@@ -151,6 +152,7 @@ app.put('/api/clips/:id', express.json(), (req, res) => {
   if (arc !== undefined) clip.arc = arc;
   if (tags !== undefined) clip.tags = tags.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean);
   if (notes !== undefined) clip.notes = notes;
+  if (timecodes !== undefined) clip.timecodes = timecodes;
 
   saveClips(clips);
   res.json({ success: true, clip });

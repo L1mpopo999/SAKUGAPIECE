@@ -261,6 +261,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
   if(selectedFile)fd.append('video',selectedFile);
   selectedImages.forEach(f=>fd.append('images',f));
   fd.append('title',title);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);
+  fd.append('timecodes', $('#timecodesInput').value.trim());
 
   $('#submitBtn').disabled=true;$('#uploadProgress').classList.add('visible');
 
@@ -279,16 +280,102 @@ $('#uploadForm').addEventListener('submit',async e=>{
   finally{$('#submitBtn').disabled=false;$('#uploadProgress').classList.remove('visible');$('#progressBarFill').style.width='0%'}
 });
 
+// ===== TIMECODE HELPERS =====
+function parseTimecodes(str) {
+  if (!str) return [];
+  return str.split('\n').map(line => {
+    const match = line.trim().match(/^(\d+):(\d{2})(?::(\d{2}))?\s*[-–—]\s*(.+)$/);
+    if (!match) return null;
+    const mins = parseInt(match[1]);
+    const secs = parseInt(match[2]);
+    const extra = match[3] ? parseInt(match[3]) : 0;
+    const totalSeconds = match[3] ? mins * 3600 + secs * 60 + extra : mins * 60 + secs;
+    return { time: totalSeconds, name: match[4].trim(), label: match[3] ? `${match[1]}:${match[2]}:${match[3]}` : `${match[1]}:${match[2].padStart(2,'0')}` };
+  }).filter(Boolean);
+}
+
+let currentTimecodes = [];
+let timecodeInterval = null;
+
 // ===== VIDEO PLAYER =====
 function openPlayer(id) {
   const clip=allClips.find(c=>c.id===id);if(!clip)return;
   $('#playerTitle').textContent=clip.title;
+  $('#playerCurrentAnimator').textContent='';
   $('#playerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">Эп. ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}${clip.tags.map(t=>`<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}`;
   $('#playerDetails').querySelectorAll('.clip-tag.animator').forEach(t=>t.addEventListener('click',()=>{closePlayer();navigateTo('animator-profile',t.dataset.animator)}));
-  if(clip.videoUrl){$('#playerVideo').src=clip.videoUrl;$('#playerVideo').style.display='block'}else{$('#playerVideo').removeAttribute('src');$('#playerVideo').style.display='none'}
+
+  currentTimecodes = parseTimecodes(clip.timecodes);
+
+  // Render timecode list
+  const tcList = $('#timecodeList');
+  if (currentTimecodes.length) {
+    tcList.innerHTML = currentTimecodes.map((tc, i) =>
+      `<div class="timecode-item" data-idx="${i}" data-time="${tc.time}"><span class="timecode-time">${tc.label}</span><span class="timecode-name">${esc(tc.name)}</span></div>`
+    ).join('');
+    tcList.querySelectorAll('.timecode-item').forEach(el => {
+      el.addEventListener('click', () => {
+        $('#playerVideo').currentTime = parseInt(el.dataset.time);
+        $('#playerVideo').play();
+      });
+    });
+    tcList.style.display = '';
+  } else {
+    tcList.innerHTML = '';
+    tcList.style.display = 'none';
+  }
+
+  if(clip.videoUrl){
+    const video = $('#playerVideo');
+    video.src=clip.videoUrl;
+    video.style.display='block';
+
+    // Render timecode markers on timeline after metadata loads
+    video.onloadedmetadata = () => {
+      const bar = $('#timecodeBar');
+      if (currentTimecodes.length && video.duration) {
+        bar.innerHTML = currentTimecodes.map(tc => {
+          const pct = (tc.time / video.duration * 100).toFixed(2);
+          return `<div class="timecode-marker" style="left:${pct}%" data-time="${tc.time}"><div class="timecode-marker-tooltip">${tc.label} — ${esc(tc.name)}</div></div>`;
+        }).join('');
+        bar.querySelectorAll('.timecode-marker').forEach(m => {
+          m.addEventListener('click', e => {
+            e.stopPropagation();
+            video.currentTime = parseInt(m.dataset.time);
+            video.play();
+          });
+        });
+        bar.style.display = '';
+      } else {
+        bar.innerHTML = '';
+        bar.style.display = 'none';
+      }
+    };
+
+    // Update current animator indicator
+    if (timecodeInterval) clearInterval(timecodeInterval);
+    if (currentTimecodes.length) {
+      timecodeInterval = setInterval(() => {
+        const t = video.currentTime;
+        let current = null;
+        for (let i = currentTimecodes.length - 1; i >= 0; i--) {
+          if (t >= currentTimecodes[i].time) { current = currentTimecodes[i]; break; }
+        }
+        $('#playerCurrentAnimator').textContent = current ? `▶ ${current.name}` : '';
+        // Highlight active timecode
+        tcList.querySelectorAll('.timecode-item').forEach((el, idx) => {
+          el.classList.toggle('active', current && currentTimecodes.indexOf(current) === idx);
+        });
+      }, 300);
+    }
+  } else {
+    $('#playerVideo').removeAttribute('src');$('#playerVideo').style.display='none';
+    $('#timecodeBar').innerHTML='';$('#timecodeBar').style.display='none';
+  }
+
   $('#playerOverlay').classList.add('visible');document.body.style.overflow='hidden';
 }
-function closePlayer(){$('#playerVideo').pause();$('#playerVideo').removeAttribute('src');$('#playerOverlay').classList.remove('visible');document.body.style.overflow=''}
+function closePlayer(){if(timecodeInterval){clearInterval(timecodeInterval);timecodeInterval=null}$('#playerVideo').pause();$('#playerVideo').removeAttribute('src');$('#playerOverlay').classList.remove('visible');document.body.style.overflow=''}
 $('#playerCloseBtn').addEventListener('click',closePlayer);
 $('#playerOverlay').addEventListener('click',e=>{if(e.target===$('#playerOverlay'))closePlayer()});
 
@@ -355,6 +442,7 @@ function openEditModal(id) {
   $('#editArcSelect').value = clip.arc;
   $('#editTagsInput').value = clip.tags.join(', ');
   $('#editNotesInput').value = clip.notes || '';
+  $('#editTimecodesInput').value = clip.timecodes || '';
   $('#editModal').classList.add('visible');
   document.body.style.overflow = 'hidden';
 }
@@ -377,7 +465,8 @@ $('#editSaveBtn').addEventListener('click', async () => {
     episode: $('#editEpisodeInput').value.trim(),
     arc: $('#editArcSelect').value,
     tags: $('#editTagsInput').value.trim(),
-    notes: $('#editNotesInput').value.trim()
+    notes: $('#editNotesInput').value.trim(),
+    timecodes: $('#editTimecodesInput').value.trim()
   };
   if (!body.title || !body.animators || !body.episode) {
     notify('Заполните название, аниматора и эпизод', true);
