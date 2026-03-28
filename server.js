@@ -58,6 +58,7 @@ const uploadFiles = multer({
 // Multiple fields: 1 video + up to 20 images
 const uploadHandler = uploadFiles.fields([
   { name: 'video', maxCount: 1 },
+  { name: 'thumbnail', maxCount: 1 },
   { name: 'images', maxCount: 20 }
 ]);
 
@@ -144,6 +145,7 @@ app.post('/api/clips', uploadHandler, (req, res) => {
   }
 
   const videoFile = req.files?.video?.[0];
+  const thumbnailFile = req.files?.thumbnail?.[0];
   const imageFiles = req.files?.images || [];
 
   if (!videoFile && imageFiles.length === 0) {
@@ -170,6 +172,8 @@ app.post('/api/clips', uploadHandler, (req, res) => {
     tags: tags ? tags.split(',').map(t => t.trim().toLowerCase().replace(/\s+/g, '_')).filter(Boolean) : [],
     notes: notes || '',
     timecodes: timecodes || '',
+    // Thumbnail
+    thumbnailUrl: thumbnailFile ? '/uploads/' + thumbnailFile.filename : null,
     // Video
     filename: videoFile ? videoFile.filename : null,
     videoUrl: videoFile ? '/uploads/' + videoFile.filename : null,
@@ -212,6 +216,30 @@ app.put('/api/clips/:id', express.json(), (req, res) => {
 
   saveClips(clips);
   res.json({ success: true, clip });
+});
+
+// Upload thumbnail for existing clip (admin only)
+const thumbnailUpload = uploadFiles.single('thumbnail');
+app.post('/api/clips/:id/thumbnail', thumbnailUpload, (req, res) => {
+  if (!checkAdmin(req, res)) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    return;
+  }
+  const clips = loadClips();
+  const id = parseInt(req.params.id);
+  const clip = clips.find(c => c.id === id);
+  if (!clip) { if (req.file) fs.unlinkSync(req.file.path); return res.status(404).json({ error: 'Клип не найден' }); }
+  if (!req.file) return res.status(400).json({ error: 'Файл обязателен' });
+
+  // Remove old thumbnail if exists
+  if (clip.thumbnailUrl) {
+    const oldPath = path.join(uploadsDir, path.basename(clip.thumbnailUrl));
+    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  }
+
+  clip.thumbnailUrl = '/uploads/' + req.file.filename;
+  saveClips(clips);
+  res.json({ success: true, thumbnailUrl: clip.thumbnailUrl });
 });
 
 // Delete a clip (admin only)

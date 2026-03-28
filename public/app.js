@@ -12,6 +12,7 @@ let allClips = [];
 let currentFilter = 'all';
 let selectedFile = null;
 let selectedImages = [];
+let selectedThumbnail = null;
 let selectedAnimators = [];
 let currentPage = 'browse';
 let currentAnimatorProfile = null;
@@ -61,11 +62,15 @@ async function loadClips() {
 function renderClipCard(clip, i) {
   const hasVideo = !!clip.videoUrl;
   const hasImages = clip.images && clip.images.length > 0;
-  const thumbContent = hasVideo
-    ? `<video src="${clip.videoUrl}" muted preload="metadata"></video>`
-    : hasImages
-      ? `<img src="${clip.images[0].url}" alt="">`
-      : `<div class="clip-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
+  const hasThumbnail = !!clip.thumbnailUrl;
+
+  const thumbContent = hasThumbnail
+    ? `<img src="${clip.thumbnailUrl}" alt="">`
+    : hasVideo
+      ? `<video src="${clip.videoUrl}" muted preload="metadata"></video>`
+      : hasImages
+        ? `<img src="${clip.images[0].url}" alt="">`
+        : `<div class="clip-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
 
   const badge = hasVideo ? (clip.quality || '1080p') : (hasImages ? 'ФОТО' : '');
   const imgCount = hasImages && clip.images.length > 1 ? `<span class="clip-img-count">${clip.images.length} фото</span>` : '';
@@ -337,6 +342,34 @@ function renderImagePreviews() {
   c.querySelectorAll('.image-preview-remove').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();selectedImages.splice(parseInt(b.dataset.idx),1);renderImagePreviews()}));
 }
 
+// ===== THUMBNAIL HANDLING =====
+const thumbnailDropZone=$('#thumbnailDropZone'), thumbnailInput=$('#thumbnailInput');
+if(thumbnailDropZone){
+  thumbnailDropZone.addEventListener('click',()=>thumbnailInput.click());
+  thumbnailDropZone.addEventListener('dragover',e=>{e.preventDefault();thumbnailDropZone.classList.add('dragover')});
+  thumbnailDropZone.addEventListener('dragleave',()=>thumbnailDropZone.classList.remove('dragover'));
+  thumbnailDropZone.addEventListener('drop',e=>{e.preventDefault();thumbnailDropZone.classList.remove('dragover');if(e.dataTransfer.files.length)handleThumbnail(e.dataTransfer.files[0])});
+  thumbnailInput.addEventListener('change',()=>{if(thumbnailInput.files.length)handleThumbnail(thumbnailInput.files[0])});
+  $('#thumbnailRemoveBtn').addEventListener('click',removeThumbnail);
+}
+
+function handleThumbnail(f){
+  if(!f.type.startsWith('image/')){notify('Выберите изображение',true);return}
+  selectedThumbnail=f;
+  const url=URL.createObjectURL(f);
+  $('#thumbnailPreviewImg').src=url;
+  $('#thumbnailPreview').style.display='inline-block';
+  $('#thumbnailDropZone').style.display='none';
+}
+
+function removeThumbnail(){
+  if(selectedThumbnail){const img=$('#thumbnailPreviewImg');if(img.src)URL.revokeObjectURL(img.src);img.src=''}
+  selectedThumbnail=null;
+  thumbnailInput.value='';
+  $('#thumbnailPreview').style.display='none';
+  $('#thumbnailDropZone').style.display='';
+}
+
 function formatBytes(b){if(b<1024)return b+' Б';if(b<1048576)return(b/1024).toFixed(1)+' КБ';return(b/1048576).toFixed(1)+' МБ'}
 
 // ===== UPLOAD SUBMIT =====
@@ -350,6 +383,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
 
   const fd=new FormData();
   if(selectedFile)fd.append('video',selectedFile);
+  if(selectedThumbnail)fd.append('thumbnail',selectedThumbnail);
   selectedImages.forEach(f=>fd.append('images',f));
   fd.append('title',title);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);
   fd.append('timecodes', $('#timecodesInput').value.trim());
@@ -364,7 +398,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
       xhr.onerror=()=>no(new Error('Ошибка сети'));
       xhr.open('POST','/api/clips');xhr.setRequestHeader('X-Admin-Password',ADMIN_PASSWORD);xhr.send(fd);
     });
-    $('#uploadForm').reset();selectedAnimators=[];selectedImages=[];selectedFile=null;renderAnimatorChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');
+    $('#uploadForm').reset();selectedAnimators=[];selectedImages=[];selectedFile=null;selectedThumbnail=null;renderAnimatorChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');removeThumbnail();
     const p=$('#uploadPreviewPlayer');if(p.src){p.pause();URL.revokeObjectURL(p.src);p.removeAttribute('src')}$('#uploadVideoPreview').style.display='none';
     closeUploadModal();notify(`«${title}» загружен!`);await loadClips();
     if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile);
@@ -558,6 +592,11 @@ function openEditModal(id) {
   $('#editTagsInput').value = clip.tags.join(', ');
   $('#editNotesInput').value = clip.notes || '';
   $('#editTimecodesInput').value = clip.timecodes || '';
+  // Thumbnail preview
+  const tp = $('#editThumbnailPreview');
+  const rb = $('#editThumbnailRemoveBtn');
+  if (clip.thumbnailUrl) { tp.src = clip.thumbnailUrl; tp.style.display = 'block'; rb.style.display = ''; }
+  else { tp.src = ''; tp.style.display = 'none'; rb.style.display = 'none'; }
   $('#editModal').classList.add('visible');
   document.body.style.overflow = 'hidden';
 }
@@ -571,6 +610,31 @@ function closeEditModal() {
 $('#closeEditBtn').addEventListener('click', closeEditModal);
 $('#editModal').addEventListener('click', e => { if (e.target === $('#editModal')) closeEditModal(); });
 $('#editCancelBtn').addEventListener('click', closeEditModal);
+
+// Edit thumbnail
+$('#editThumbnailBtn').addEventListener('click', () => $('#editThumbnailInput').click());
+$('#editThumbnailInput').addEventListener('change', async () => {
+  const f = $('#editThumbnailInput').files[0];
+  if (!f || !editingClipId) return;
+  const fd = new FormData();
+  fd.append('thumbnail', f);
+  try {
+    const res = await fetch(`/api/clips/${editingClipId}/thumbnail`, {
+      method: 'POST',
+      headers: { 'X-Admin-Password': ADMIN_PASSWORD },
+      body: fd
+    });
+    const data = await res.json();
+    if (data.success) {
+      $('#editThumbnailPreview').src = data.thumbnailUrl;
+      $('#editThumbnailPreview').style.display = 'block';
+      $('#editThumbnailRemoveBtn').style.display = '';
+      notify('Обложка обновлена');
+      await loadClips();
+    } else notify(data.error, true);
+  } catch { notify('Ошибка сети', true); }
+  $('#editThumbnailInput').value = '';
+});
 
 $('#editSaveBtn').addEventListener('click', async () => {
   if (!editingClipId) return;
