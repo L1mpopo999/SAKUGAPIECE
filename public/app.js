@@ -265,7 +265,6 @@ function closeUploadModal(){$('#uploadModal').classList.remove('visible');docume
 $('#openUploadBtn').addEventListener('click',()=>openUploadModal());
 $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('Войдите как админ',true);return}openUploadModal(currentAnimatorProfile)});
 $('#closeUploadBtn').addEventListener('click',closeUploadModal);
-$('#uploadModal').addEventListener('click',e=>{if(e.target===$('#uploadModal'))closeUploadModal()});
 
 // ===== ANIMATOR SELECTOR =====
 const animInput=$('#animatorInput'), animDropdown=$('#animatorDropdown');
