@@ -172,12 +172,13 @@ function renderAnimatorGrid() {
   grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
     <div class="animator-avatar">${getInitials(a.name)}</div>
     <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}</div><div class="animator-card-count">${a.count} клип${pluralRu(a.count)}</div></div>
-    ${isAdmin ? `<button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">×</button>` : ''}
+    ${isAdmin ? `<button class="animator-card-edit" data-edit-name="${esc(a.name)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">×</button>` : ''}
     <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`).join('');
 
   grid.querySelectorAll('.animator-card[data-name]').forEach(c=>c.addEventListener('click', e => {
     if (e.target.closest('.animator-card-delete')) return;
+    if (e.target.closest('.animator-card-edit')) return;
     navigateTo('animator-profile',c.dataset.name);
   }));
 
@@ -201,6 +202,24 @@ function renderAnimatorGrid() {
       await loadAnimatorsAndFilters();
       renderAnimatorGrid();
       notify(`«${name}» удалён`);
+    });
+  });
+
+  // Admin: rename animator
+  grid.querySelectorAll('.animator-card-edit').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const oldName = btn.dataset.editName;
+      const newName = prompt(`Новое имя для «${oldName}»:`, oldName);
+      if (!newName || !newName.trim() || newName.trim() === oldName) return;
+      const res = await fetch('/api/animators/rename', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': ADMIN_PASSWORD },
+        body: JSON.stringify({ oldName, newName: newName.trim() })
+      });
+      const data = await res.json();
+      if (data.success) { await loadAnimatorsAndFilters(); await loadClips(); renderAnimatorGrid(); notify(`«${oldName}» → «${newName.trim()}»`); }
+      else notify(data.error, true);
     });
   });
 }

@@ -267,6 +267,31 @@ app.delete('/api/animators', (req, res) => {
   res.json({ success: true, animators: list });
 });
 
+app.put('/api/animators/rename', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { oldName, newName } = req.body;
+  if (!oldName || !newName) return res.status(400).json({ error: 'Укажите старое и новое имя' });
+
+  // Rename in animators list
+  let list = loadAnimators();
+  const idx = list.findIndex(a => a.toLowerCase() === oldName.toLowerCase());
+  if (idx !== -1) list[idx] = newName.trim();
+  saveAnimators(list);
+
+  // Rename in all clips
+  const clips = loadClips();
+  let changed = 0;
+  clips.forEach(clip => {
+    clip.animators = clip.animators.map(a => {
+      if (a.toLowerCase() === oldName.toLowerCase()) { changed++; return newName.trim(); }
+      return a;
+    });
+  });
+  if (changed) saveClips(clips);
+
+  res.json({ success: true, renamed: changed });
+});
+
 // ===== FILTERS API =====
 app.get('/api/filters', (req, res) => { res.json(loadFilters()); });
 
