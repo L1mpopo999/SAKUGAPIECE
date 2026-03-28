@@ -301,13 +301,36 @@ $('#uploadForm').addEventListener('submit',async e=>{
 function parseTimecodes(str) {
   if (!str) return [];
   return str.split('\n').map(line => {
-    const match = line.trim().match(/^(\d+):(\d{2})(?::(\d{2}))?\s*[-–—]\s*(.+)$/);
-    if (!match) return null;
-    const mins = parseInt(match[1]);
-    const secs = parseInt(match[2]);
-    const extra = match[3] ? parseInt(match[3]) : 0;
-    const totalSeconds = match[3] ? mins * 3600 + secs * 60 + extra : mins * 60 + secs;
-    return { time: totalSeconds, name: match[4].trim(), label: match[3] ? `${match[1]}:${match[2]}:${match[3]}` : `${match[1]}:${match[2].padStart(2,'0')}` };
+    line = line.trim();
+    if (!line) return null;
+
+    // Try to extract start timecode from beginning of line
+    // Supports: 0:00, 0:00.0, 0:00:00, 00:00, etc.
+    const timeMatch = line.match(/^(\d+):(\d{2})(?:[:.](\d+))?/);
+    if (!timeMatch) return null;
+
+    const mins = parseInt(timeMatch[1]);
+    const secs = parseInt(timeMatch[2]);
+    const frac = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
+    const totalSeconds = mins * 60 + secs;
+
+    // Extract the name — everything after the timecode and separators
+    // Remove the start timecode, optional end timecode, and separators
+    let rest = line.slice(timeMatch[0].length).trim();
+    // Remove optional end timecode like "- 0:25.9" or "- 0:25.9:"
+    rest = rest.replace(/^[-–—]\s*\d+:\d{2}(?:[:.]?\d*)?:?\s*/, '');
+    // Remove leading separators: - — – :
+    rest = rest.replace(/^[-–—:]\s*/, '');
+    // Remove leading timecode-like patterns (e.g. "0:05.6:")
+    rest = rest.replace(/^\d+:\d{2}(?:[:.]?\d*)?:?\s*/, '');
+
+    if (!rest) return null;
+
+    const label = timeMatch[3]
+      ? `${timeMatch[1]}:${timeMatch[2].padStart(2,'0')}.${timeMatch[3]}`
+      : `${timeMatch[1]}:${timeMatch[2].padStart(2,'0')}`;
+
+    return { time: totalSeconds, name: rest.trim(), label };
   }).filter(Boolean);
 }
 
@@ -670,6 +693,68 @@ function renderClipPage(clip) {
       window.location.href = '/?animator=' + encodeURIComponent(tag.dataset.animator);
     });
   });
+
+  // Photo click to enlarge
+  const galleryItems = page.querySelectorAll('.clip-page-gallery-item img');
+  galleryItems.forEach((img, idx) => {
+    img.addEventListener('click', () => {
+      openClipPageImageViewer(clip.images.map(i => i.url), idx);
+    });
+  });
+}
+
+// ===== CLIP PAGE IMAGE VIEWER =====
+function openClipPageImageViewer(images, startIdx) {
+  let currentIdx = startIdx;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'clip-page-lightbox';
+  overlay.innerHTML = `
+    <button class="clip-page-lightbox-close">&times;</button>
+    <button class="clip-page-lightbox-nav prev">‹</button>
+    <img class="clip-page-lightbox-img" src="${images[currentIdx]}">
+    <button class="clip-page-lightbox-nav next">›</button>
+    <div class="clip-page-lightbox-counter">${currentIdx + 1} / ${images.length}</div>
+  `;
+
+  const imgEl = overlay.querySelector('.clip-page-lightbox-img');
+  const counter = overlay.querySelector('.clip-page-lightbox-counter');
+  const prevBtn = overlay.querySelector('.prev');
+  const nextBtn = overlay.querySelector('.next');
+
+  function update() {
+    imgEl.src = images[currentIdx];
+    counter.textContent = `${currentIdx + 1} / ${images.length}`;
+    prevBtn.style.visibility = currentIdx > 0 ? 'visible' : 'hidden';
+    nextBtn.style.visibility = currentIdx < images.length - 1 ? 'visible' : 'hidden';
+  }
+
+  prevBtn.addEventListener('click', e => { e.stopPropagation(); if (currentIdx > 0) { currentIdx--; update(); } });
+  nextBtn.addEventListener('click', e => { e.stopPropagation(); if (currentIdx < images.length - 1) { currentIdx++; update(); } });
+  overlay.querySelector('.clip-page-lightbox-close').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  // Keyboard
+  function onKey(e) {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
+    if (e.key === 'ArrowLeft' && currentIdx > 0) { currentIdx--; update(); }
+    if (e.key === 'ArrowRight' && currentIdx < images.length - 1) { currentIdx++; update(); }
+  }
+  document.addEventListener('keydown', onKey);
+
+  // Swipe
+  let tx = 0;
+  overlay.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  overlay.addEventListener('touchend', e => {
+    const diff = e.changedTouches[0].clientX - tx;
+    if (Math.abs(diff) > 50) {
+      if (diff < 0 && currentIdx < images.length - 1) { currentIdx++; update(); }
+      if (diff > 0 && currentIdx > 0) { currentIdx--; update(); }
+    }
+  }, { passive: true });
+
+  update();
+  document.body.appendChild(overlay);
 }
 
 init();

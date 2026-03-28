@@ -212,7 +212,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-page-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.8rem;margin-bottom:1.2rem}
 .clip-page-gallery-item{border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .2s}
 .clip-page-gallery-item:hover{transform:scale(1.02)}
-.clip-page-gallery-item img{width:100%;display:block}
+.clip-page-gallery-item img{width:100%;display:block;cursor:pointer}
+
+/* Lightbox */
+.clip-page-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:1rem}
+.clip-page-lightbox-close{position:fixed;top:1rem;right:1rem;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:2rem;width:44px;height:44px;border-radius:50%;cursor:pointer;z-index:10000;display:flex;align-items:center;justify-content:center}
+.clip-page-lightbox-close:hover{background:rgba(255,255,255,.2)}
+.clip-page-lightbox-img{max-width:90vw;max-height:80vh;object-fit:contain;border-radius:var(--radius-lg)}
+.clip-page-lightbox-nav{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);border:none;color:#fff;font-size:2.5rem;width:50px;height:50px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.clip-page-lightbox-nav:hover{background:rgba(255,255,255,.2)}
+.clip-page-lightbox-nav.prev{left:1rem}
+.clip-page-lightbox-nav.next{right:1rem}
+.clip-page-lightbox-counter{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--text-secondary);margin-top:1rem}
 
 /* Admin */
 .admin-delete-btn{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:.9rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.5);transition:transform .15s}
