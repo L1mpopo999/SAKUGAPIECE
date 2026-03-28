@@ -91,8 +91,19 @@ function renderClipCard(clip, i) {
       <div class="clip-title">${esc(clip.title)}</div>
       <div class="clip-meta"><span>Эп. ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span></div>
       <div class="clip-tags">
-        ${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
-        ${clip.tags.slice(0,2).map(t=>`<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}
+        ${(() => {
+          const allTags = [
+            ...clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`),
+            ...clip.tags.slice(0,2).map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`)
+          ];
+          const MAX_VISIBLE = 4;
+          const visible = allTags.slice(0, MAX_VISIBLE).join('');
+          const hidden = allTags.slice(MAX_VISIBLE);
+          if (hidden.length === 0) return visible;
+          return visible +
+            `<span class="clip-tags-hidden" style="display:none">${hidden.join('')}</span>` +
+            `<span class="clip-tag clip-tags-more">+${hidden.length}</span>`;
+        })()}
       </div>
     </div>
   </div>`;
@@ -101,6 +112,15 @@ function renderClipCard(clip, i) {
 function attachClipEvents(container) {
   container.querySelectorAll('.clip-card').forEach(card => {
     card.addEventListener('click', e => {
+      if (e.target.closest('.clip-tags-more')) {
+        e.stopPropagation();
+        const tagsContainer = e.target.closest('.clip-tags');
+        const hidden = tagsContainer.querySelector('.clip-tags-hidden');
+        const moreBtn = tagsContainer.querySelector('.clip-tags-more');
+        if (hidden) { hidden.style.display = 'contents'; }
+        if (moreBtn) { moreBtn.remove(); }
+        return;
+      }
       if (e.target.closest('.admin-delete-btn')) { e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
       if (e.target.closest('.admin-edit-btn')) { e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
       if (e.target.closest('.clip-tag.animator')) { e.stopPropagation(); navigateTo('animator-profile', e.target.closest('.clip-tag.animator').dataset.animator); return; }
