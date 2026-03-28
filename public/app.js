@@ -99,9 +99,18 @@ function attachClipEvents(container) {
       if (e.target.closest('.admin-delete-btn')) { e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
       if (e.target.closest('.admin-edit-btn')) { e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
       if (e.target.closest('.clip-tag.animator')) { e.stopPropagation(); navigateTo('animator-profile', e.target.closest('.clip-tag.animator').dataset.animator); return; }
-      // Open clip in new tab
-      const id = card.dataset.id;
-      window.open(`/clip/${id}`, '_blank');
+      const clip = allClips.find(c => c.id === parseInt(card.dataset.id));
+      if (!clip) return;
+      if (clip.videoUrl) {
+        // Video: open in overlay on same page
+        openPlayer(clip.id);
+      } else if (clip.images && clip.images.length >= 4) {
+        // Many photos: open in new tab
+        window.open(`/clip/${clip.id}`, '_blank');
+      } else if (clip.images && clip.images.length > 0) {
+        // Few photos: open lightbox
+        openClipPageImageViewer(clip.images.map(i => i.url), 0);
+      }
     });
   });
 }
