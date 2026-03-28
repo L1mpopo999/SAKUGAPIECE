@@ -83,7 +83,9 @@ function renderClipCard(clip, i) {
       ${clip.duration ? `<span class="clip-duration">${clip.duration}</span>` : ''}
       ${badge ? `<span class="clip-hd-badge">${badge}</span>` : ''}
       ${imgCount}
-      <div class="clip-play-overlay"><div class="play-btn"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21"/></svg></div></div>
+      ${hasVideo
+        ? `<div class="clip-play-overlay"><div class="play-btn"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21"/></svg></div></div>`
+        : `<div class="clip-hover-dim"></div>`}
     </div>
     <div class="clip-info">
       <div class="clip-title">${esc(clip.title)}</div>
