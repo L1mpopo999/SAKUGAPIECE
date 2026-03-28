@@ -316,6 +316,29 @@ app.delete('/api/filters', (req, res) => {
   res.json({ success: true, filters: list });
 });
 
+// ===== BACKUP (admin only) =====
+app.get('/api/backup', (req, res) => {
+  const pwd = req.query.pwd;
+  if (pwd !== ADMIN_PASSWORD) return res.status(403).send('Доступ запрещён');
+
+  const archiver = require('archiver');
+  const archive = archiver('zip', { zlib: { level: 5 } });
+
+  res.attachment('sakugapiece-backup.zip');
+  archive.pipe(res);
+
+  // Add clips.json
+  if (fs.existsSync(DATA_FILE)) archive.file(DATA_FILE, { name: 'clips.json' });
+  // Add animators.json
+  if (fs.existsSync(ANIMATORS_FILE)) archive.file(ANIMATORS_FILE, { name: 'animators.json' });
+  // Add filters.json
+  if (fs.existsSync(FILTERS_FILE)) archive.file(FILTERS_FILE, { name: 'filters.json' });
+  // Add uploads folder
+  if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
+
+  archive.finalize();
+});
+
 // ===== ERROR HANDLING =====
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
