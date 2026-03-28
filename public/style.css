@@ -197,6 +197,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .player-current-animator{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--gold);margin-bottom:.4rem;min-height:1.1rem}
 .form-hint{font-size:.7rem;color:var(--text-muted);margin-top:.3rem}
 
+/* Clip Page */
+.clip-page-container{max-width:960px;margin:0 auto;padding:1.5rem 1rem 4rem}
+.clip-page-back{margin-bottom:1.2rem}
+.clip-page-video{margin-bottom:1rem}
+.clip-page-player{width:100%;border-radius:var(--radius-lg);background:#000;display:block}
+.clip-page-info{padding:.5rem 0}
+.clip-page-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.5rem,3vw,2.2rem);letter-spacing:.04em;margin-bottom:.3rem}
+.clip-page-current-animator{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--gold);margin-bottom:.5rem;min-height:1.2rem}
+.clip-page-meta{display:flex;align-items:center;gap:.5rem;font-size:.8rem;color:var(--text-secondary);font-family:'Space Mono',monospace;margin-bottom:.8rem;flex-wrap:wrap}
+.clip-page-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem}
+.clip-page-notes{font-size:.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.2rem;padding:1rem;background:var(--bg-card);border-radius:var(--radius-lg);border:1px solid var(--border);white-space:pre-wrap}
+.clip-page-section-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.06em;color:var(--text-primary);margin-bottom:.6rem}
+.clip-page-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.8rem;margin-bottom:1.2rem}
+.clip-page-gallery-item{border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .2s}
+.clip-page-gallery-item:hover{transform:scale(1.02)}
+.clip-page-gallery-item img{width:100%;display:block}
+
 /* Admin */
 .admin-delete-btn{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:.9rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.5);transition:transform .15s}
 .admin-delete-btn:hover{transform:scale(1.15)}

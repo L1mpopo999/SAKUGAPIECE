@@ -83,6 +83,11 @@ app.get('/api/clips', (req, res) => {
   res.json(loadClips());
 });
 
+// Clip page — serve index.html for client-side routing
+app.get('/clip/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Upload a new clip (admin only)
 app.post('/api/clips', uploadHandler, (req, res) => {
   if (!checkAdmin(req, res)) {

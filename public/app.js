@@ -104,10 +104,9 @@ function attachClipEvents(container) {
       if (e.target.closest('.admin-delete-btn')) { e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
       if (e.target.closest('.admin-edit-btn')) { e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
       if (e.target.closest('.clip-tag.animator')) { e.stopPropagation(); navigateTo('animator-profile', e.target.closest('.clip-tag.animator').dataset.animator); return; }
-      const clip = allClips.find(c => c.id === parseInt(card.dataset.id));
-      if (!clip) return;
-      if (clip.videoUrl) openPlayer(clip.id);
-      else if (clip.images && clip.images.length) openImageViewer(clip);
+      // Open clip in new tab
+      const id = card.dataset.id;
+      window.open(`/clip/${id}`, '_blank');
     });
   });
 }
@@ -541,4 +540,136 @@ $('#imageViewerOverlay').addEventListener('touchstart',e=>{touchStartX=e.touches
 $('#imageViewerOverlay').addEventListener('touchend',e=>{const diff=e.changedTouches[0].clientX-touchStartX;if(Math.abs(diff)>50){if(diff<0&&viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}if(diff>0&&viewerIndex>0){viewerIndex--;updateImageViewer()}}},{passive:true});
 
 // ===== INIT =====
-loadClips();
+async function init() {
+  await loadClips();
+
+  // Check if we're on a clip page
+  const clipMatch = window.location.pathname.match(/^\/clip\/(\d+)$/);
+  if (clipMatch) {
+    const clipId = parseInt(clipMatch[1]);
+    const clip = allClips.find(c => c.id === clipId);
+    if (clip) {
+      renderClipPage(clip);
+      return;
+    }
+  }
+}
+
+function renderClipPage(clip) {
+  // Hide all pages and header nav
+  $$('.page').forEach(p => p.classList.remove('active'));
+
+  // Create clip page
+  const page = document.createElement('div');
+  page.className = 'page active clip-page';
+  page.innerHTML = `
+    <div class="clip-page-container">
+      <a href="/" class="back-btn clip-page-back">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        На главную
+      </a>
+
+      ${clip.videoUrl ? `
+        <div class="clip-page-video">
+          <video controls autoplay class="clip-page-player" id="clipPageVideo">
+            <source src="${clip.videoUrl}">
+          </video>
+          <div class="timecode-bar" id="clipPageTimecodeBar"></div>
+        </div>
+      ` : ''}
+
+      ${clip.images && clip.images.length ? `
+        <div class="clip-page-gallery">
+          ${clip.images.map((img, i) => `
+            <div class="clip-page-gallery-item">
+              <img src="${img.url}" alt="" loading="lazy">
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <div class="clip-page-info">
+        <h1 class="clip-page-title">${esc(clip.title)}</h1>
+        <div class="clip-page-current-animator" id="clipPageCurrentAnimator"></div>
+        <div class="clip-page-meta">
+          <span>Эпизод ${esc(clip.episode)}</span>
+          <span class="clip-meta-divider">·</span>
+          <span>${esc(clip.arc)}</span>
+          ${clip.quality ? `<span class="clip-meta-divider">·</span><span>${clip.quality}</span>` : ''}
+        </div>
+
+        <div class="clip-page-tags">
+          ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
+          ${clip.tags.map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}
+        </div>
+
+        ${clip.notes ? `<div class="clip-page-notes">${esc(clip.notes).replace(/\n/g, '<br>')}</div>` : ''}
+
+        <div class="clip-page-timecodes" id="clipPageTimecodes"></div>
+      </div>
+    </div>
+  `;
+
+  document.querySelector('.header').after(page);
+
+  // Setup timecodes
+  const timecodes = parseTimecodes(clip.timecodes);
+  if (timecodes.length) {
+    const tcContainer = page.querySelector('#clipPageTimecodes');
+    tcContainer.innerHTML = `
+      <h3 class="clip-page-section-title">Таймкоды аниматоров</h3>
+      ${timecodes.map((tc, i) => `
+        <div class="timecode-item" data-time="${tc.time}">
+          <span class="timecode-time">${tc.label}</span>
+          <span class="timecode-name">${esc(tc.name)}</span>
+        </div>
+      `).join('')}
+    `;
+
+    tcContainer.querySelectorAll('.timecode-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const video = page.querySelector('#clipPageVideo');
+        if (video) { video.currentTime = parseInt(el.dataset.time); video.play(); }
+      });
+    });
+
+    // Video timecode markers and tracking
+    const video = page.querySelector('#clipPageVideo');
+    if (video) {
+      video.addEventListener('loadedmetadata', () => {
+        const bar = page.querySelector('#clipPageTimecodeBar');
+        if (bar && video.duration) {
+          bar.innerHTML = timecodes.map(tc => {
+            const pct = (tc.time / video.duration * 100).toFixed(2);
+            return `<div class="timecode-marker" style="left:${pct}%" data-time="${tc.time}"><div class="timecode-marker-tooltip">${tc.label} — ${esc(tc.name)}</div></div>`;
+          }).join('');
+          bar.querySelectorAll('.timecode-marker').forEach(m => {
+            m.addEventListener('click', () => { video.currentTime = parseInt(m.dataset.time); video.play(); });
+          });
+        }
+      });
+
+      // Track current animator
+      setInterval(() => {
+        const t = video.currentTime;
+        let current = null;
+        for (let i = timecodes.length - 1; i >= 0; i--) {
+          if (t >= timecodes[i].time) { current = timecodes[i]; break; }
+        }
+        page.querySelector('#clipPageCurrentAnimator').textContent = current ? `▶ ${current.name}` : '';
+        tcContainer.querySelectorAll('.timecode-item').forEach((el, idx) => {
+          el.classList.toggle('active', current && timecodes.indexOf(current) === idx);
+        });
+      }, 300);
+    }
+  }
+
+  // Animator tag clicks
+  page.querySelectorAll('.clip-tag.animator').forEach(tag => {
+    tag.addEventListener('click', () => {
+      window.location.href = '/?animator=' + encodeURIComponent(tag.dataset.animator);
+    });
+  });
+}
+
+init();
