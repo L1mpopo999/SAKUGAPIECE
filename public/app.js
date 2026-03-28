@@ -138,9 +138,9 @@ function showSuggestions() {
   const q=$('#searchInput').value.toLowerCase().trim(), sug=$('#searchSuggestions');
   if(!q){sug.classList.remove('visible');return}
   const am=new Map,tm=new Map;
-  allClips.forEach(c=>{c.animators.forEach(a=>{if(a.toLowerCase().includes(q))am.set(a,(am.get(a)||0)+1)});c.tags.forEach(t=>{if(t.toLowerCase().includes(q))tm.set(t,(tm.get(t)||0)+1)})});
-  ANIMATORS.forEach(a=>{if(a.toLowerCase().includes(q)&&!am.has(a))am.set(a,0)});
-  const items=[];am.forEach((c,n)=>items.push({type:'animator',name:n,count:c}));tm.forEach((c,n)=>items.push({type:'tag',name:tagLabel(n),raw:n,count:c}));
+  allClips.forEach(c=>{c.animators.forEach(a=>{const key=a.toLowerCase();if(key.includes(q))am.set(key,(am.get(key)||0)+1)});c.tags.forEach(t=>{if(t.toLowerCase().includes(q))tm.set(t,(tm.get(t)||0)+1)})});
+  ANIMATORS.forEach(a=>{const key=a.toLowerCase();if(key.includes(q)&&!am.has(key))am.set(key,0)});
+  const items=[];am.forEach((c,key)=>{const display=ANIMATORS.find(a=>a.toLowerCase()===key)||key;items.push({type:'animator',name:display,count:c})});tm.forEach((c,n)=>items.push({type:'tag',name:tagLabel(n),raw:n,count:c}));
   if(!items.length){sug.classList.remove('visible');return}
   sug.innerHTML=items.slice(0,8).map(it=>`<div class="suggestion-item" data-value="${esc(it.raw||it.name)}" data-type="${it.type}"><span class="suggestion-type ${it.type}">${it.type==='animator'?'аниматор':'тег'}</span><span class="suggestion-name">${esc(it.name)}</span><span class="suggestion-count">${it.count} клип${pluralRu(it.count)}</span></div>`).join('');
   sug.querySelectorAll('.suggestion-item').forEach(el=>el.addEventListener('click',()=>{if(el.dataset.type==='animator'){sug.classList.remove('visible');$('#searchInput').value='';navigateTo('animator-profile',el.dataset.value)}else{$('#searchInput').value=el.dataset.value;sug.classList.remove('visible');applyFilters()}}));
@@ -150,8 +150,12 @@ function showSuggestions() {
 // ===== ANIMATORS PAGE =====
 function renderAnimatorGrid() {
   const q=($('#animatorSearchInput')?.value||'').toLowerCase().trim(), grid=$('#animatorGrid');
-  const counts=new Map; allClips.forEach(c=>c.animators.forEach(a=>counts.set(a,(counts.get(a)||0)+1)));
-  let list=ANIMATORS.map(n=>({name:n,count:counts.get(n)||0}));
+  const counts=new Map;
+  allClips.forEach(c=>c.animators.forEach(a=>{ 
+    const key = a.toLowerCase();
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }));
+  let list=ANIMATORS.map(n=>({name:n,count:counts.get(n.toLowerCase())||0}));
   if(q) list=list.filter(a=>a.name.toLowerCase().includes(q));
   list.sort((a,b)=>b.count!==a.count?b.count-a.count:a.name.localeCompare(b.name));
 
