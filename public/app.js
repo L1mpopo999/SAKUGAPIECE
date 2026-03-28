@@ -1,16 +1,11 @@
-// ===== ANIMATORS DATABASE =====
-const ANIMATORS = [
-  "Midori Matsuda","Keiichi Ichikawa","Tatsuya Nagamine","Akihiro Ota",
-  "Vincent Chansard","Tu Yong-Ce","Naotoshi Shida","Shinya Ohira",
-  "Henry Thurlow","Megumi Ishitani","Takashi Kojima","Shu Sugita",
-  "Yen BM","Jakisuaki","Michael Sung","Shoutarou Ban",
-  "Shūichi Itō","Ryūhiro Nagaki","Masayuki Takagi","Yoshiichi Tomita",
-  "Masahiro Kitasaki","Kazue Sakai","Eisaku Inoue","Makoto Muroi",
-  "Hisashi Sameshima","Dai Harigi","Yasuko Chiba","Yuka Takemori",
-  "Toshio Deguchi","He Ziwei","Ippei Masui","Asako Ota",
-  "Narumi Takahashi","Kenji Yokoyama","Bahi JD","Masami Mori",
-  "Kimitaka Itō","Takumi Yamamoto"
-];
+// ===== ANIMATORS & FILTERS — loaded from server =====
+let ANIMATORS = [];
+let FILTERS = [];
+
+async function loadAnimatorsAndFilters() {
+  try { ANIMATORS = await (await fetch('/api/animators')).json(); } catch { ANIMATORS = []; }
+  try { FILTERS = await (await fetch('/api/filters')).json(); } catch { FILTERS = []; }
+}
 
 // ===== STATE =====
 let allClips = [];
@@ -132,7 +127,7 @@ function applyFilters() {
   if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
   renderClips(clips);
 }
-$$('.filter-chip').forEach(ch => ch.addEventListener('click', () => { $$('.filter-chip').forEach(c=>c.classList.remove('active')); ch.classList.add('active'); currentFilter=ch.dataset.filter; applyFilters(); }));
+// Filter chips are rendered dynamically in renderFilterChips()
 
 // ===== SEARCH =====
 $('#searchInput').addEventListener('input', () => { applyFilters(); showSuggestions(); });
@@ -159,9 +154,58 @@ function renderAnimatorGrid() {
   let list=ANIMATORS.map(n=>({name:n,count:counts.get(n)||0}));
   if(q) list=list.filter(a=>a.name.toLowerCase().includes(q));
   list.sort((a,b)=>b.count!==a.count?b.count-a.count:a.name.localeCompare(b.name));
-  if(!list.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Аниматор не найден</p></div>`;return}
-  grid.innerHTML=list.map((a,i)=>`<div class="animator-card" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s"><div class="animator-avatar">${getInitials(a.name)}</div><div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}</div><div class="animator-card-count">${a.count} клип${pluralRu(a.count)}</div></div><svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></div>`).join('');
-  grid.querySelectorAll('.animator-card').forEach(c=>c.addEventListener('click',()=>navigateTo('animator-profile',c.dataset.name)));
+
+  let adminAddHtml = '';
+  if (isAdmin) {
+    adminAddHtml = `<div class="animator-card animator-add-card" id="addAnimatorCard" style="border-style:dashed;border-color:var(--gold);justify-content:center;gap:.5rem;cursor:pointer">
+      <span style="color:var(--gold);font-size:1.5rem">+</span>
+      <span style="color:var(--gold);font-family:'Space Mono',monospace;font-size:.75rem">Добавить аниматора</span>
+    </div>`;
+  }
+
+  if(!list.length && !isAdmin){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Аниматор не найден</p></div>`;return}
+
+  grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
+    <div class="animator-avatar">${getInitials(a.name)}</div>
+    <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}</div><div class="animator-card-count">${a.count} клип${pluralRu(a.count)}</div></div>
+    ${isAdmin ? `<button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">×</button>` : ''}
+    <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>`).join('');
+
+  grid.querySelectorAll('.animator-card[data-name]').forEach(c=>c.addEventListener('click', e => {
+    if (e.target.closest('.animator-card-delete')) return;
+    navigateTo('animator-profile',c.dataset.name);
+  }));
+
+  // Admin: add animator
+  const addCard = grid.querySelector('#addAnimatorCard');
+  if (addCard) {
+    addCard.addEventListener('click', () => {
+      const name = prompt('Имя нового аниматора:');
+      if (!name || !name.trim()) return;
+      addAnimator(name.trim());
+    });
+  }
+
+  // Admin: delete animator
+  grid.querySelectorAll('.animator-card-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.delName;
+      if (!confirm(`Удалить аниматора «${name}»?`)) return;
+      await fetch('/api/animators', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({name}) });
+      await loadAnimatorsAndFilters();
+      renderAnimatorGrid();
+      notify(`«${name}» удалён`);
+    });
+  });
+}
+
+async function addAnimator(name) {
+  const res = await fetch('/api/animators', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({name}) });
+  const data = await res.json();
+  if (data.success) { await loadAnimatorsAndFilters(); renderAnimatorGrid(); notify(`«${name}» добавлен`); }
+  else notify(data.error, true);
 }
 $('#animatorSearchInput')?.addEventListener('input', renderAnimatorGrid);
 
@@ -448,7 +492,7 @@ if (sessionStorage.getItem('sp_admin') === ADMIN_PASSWORD) {
 }
 
 $('#adminToggleBtn').addEventListener('click',()=>{
-  if(isAdmin){isAdmin=false;document.body.classList.remove('admin-mode');sessionStorage.removeItem('sp_admin');notify('Вышли из режима админа')}
+  if(isAdmin){isAdmin=false;document.body.classList.remove('admin-mode');sessionStorage.removeItem('sp_admin');notify('Вышли из режима админа');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();}
   else{$('#adminLoginModal').classList.add('visible');document.body.style.overflow='hidden';$('#adminPasswordInput').value='';$('#adminLoginError').style.display='none';setTimeout(()=>$('#adminPasswordInput').focus(),100)}
 });
 $('#passwordToggleBtn').addEventListener('click', () => {
@@ -465,7 +509,7 @@ $('#adminLoginBtn').addEventListener('click',tryLogin);
 $('#adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
 
 function tryLogin(){
-  if($('#adminPasswordInput').value===ADMIN_PASSWORD){isAdmin=true;document.body.classList.add('admin-mode');sessionStorage.setItem('sp_admin',ADMIN_PASSWORD);$('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';notify('Режим админа включён')}
+  if($('#adminPasswordInput').value===ADMIN_PASSWORD){isAdmin=true;document.body.classList.add('admin-mode');sessionStorage.setItem('sp_admin',ADMIN_PASSWORD);$('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';notify('Режим админа включён');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();}
   else{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
 }
 
@@ -564,6 +608,8 @@ $('#imageViewerOverlay').addEventListener('touchend',e=>{const diff=e.changedTou
 
 // ===== INIT =====
 async function init() {
+  await loadAnimatorsAndFilters();
+  renderFilterChips();
   await loadClips();
 
   // Check if we're on a clip page
@@ -576,6 +622,95 @@ async function init() {
       return;
     }
   }
+
+  // Check if navigating to animator
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('animator')) {
+    navigateTo('animator-profile', params.get('animator'));
+  }
+}
+
+function renderFilterChips() {
+  const container = document.querySelector('.filters');
+  if (!container) return;
+
+  const tagFilters = FILTERS.filter(f => f.type === 'tag');
+  const arcFilters = FILTERS.filter(f => f.type === 'arc');
+
+  container.innerHTML = `
+    <button class="filter-chip active" data-filter="all">Все</button>
+    <button class="filter-chip" data-filter="type:video">Видео</button>
+    <button class="filter-chip" data-filter="type:images">Фото</button>
+    <span class="filter-separator"></span>
+    ${tagFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+    <span class="filter-separator"></span>
+    ${arcFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+    ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
+    <span class="results-count" id="resultsCount"></span>
+  `;
+
+  container.querySelectorAll('.filter-chip[data-filter]').forEach(ch => {
+    ch.addEventListener('click', () => {
+      container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      ch.classList.add('active');
+      currentFilter = ch.dataset.filter;
+      applyFilters();
+    });
+  });
+
+  const manageBtn = container.querySelector('.admin-manage-filters-btn');
+  if (manageBtn) manageBtn.addEventListener('click', openFilterManager);
+}
+
+// ===== FILTER MANAGER =====
+function openFilterManager() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay visible';
+  overlay.innerHTML = `
+    <div class="modal">
+      <button class="modal-close" id="closeFilterMgr">&times;</button>
+      <h2 class="modal-title">Управление вкладками</h2>
+      <div id="filterMgrList"></div>
+      <div class="form-row" style="margin-top:1rem">
+        <input class="form-input" id="newFilterId" placeholder="ID (латиницей)" style="flex:1">
+        <input class="form-input" id="newFilterLabel" placeholder="Название" style="flex:1">
+        <select class="form-select" id="newFilterType" style="flex:.7"><option value="tag">Тег</option><option value="arc">Арка</option></select>
+      </div>
+      <button class="btn-submit" id="addFilterBtn" style="margin-top:.6rem">Добавить вкладку</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  function renderList() {
+    const list = overlay.querySelector('#filterMgrList');
+    list.innerHTML = FILTERS.map(f => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .6rem;border-bottom:1px solid var(--border)">
+        <span><strong>${esc(f.label)}</strong> <span style="color:var(--text-muted);font-size:.7rem">(${f.id}, ${f.type})</span></span>
+        <button class="filter-mgr-del" data-id="${esc(f.id)}" style="background:var(--accent);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:.8rem">×</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('.filter-mgr-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await fetch('/api/filters', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({id:btn.dataset.id}) });
+        await loadAnimatorsAndFilters(); renderList(); renderFilterChips();
+      });
+    });
+  }
+  renderList();
+
+  overlay.querySelector('#addFilterBtn').addEventListener('click', async () => {
+    const id = overlay.querySelector('#newFilterId').value.trim();
+    const label = overlay.querySelector('#newFilterLabel').value.trim();
+    const type = overlay.querySelector('#newFilterType').value;
+    if (!id || !label) { notify('Заполните ID и название', true); return; }
+    const res = await fetch('/api/filters', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({id,label,type}) });
+    const data = await res.json();
+    if (data.success) { await loadAnimatorsAndFilters(); renderList(); renderFilterChips(); overlay.querySelector('#newFilterId').value=''; overlay.querySelector('#newFilterLabel').value=''; notify('Вкладка добавлена'); }
+    else notify(data.error, true);
+  });
+
+  overlay.querySelector('#closeFilterMgr').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
 function renderClipPage(clip) {

@@ -61,6 +61,49 @@ const uploadHandler = uploadFiles.fields([
   { name: 'images', maxCount: 20 }
 ]);
 
+// ===== ANIMATORS & FILTERS DATA =====
+const ANIMATORS_FILE = path.join(dataDir, 'animators.json');
+const FILTERS_FILE = path.join(dataDir, 'filters.json');
+
+const DEFAULT_ANIMATORS = [
+  "Midori Matsuda","Keiichi Ichikawa","Tatsuya Nagamine","Akihiro Ota",
+  "Vincent Chansard","Tu Yong-Ce","Naotoshi Shida","Shinya Ohira",
+  "Henry Thurlow","Megumi Ishitani","Takashi Kojima","Shu Sugita",
+  "Yen BM","Jakisuaki","Michael Sung","Shoutarou Ban",
+  "Shūichi Itō","Ryūhiro Nagaki","Masayuki Takagi","Yoshiichi Tomita",
+  "Masahiro Kitasaki","Kazue Sakai","Eisaku Inoue","Makoto Muroi",
+  "Hisashi Sameshima","Dai Harigi","Yasuko Chiba","Yuka Takemori",
+  "Toshio Deguchi","He Ziwei","Ippei Masui","Asako Ota",
+  "Narumi Takahashi","Kenji Yokoyama","Bahi JD","Masami Mori",
+  "Kimitaka Itō","Takumi Yamamoto"
+];
+
+const DEFAULT_FILTERS = [
+  { id: "fighting", label: "Бои", type: "tag" },
+  { id: "effects", label: "Эффекты", type: "tag" },
+  { id: "character_acting", label: "Эктинг", type: "tag" },
+  { id: "transformation", label: "Трансформация", type: "tag" },
+  { id: "Wano", label: "Wano", type: "arc" },
+  { id: "Egghead", label: "Egghead", type: "arc" },
+  { id: "Elbaf", label: "Elbaf", type: "arc" },
+  { id: "Dressrosa", label: "Dressrosa", type: "arc" },
+  { id: "Marineford", label: "Marineford", type: "arc" }
+];
+
+function loadAnimators() {
+  if (!fs.existsSync(ANIMATORS_FILE)) { saveAnimators(DEFAULT_ANIMATORS); return DEFAULT_ANIMATORS; }
+  try { return JSON.parse(fs.readFileSync(ANIMATORS_FILE, 'utf-8')); }
+  catch { return DEFAULT_ANIMATORS; }
+}
+function saveAnimators(list) { fs.writeFileSync(ANIMATORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+
+function loadFilters() {
+  if (!fs.existsSync(FILTERS_FILE)) { saveFilters(DEFAULT_FILTERS); return DEFAULT_FILTERS; }
+  try { return JSON.parse(fs.readFileSync(FILTERS_FILE, 'utf-8')); }
+  catch { return DEFAULT_FILTERS; }
+}
+function saveFilters(list) { fs.writeFileSync(FILTERS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+
 // ===== MIDDLEWARE =====
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -196,6 +239,56 @@ app.delete('/api/clips/:id', (req, res) => {
 
   saveClips(clips.filter(c => c.id !== id));
   res.json({ success: true });
+});
+
+// ===== ANIMATORS API =====
+app.get('/api/animators', (req, res) => { res.json(loadAnimators()); });
+
+app.post('/api/animators', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Имя обязательно' });
+  const list = loadAnimators();
+  const trimmed = name.trim();
+  if (list.find(a => a.toLowerCase() === trimmed.toLowerCase())) return res.status(400).json({ error: 'Аниматор уже существует' });
+  list.push(trimmed);
+  list.sort((a, b) => a.localeCompare(b));
+  saveAnimators(list);
+  res.json({ success: true, animators: list });
+});
+
+app.delete('/api/animators', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Имя обязательно' });
+  let list = loadAnimators();
+  list = list.filter(a => a.toLowerCase() !== name.toLowerCase());
+  saveAnimators(list);
+  res.json({ success: true, animators: list });
+});
+
+// ===== FILTERS API =====
+app.get('/api/filters', (req, res) => { res.json(loadFilters()); });
+
+app.post('/api/filters', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { id, label, type } = req.body;
+  if (!id || !label) return res.status(400).json({ error: 'ID и название обязательны' });
+  const list = loadFilters();
+  if (list.find(f => f.id === id)) return res.status(400).json({ error: 'Фильтр с таким ID уже есть' });
+  list.push({ id: id.trim(), label: label.trim(), type: type || 'tag' });
+  saveFilters(list);
+  res.json({ success: true, filters: list });
+});
+
+app.delete('/api/filters', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: 'ID обязателен' });
+  let list = loadFilters();
+  list = list.filter(f => f.id !== id);
+  saveFilters(list);
+  res.json({ success: true, filters: list });
 });
 
 // ===== ERROR HANDLING =====
