@@ -756,6 +756,23 @@ function renderClipPage(clip) {
             <source src="${clip.videoUrl}">
           </video>
           <div class="timecode-bar" id="clipPageTimecodeBar"></div>
+          <div class="frame-controls">
+            <button class="frame-btn" id="framePrevBtn" title="Предыдущий кадр (←)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="5" width="3" height="14"/><polygon points="20 5 10 12 20 19"/></svg>
+            </button>
+            <span class="frame-info" id="frameInfo">Кадр: 0:00.000</span>
+            <button class="frame-btn" id="frameNextBtn" title="Следующий кадр (→)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="17" y="5" width="3" height="14"/><polygon points="4 5 14 12 4 19"/></svg>
+            </button>
+            <select class="frame-fps-select" id="frameFpsSelect" title="Частота кадров">
+              <option value="24">24 fps</option>
+              <option value="23.976">23.976 fps</option>
+              <option value="30">30 fps</option>
+              <option value="25">25 fps</option>
+              <option value="12">12 fps (2s)</option>
+              <option value="8">8 fps (3s)</option>
+            </select>
+          </div>
         </div>
       ` : ''}
 
@@ -851,6 +868,57 @@ function renderClipPage(clip) {
       window.location.href = '/?animator=' + encodeURIComponent(tag.dataset.animator);
     });
   });
+
+  // Frame-by-frame controls
+  const frameVideo = page.querySelector('#clipPageVideo');
+  const frameInfo = page.querySelector('#frameInfo');
+  const fpsSelect = page.querySelector('#frameFpsSelect');
+
+  if (frameVideo && frameInfo) {
+    let fps = 24;
+
+    if (fpsSelect) {
+      fpsSelect.addEventListener('change', () => { fps = parseFloat(fpsSelect.value); });
+    }
+
+    function formatFrameTime(t) {
+      const m = Math.floor(t / 60);
+      const s = Math.floor(t % 60);
+      const ms = Math.floor((t % 1) * 1000);
+      return `${m}:${s.toString().padStart(2,'0')}.${ms.toString().padStart(3,'0')}`;
+    }
+
+    function updateFrameInfo() {
+      const t = frameVideo.currentTime;
+      const frameNum = Math.round(t * fps);
+      frameInfo.textContent = `Кадр ${frameNum} · ${formatFrameTime(t)}`;
+    }
+
+    function stepFrame(direction) {
+      frameVideo.pause();
+      frameVideo.currentTime = Math.max(0, frameVideo.currentTime + (direction / fps));
+      updateFrameInfo();
+    }
+
+    const prevBtn = page.querySelector('#framePrevBtn');
+    const nextBtn = page.querySelector('#frameNextBtn');
+    if (prevBtn) prevBtn.addEventListener('click', () => stepFrame(-1));
+    if (nextBtn) nextBtn.addEventListener('click', () => stepFrame(1));
+
+    frameVideo.addEventListener('timeupdate', updateFrameInfo);
+    frameVideo.addEventListener('seeked', updateFrameInfo);
+
+    // Keyboard: arrow keys for frame stepping when video is paused
+    document.addEventListener('keydown', function frameKeyHandler(e) {
+      if (!document.body.contains(frameVideo)) {
+        document.removeEventListener('keydown', frameKeyHandler);
+        return;
+      }
+      if (e.target.closest('input, textarea, select')) return;
+      if (e.key === ',' || (e.key === 'ArrowLeft' && frameVideo.paused)) { e.preventDefault(); stepFrame(-1); }
+      if (e.key === '.' || (e.key === 'ArrowRight' && frameVideo.paused)) { e.preventDefault(); stepFrame(1); }
+    });
+  }
 
   // Photo click to enlarge
   const galleryItems = page.querySelectorAll('.clip-page-gallery-item img');
