@@ -92,7 +92,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-card-count{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--text-muted)}
 .animator-card-arrow{color:var(--text-muted);flex-shrink:0;transition:transform .2s}
 .animator-card:hover .animator-card-arrow{transform:translateX(3px);color:var(--tag-animator-text)}
-.episode-avatar{font-size:.7rem!important;font-family:'Space Mono',monospace!important;width:44px!important;height:44px!important;background:var(--accent)!important}
+.episode-card .animator-avatar{font-size:.75rem;font-family:'Space Mono',monospace}
 .episodes-sort-bar{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;max-width:1440px;margin:0 auto;padding:0 1rem 1rem}
 
 /* Animator Profile */

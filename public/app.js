@@ -292,14 +292,14 @@ let episodeSortMode = 'clips';
 let episodeArcFilter = 'all';
 
 function getEpisodeArc(num) {
-  if (num >= 890 && num <= 1085) return 'Wano';
-  if (num >= 1086 && num <= 1122) return 'Egghead';
-  if (num >= 1123) return 'Elbaf';
+  if (num >= 890 && num <= 1088) return 'Wano';
+  if (num >= 1089 && num <= 1155) return 'Egghead';
+  if (num >= 1156) return 'Elbaf';
   return 'Unknown';
 }
 
 function getEpisodeList() {
-  // Collect all episodes from clips + default range 890-1155
+  // Default range 890-1155, plus any extras from clips
   const episodeSet = new Set();
   for (let i = 890; i <= 1155; i++) episodeSet.add(String(i));
   allClips.forEach(c => { if (c.episode) episodeSet.add(c.episode.trim()); });
@@ -354,7 +354,7 @@ function renderEpisodeGrid() {
   }
 
   grid.innerHTML = adminAddHtml + list.map((e, i) => `<div class="animator-card episode-card" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
-    <div class="animator-avatar episode-avatar">${esc(e.episode)}</div>
+    <div class="animator-avatar">${esc(e.episode)}</div>
     <div class="animator-card-info">
       <div class="animator-card-name">Серия ${esc(e.episode)}</div>
       <div class="animator-card-count">${e.arc} · ${e.count} клип${pluralRu(e.count)}</div>
