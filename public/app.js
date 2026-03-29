@@ -1,10 +1,12 @@
 // ===== ANIMATORS & FILTERS — loaded from server =====
 let ANIMATORS = [];
 let FILTERS = [];
+let EPISODES_DATA = { hidden: [], renamed: {} };
 
 async function loadAnimatorsAndFilters() {
   try { ANIMATORS = await (await fetch('/api/animators')).json(); } catch { ANIMATORS = []; }
   try { FILTERS = await (await fetch('/api/filters')).json(); } catch { FILTERS = []; }
+  try { EPISODES_DATA = await (await fetch('/api/episodes')).json(); } catch { EPISODES_DATA = { hidden: [], renamed: {} }; }
 }
 
 // ===== STATE =====
@@ -342,7 +344,8 @@ function renderEpisodeGrid() {
     list.sort((a, b) => b.num - a.num);
   }
 
-  // Show all episodes for everyone
+  // Hide hidden episodes for non-admins
+  if (!isAdmin) list = list.filter(e => !EPISODES_DATA.hidden.includes(e.episode));
 
   if (!list.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Серии не найдены</p></div>`;
@@ -357,25 +360,60 @@ function renderEpisodeGrid() {
     </div>`;
   }
 
-  grid.innerHTML = adminAddHtml + list.map((e, i) => `<div class="animator-card episode-card" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
+  const isHidden = (ep) => EPISODES_DATA.hidden.includes(ep);
+
+  grid.innerHTML = adminAddHtml + list.map((e, i) => `<div class="animator-card episode-card${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
     <div class="animator-avatar">${esc(e.episode)}</div>
     <div class="animator-card-info">
-      <div class="animator-card-name">Серия ${esc(e.episode)}</div>
+      <div class="animator-card-name">Серия ${esc(e.episode)}${isHidden(e.episode) ? ' <span style="font-size:.6rem;color:var(--text-muted)">(скрыта)</span>' : ''}</div>
       <div class="animator-card-count">${e.arc} · ${e.count} клип${pluralRu(e.count)}</div>
     </div>
+    ${isAdmin ? `<button class="animator-card-edit" data-edit-ep="${esc(e.episode)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="animator-card-delete ep-hide-btn" data-del-ep="${esc(e.episode)}" title="${isHidden(e.episode) ? 'Показать' : 'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">${isHidden(e.episode) ? '👁' : '×'}</button>` : ''}
     <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`).join('');
 
-  grid.querySelectorAll('.episode-card[data-episode]').forEach(c => c.addEventListener('click', () => {
+  grid.querySelectorAll('.episode-card[data-episode]').forEach(c => c.addEventListener('click', (ev) => {
+    if (ev.target.closest('.animator-card-delete') || ev.target.closest('.animator-card-edit')) return;
     navigateTo('episode-profile', c.dataset.episode);
   }));
+
+  // Admin: rename episode
+  grid.querySelectorAll('[data-edit-ep]').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const oldEp = btn.dataset.editEp;
+      const newEp = prompt(`Новый номер для серии «${oldEp}»:`, oldEp);
+      if (!newEp || newEp.trim() === oldEp) return;
+      try {
+        const res = await fetch('/api/episodes/rename', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({oldEpisode:oldEp, newEpisode:newEp.trim()}) });
+        const data = await res.json();
+        if (data.success) { await loadAnimatorsAndFilters(); await loadClips(); renderEpisodeGrid(); notify(`Серия «${oldEp}» → «${newEp.trim()}»`); }
+        else notify(data.error, true);
+      } catch { notify('Ошибка сети', true); }
+    });
+  });
+
+  // Admin: hide/unhide episode
+  grid.querySelectorAll('.ep-hide-btn').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const ep = btn.dataset.delEp;
+      const hidden = EPISODES_DATA.hidden.includes(ep);
+      const endpoint = hidden ? '/api/episodes/unhide' : '/api/episodes/hide';
+      try {
+        const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({episode:ep}) });
+        const data = await res.json();
+        if (data.success) { EPISODES_DATA = data.episodes; renderEpisodeGrid(); notify(hidden ? `Серия ${ep} показана` : `Серия ${ep} скрыта`); }
+        else notify(data.error, true);
+      } catch { notify('Ошибка сети', true); }
+    });
+  });
 
   const addCard = grid.querySelector('#addEpisodeCard');
   if (addCard) {
     addCard.addEventListener('click', () => {
       const ep = prompt('Номер серии:');
       if (!ep || !ep.trim()) return;
-      // Just navigate to that episode profile
       navigateTo('episode-profile', ep.trim());
       notify(`Серия ${ep.trim()} добавлена`);
     });

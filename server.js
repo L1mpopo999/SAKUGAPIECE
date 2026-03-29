@@ -105,6 +105,17 @@ function loadFilters() {
 }
 function saveFilters(list) { fs.writeFileSync(FILTERS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
 
+// ===== EPISODES DATA =====
+const EPISODES_FILE = path.join(dataDir, 'episodes.json');
+const DEFAULT_EPISODES = { hidden: [], renamed: {} };
+
+function loadEpisodes() {
+  if (!fs.existsSync(EPISODES_FILE)) { saveEpisodes(DEFAULT_EPISODES); return DEFAULT_EPISODES; }
+  try { return JSON.parse(fs.readFileSync(EPISODES_FILE, 'utf-8')); }
+  catch { return DEFAULT_EPISODES; }
+}
+function saveEpisodes(data) { fs.writeFileSync(EPISODES_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+
 // ===== MIDDLEWARE =====
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -346,6 +357,50 @@ app.delete('/api/filters', (req, res) => {
   res.json({ success: true, filters: list });
 });
 
+// ===== EPISODES API =====
+app.get('/api/episodes', (req, res) => { res.json(loadEpisodes()); });
+
+// Hide episode
+app.post('/api/episodes/hide', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { episode } = req.body;
+  if (!episode) return res.status(400).json({ error: 'Укажите серию' });
+  const data = loadEpisodes();
+  if (!data.hidden.includes(episode)) data.hidden.push(episode);
+  saveEpisodes(data);
+  res.json({ success: true, episodes: data });
+});
+
+// Unhide episode
+app.post('/api/episodes/unhide', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { episode } = req.body;
+  if (!episode) return res.status(400).json({ error: 'Укажите серию' });
+  const data = loadEpisodes();
+  data.hidden = data.hidden.filter(e => e !== episode);
+  saveEpisodes(data);
+  res.json({ success: true, episodes: data });
+});
+
+// Rename episode
+app.post('/api/episodes/rename', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { oldEpisode, newEpisode } = req.body;
+  if (!oldEpisode || !newEpisode) return res.status(400).json({ error: 'Укажите старый и новый номер' });
+  const data = loadEpisodes();
+  // Update renamed map
+  data.renamed[oldEpisode] = newEpisode;
+  saveEpisodes(data);
+  // Rename in all clips
+  const clips = loadClips();
+  let changed = 0;
+  clips.forEach(clip => {
+    if (clip.episode.trim() === oldEpisode) { clip.episode = newEpisode; changed++; }
+  });
+  if (changed) saveClips(clips);
+  res.json({ success: true, renamed: changed });
+});
+
 // ===== BACKUP (admin only) =====
 app.get('/api/backup', (req, res) => {
   const pwd = req.query.pwd;
@@ -363,6 +418,8 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(ANIMATORS_FILE)) archive.file(ANIMATORS_FILE, { name: 'animators.json' });
   // Add filters.json
   if (fs.existsSync(FILTERS_FILE)) archive.file(FILTERS_FILE, { name: 'filters.json' });
+  // Add episodes.json
+  if (fs.existsSync(EPISODES_FILE)) archive.file(EPISODES_FILE, { name: 'episodes.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 
