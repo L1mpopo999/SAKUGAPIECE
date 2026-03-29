@@ -46,7 +46,12 @@ function navigateTo(page, data) {
     $(`.nav-link[data-page="animators"]`).classList.add('active');
     renderAnimatorProfile(data);
   }
+  if (page === 'episode-profile' && data) {
+    $(`.nav-link[data-page="episodes"]`).classList.add('active');
+    renderEpisodeProfile(data);
+  }
   if (page === 'animators') renderAnimatorGrid();
+  if (page === 'episodes') renderEpisodeGrid();
   window.scrollTo(0, 0);
 }
 $$('.nav-link[data-page]').forEach(b => b.addEventListener('click', () => navigateTo(b.dataset.page)));
@@ -281,6 +286,137 @@ function renderAnimatorProfile(name) {
   if(!clips.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Пока нет загруженных клипов</p><p style="color:var(--text-muted);font-size:.8rem;margin-top:.4rem">Загрузите клип для этого аниматора!</p></div>`}
   else{grid.innerHTML=clips.map((c,i)=>renderClipCard(c,i)).join('');attachClipEvents(grid)}
 }
+
+// ===== EPISODES PAGE =====
+let episodeSortMode = 'clips';
+let episodeArcFilter = 'all';
+
+function getEpisodeArc(num) {
+  if (num >= 890 && num <= 1085) return 'Wano';
+  if (num >= 1086 && num <= 1122) return 'Egghead';
+  if (num >= 1123) return 'Elbaf';
+  return 'Unknown';
+}
+
+function getEpisodeList() {
+  // Collect all episodes from clips + default range 890-1155
+  const episodeSet = new Set();
+  for (let i = 890; i <= 1155; i++) episodeSet.add(String(i));
+  allClips.forEach(c => { if (c.episode) episodeSet.add(c.episode.trim()); });
+  return [...episodeSet];
+}
+
+function renderEpisodeGrid() {
+  const q = ($('#episodeSearchInput')?.value || '').trim();
+  const grid = $('#episodeGrid');
+
+  // Count clips per episode
+  const counts = new Map();
+  allClips.forEach(c => {
+    const ep = c.episode.trim();
+    counts.set(ep, (counts.get(ep) || 0) + 1);
+  });
+
+  let list = getEpisodeList().map(ep => ({
+    episode: ep,
+    num: parseInt(ep) || 0,
+    count: counts.get(ep) || 0,
+    arc: getEpisodeArc(parseInt(ep) || 0)
+  }));
+
+  // Filter by search
+  if (q) list = list.filter(e => e.episode.includes(q));
+
+  // Filter by arc
+  if (episodeArcFilter !== 'all') list = list.filter(e => e.arc === episodeArcFilter);
+
+  // Sort
+  if (episodeSortMode === 'clips') {
+    list.sort((a, b) => b.count !== a.count ? b.count - a.count : b.num - a.num);
+  } else {
+    list.sort((a, b) => b.num - a.num);
+  }
+
+  // Only show episodes with clips or in admin mode
+  if (!isAdmin) list = list.filter(e => e.count > 0);
+
+  if (!list.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Серии не найдены</p></div>`;
+    return;
+  }
+
+  let adminAddHtml = '';
+  if (isAdmin) {
+    adminAddHtml = `<div class="animator-card animator-add-card" id="addEpisodeCard" style="border-style:dashed;border-color:var(--gold);justify-content:center;gap:.5rem;cursor:pointer">
+      <span style="color:var(--gold);font-size:1.5rem">+</span>
+      <span style="color:var(--gold);font-family:'Space Mono',monospace;font-size:.75rem">Добавить серию</span>
+    </div>`;
+  }
+
+  grid.innerHTML = adminAddHtml + list.map((e, i) => `<div class="animator-card episode-card" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
+    <div class="animator-avatar episode-avatar">${esc(e.episode)}</div>
+    <div class="animator-card-info">
+      <div class="animator-card-name">Серия ${esc(e.episode)}</div>
+      <div class="animator-card-count">${e.arc} · ${e.count} клип${pluralRu(e.count)}</div>
+    </div>
+    <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>`).join('');
+
+  grid.querySelectorAll('.episode-card[data-episode]').forEach(c => c.addEventListener('click', () => {
+    navigateTo('episode-profile', c.dataset.episode);
+  }));
+
+  const addCard = grid.querySelector('#addEpisodeCard');
+  if (addCard) {
+    addCard.addEventListener('click', () => {
+      const ep = prompt('Номер серии:');
+      if (!ep || !ep.trim()) return;
+      // Just navigate to that episode profile
+      navigateTo('episode-profile', ep.trim());
+      notify(`Серия ${ep.trim()} добавлена`);
+    });
+  }
+}
+
+$('#episodeSearchInput')?.addEventListener('input', renderEpisodeGrid);
+
+// Episode sort & arc filter
+document.querySelectorAll('[data-episode-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-episode-sort]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    episodeSortMode = btn.dataset.episodeSort;
+    renderEpisodeGrid();
+  });
+});
+document.querySelectorAll('[data-episode-arc]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-episode-arc]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    episodeArcFilter = btn.dataset.episodeArc;
+    renderEpisodeGrid();
+  });
+});
+
+// ===== EPISODE PROFILE =====
+function renderEpisodeProfile(episode) {
+  $('#episodeProfileName').textContent = `Серия ${episode}`;
+  const clips = allClips.filter(c => c.episode.trim() === episode);
+  const arc = getEpisodeArc(parseInt(episode) || 0);
+  const animators = [...new Set(clips.flatMap(c => c.animators))];
+  let stats = `${arc} · ${clips.length} клип${pluralRu(clips.length)}`;
+  if (animators.length) stats += ` · ${animators.length} аниматор${pluralRu(animators.length)}`;
+  $('#episodeProfileStats').textContent = stats;
+  const grid = $('#episodeClipGrid');
+  if (!clips.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Пока нет клипов для этой серии</p></div>`;
+  } else {
+    grid.innerHTML = clips.map((c, i) => renderClipCard(c, i)).join('');
+    attachClipEvents(grid);
+  }
+}
+
+$('#backToEpisodesBtn').addEventListener('click', () => navigateTo('episodes'));
 
 // ===== UPLOAD MODAL =====
 function openUploadModal(presetAnimator) {
@@ -588,7 +724,6 @@ function openPlayer(id) {
 }
 function closePlayer(){if(timecodeInterval){clearInterval(timecodeInterval);timecodeInterval=null}$('#playerVideo').pause();$('#playerVideo').removeAttribute('src');$('#playerOverlay').classList.remove('visible');document.body.style.overflow=''}
 $('#playerCloseBtn').addEventListener('click',closePlayer);
-$('#playerOverlay').addEventListener('click',e=>{if(e.target===$('#playerOverlay'))closePlayer()});
 
 // ===== IMAGE VIEWER =====
 function openImageViewer(clip) {
@@ -670,7 +805,6 @@ function closeEditModal() {
 }
 
 $('#closeEditBtn').addEventListener('click', closeEditModal);
-$('#editModal').addEventListener('click', e => { if (e.target === $('#editModal')) closeEditModal(); });
 $('#editCancelBtn').addEventListener('click', closeEditModal);
 
 // Edit thumbnail
