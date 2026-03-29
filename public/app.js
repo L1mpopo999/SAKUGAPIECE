@@ -52,6 +52,11 @@ function navigateTo(page, data) {
   }
   if (page === 'animators') renderAnimatorGrid();
   if (page === 'episodes') renderEpisodeGrid();
+  // Update URL hash
+  if (page === 'browse') window.history.replaceState(null, '', '#');
+  else if (page === 'animator-profile' && data) window.history.replaceState(null, '', '#animator/' + encodeURIComponent(data));
+  else if (page === 'episode-profile' && data) window.history.replaceState(null, '', '#episode/' + encodeURIComponent(data));
+  else window.history.replaceState(null, '', '#' + page);
   window.scrollTo(0, 0);
 }
 $$('.nav-link[data-page]').forEach(b => b.addEventListener('click', () => navigateTo(b.dataset.page)));
@@ -926,10 +931,25 @@ async function init() {
     }
   }
 
-  // Check if navigating to animator
+  // Check if navigating to animator via query param
   const params = new URLSearchParams(window.location.search);
   if (params.get('animator')) {
     navigateTo('animator-profile', params.get('animator'));
+    return;
+  }
+
+  // Hash-based routing
+  const hash = window.location.hash.slice(1);
+  if (hash.startsWith('animator/')) {
+    navigateTo('animator-profile', decodeURIComponent(hash.slice(9)));
+  } else if (hash.startsWith('episode/')) {
+    navigateTo('episode-profile', decodeURIComponent(hash.slice(8)));
+  } else if (hash === 'episodes') {
+    navigateTo('episodes');
+  } else if (hash === 'animators') {
+    navigateTo('animators');
+  } else if (hash === 'about') {
+    navigateTo('about');
   }
 }
 
