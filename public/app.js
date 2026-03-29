@@ -342,8 +342,7 @@ function renderEpisodeGrid() {
     list.sort((a, b) => b.num - a.num);
   }
 
-  // Only show episodes with clips or in admin mode
-  if (!isAdmin) list = list.filter(e => e.count > 0);
+  // Show all episodes for everyone
 
   if (!list.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Серии не найдены</p></div>`;
