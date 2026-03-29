@@ -9,6 +9,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* Header */
 .header{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 2rem}
 .header-inner{max-width:1440px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:.5rem}
+.header-socials{display:flex;align-items:center;gap:.6rem}
+.header-socials-name{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--text-muted);letter-spacing:.02em}
 .logo{display:flex;align-items:baseline;gap:.3rem;text-decoration:none;flex-shrink:0}
 .logo-sakuga{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;color:var(--text-primary);line-height:1}
 .logo-piece{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;color:var(--accent);line-height:1}
@@ -267,10 +269,8 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
 
 /* Footer */
 .footer{border-top:1px solid var(--border);padding:1.5rem 1rem;text-align:center;position:relative;z-index:1}
-.footer-socials{display:flex;justify-content:center;gap:.8rem;margin-bottom:.6rem}
 .footer-social{color:var(--text-muted);transition:color .2s,transform .2s;display:flex;align-items:center}
 .footer-social:hover{color:var(--gold);transform:translateY(-2px)}
-.footer-author{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--text-muted);margin-bottom:.4rem}
 .footer-text{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--text-muted);letter-spacing:.04em}
 
 /* Notification */
@@ -286,6 +286,7 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
 @media(max-width:768px){
   .header{padding:0 1rem}
   .header-inner{height:52px}
+  .header-socials{display:none}
   .logo-sakuga,.logo-piece{font-size:1.4rem}
   .nav-links{gap:.7rem}
   .nav-link{font-size:.65rem;letter-spacing:.06em}
