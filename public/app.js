@@ -407,6 +407,15 @@ function renderEpisodeProfile(episode) {
   let stats = `${arc} · ${clips.length} клип${pluralRu(clips.length)}`;
   if (animators.length) stats += ` · ${animators.length} аниматор${pluralRu(animators.length)}`;
   $('#episodeProfileStats').textContent = stats;
+
+  // Sort: images/photos first, then videos; within each group sort by clipOrder
+  clips.sort((a, b) => {
+    const aIsPhoto = !a.videoUrl;
+    const bIsPhoto = !b.videoUrl;
+    if (aIsPhoto !== bIsPhoto) return aIsPhoto ? -1 : 1;
+    return (a.clipOrder || 0) - (b.clipOrder || 0);
+  });
+
   const grid = $('#episodeClipGrid');
   if (!clips.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Пока нет клипов для этой серии</p></div>`;
@@ -585,6 +594,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
   selectedImages.forEach(f=>fd.append('images',f));
   fd.append('title',title);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);
   fd.append('timecodes', $('#timecodesInput').value.trim());
+  fd.append('clipOrder', $('#clipOrderInput').value.trim() || '0');
 
   $('#submitBtn').disabled=true;$('#uploadProgress').classList.add('visible');
 
@@ -789,6 +799,7 @@ function openEditModal(id) {
   $('#editTagsInput').value = clip.tags.join(', ');
   $('#editNotesInput').value = clip.notes || '';
   $('#editTimecodesInput').value = clip.timecodes || '';
+  $('#editClipOrderInput').value = clip.clipOrder || 0;
   // Thumbnail preview
   const tp = $('#editThumbnailPreview');
   const rb = $('#editThumbnailRemoveBtn');
@@ -841,7 +852,8 @@ $('#editSaveBtn').addEventListener('click', async () => {
     arc: $('#editArcSelect').value,
     tags: $('#editTagsInput').value.trim(),
     notes: $('#editNotesInput').value.trim(),
-    timecodes: $('#editTimecodesInput').value.trim()
+    timecodes: $('#editTimecodesInput').value.trim(),
+    clipOrder: $('#editClipOrderInput').value.trim() || '0'
   };
   if (!body.title || !body.animators || !body.episode) {
     notify('Заполните название, аниматора и эпизод', true);
