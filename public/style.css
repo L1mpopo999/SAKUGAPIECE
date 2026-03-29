@@ -115,6 +115,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-chip{display:inline-flex;align-items:center;gap:.25rem;background:var(--tag-animator-bg);color:var(--tag-animator-text);font-family:'Space Mono',monospace;font-size:.68rem;padding:.2rem .5rem;border-radius:4px}
 .animator-chip-remove{background:none;border:none;color:var(--tag-animator-text);cursor:pointer;font-size:.85rem;line-height:1;padding:0;opacity:.7}
 .animator-chip-remove:hover{opacity:1}
+.tag-chip{background:var(--tag-bg)!important;color:var(--tag-text)!important}
+.tag-chip .animator-chip-remove{color:var(--tag-text)!important}
 .animator-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);box-shadow:var(--shadow);max-height:180px;overflow-y:auto;display:none;z-index:60}
 .animator-dropdown.visible{display:block}
 .animator-dropdown-item{padding:.5rem .8rem;cursor:pointer;font-size:.82rem;color:var(--text-primary);transition:background .15s}

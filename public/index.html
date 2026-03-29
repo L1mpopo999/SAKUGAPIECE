@@ -7,9 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Noto+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
-<link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="data:,">
 <meta name="theme-color" content="#0a0a0f">
 </head>
 <body>
@@ -202,8 +200,12 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Теги (через запятую)</label>
-        <input class="form-input" id="tagsInput" type="text" placeholder="напр. fighting, effects, gear5">
+        <label class="form-label">Теги</label>
+        <div class="animator-select-wrapper" id="tagSelectWrapper">
+          <div class="animator-chips" id="tagChips"></div>
+          <input class="form-input" id="tagsInput" type="text" placeholder="Начните вводить тег..." autocomplete="off">
+          <div class="animator-dropdown" id="tagDropdown"></div>
+        </div>
       </div>
 
       <div class="form-group">

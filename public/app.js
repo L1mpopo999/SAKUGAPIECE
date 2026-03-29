@@ -90,35 +90,38 @@ function renderClipCard(clip, i) {
     <div class="clip-info">
       <div class="clip-title">${esc(clip.title)}</div>
       <div class="clip-meta"><span>Эп. ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span></div>
-      <div class="clip-tags">
-        ${(() => {
-          const allTags = [
-            ...clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`),
-            ...clip.tags.slice(0,2).map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`)
-          ];
-          const MAX_VISIBLE = 4;
-          const visible = allTags.slice(0, MAX_VISIBLE).join('');
-          const hidden = allTags.slice(MAX_VISIBLE);
-          if (hidden.length === 0) return visible;
-          return visible +
-            `<span class="clip-tags-hidden" style="display:none">${hidden.join('')}</span>` +
-            `<span class="clip-tag clip-tags-more">+${hidden.length}</span>`;
-        })()}
+      <div class="clip-tags" data-clip-id="${clip.id}">
+        ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
+        ${clip.tags.slice(0,2).map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}
+        ${clip.episode ? `<span class="clip-tag category">${esc(clip.episode)}</span>` : ''}
       </div>
     </div>
   </div>`;
 }
 
 function attachClipEvents(container) {
+  // Add "..." buttons to overflowing tag containers
+  container.querySelectorAll('.clip-tags').forEach(tagsEl => {
+    if (tagsEl.scrollHeight > tagsEl.clientHeight + 2) {
+      const moreBtn = document.createElement('span');
+      moreBtn.className = 'clip-tag clip-tags-more';
+      moreBtn.textContent = '...';
+      tagsEl.appendChild(moreBtn);
+    }
+  });
+
   container.querySelectorAll('.clip-card').forEach(card => {
     card.addEventListener('click', e => {
       if (e.target.closest('.clip-tags-more')) {
         e.stopPropagation();
         const tagsContainer = e.target.closest('.clip-tags');
-        const hidden = tagsContainer.querySelector('.clip-tags-hidden');
+        tagsContainer.classList.toggle('expanded');
         const moreBtn = tagsContainer.querySelector('.clip-tags-more');
-        if (hidden) { hidden.style.display = 'contents'; }
-        if (moreBtn) { moreBtn.remove(); }
+        if (tagsContainer.classList.contains('expanded')) {
+          moreBtn.textContent = '▲';
+        } else {
+          moreBtn.textContent = '...';
+        }
         return;
       }
       if (e.target.closest('.admin-delete-btn')) { e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
@@ -311,6 +314,45 @@ function renderAnimatorChips() {
   c.querySelectorAll('.animator-chip-remove').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();selectedAnimators=selectedAnimators.filter(a=>a!==b.dataset.name);renderAnimatorChips()}));
 }
 
+// ===== TAG SELECTOR =====
+let selectedTags = [];
+const tagInput=$('#tagsInput'), tagDropdown=$('#tagDropdown');
+
+tagInput.addEventListener('input',()=>{
+  const q=tagInput.value.toLowerCase().trim();
+  const available=FILTERS.filter(f=>!selectedTags.includes(f.id));
+  const matches=q ? available.filter(f=>f.id.toLowerCase().includes(q)||f.label.toLowerCase().includes(q)) : available;
+  if(!matches.length){tagDropdown.classList.remove('visible');return}
+  tagDropdown.innerHTML=matches.slice(0,10).map(f=>`<div class="animator-dropdown-item" data-id="${esc(f.id)}" data-label="${esc(f.label)}">${esc(f.label)} <span style="opacity:.5;font-size:.75em">(${esc(f.id)})</span></div>`).join('');
+  tagDropdown.querySelectorAll('.animator-dropdown-item').forEach(el=>el.addEventListener('click',()=>{
+    if(!selectedTags.includes(el.dataset.id))selectedTags.push(el.dataset.id);
+    renderTagChips();tagInput.value='';tagDropdown.classList.remove('visible');
+  }));
+  tagDropdown.classList.add('visible');
+});
+tagInput.addEventListener('focus',()=>{
+  const available=FILTERS.filter(f=>!selectedTags.includes(f.id));
+  if(available.length){
+    tagDropdown.innerHTML=available.slice(0,10).map(f=>`<div class="animator-dropdown-item" data-id="${esc(f.id)}" data-label="${esc(f.label)}">${esc(f.label)} <span style="opacity:.5;font-size:.75em">(${esc(f.id)})</span></div>`).join('');
+    tagDropdown.querySelectorAll('.animator-dropdown-item').forEach(el=>el.addEventListener('click',()=>{
+      if(!selectedTags.includes(el.dataset.id))selectedTags.push(el.dataset.id);
+      renderTagChips();tagInput.value='';tagDropdown.classList.remove('visible');
+    }));
+    tagDropdown.classList.add('visible');
+  }
+});
+document.addEventListener('click',e=>{if(!e.target.closest('#tagSelectWrapper'))tagDropdown.classList.remove('visible')});
+
+function renderTagChips(){
+  const c=$('#tagChips');
+  c.innerHTML=selectedTags.map(t=>{
+    const f=FILTERS.find(f=>f.id===t);
+    const label=f?f.label:t;
+    return`<span class="animator-chip tag-chip">${esc(label)}<button class="animator-chip-remove" data-tag="${esc(t)}">&times;</button></span>`;
+  }).join('');
+  c.querySelectorAll('.animator-chip-remove').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();selectedTags=selectedTags.filter(t=>t!==b.dataset.tag);renderTagChips()}));
+}
+
 // ===== FILE HANDLING — VIDEO =====
 const dropZone=$('#dropZone'), fileInput=$('#fileInput');
 dropZone.addEventListener('click',()=>fileInput.click());
@@ -395,7 +437,7 @@ function formatBytes(b){if(b<1024)return b+' Б';if(b<1048576)return(b/1024).toF
 // ===== UPLOAD SUBMIT =====
 $('#uploadForm').addEventListener('submit',async e=>{
   e.preventDefault();
-  const title=$('#clipTitleInput').value.trim(), episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=$('#tagsInput').value.trim(), notes=$('#notesInput').value.trim();
+  const title=$('#clipTitleInput').value.trim(), episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=selectedTags.join(','), notes=$('#notesInput').value.trim();
   if(!selectedFile&&!selectedImages.length){notify('Загрузите видео или хотя бы одно фото',true);return}
   if(!title){notify('Введите название',true);return}
   if(!selectedAnimators.length){notify('Выберите аниматора',true);return}
@@ -418,7 +460,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
       xhr.onerror=()=>no(new Error('Ошибка сети'));
       xhr.open('POST','/api/clips');xhr.setRequestHeader('X-Admin-Password',ADMIN_PASSWORD);xhr.send(fd);
     });
-    $('#uploadForm').reset();selectedAnimators=[];selectedImages=[];selectedFile=null;selectedThumbnail=null;renderAnimatorChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');removeThumbnail();
+    $('#uploadForm').reset();selectedAnimators=[];selectedTags=[];selectedImages=[];selectedFile=null;selectedThumbnail=null;renderAnimatorChips();renderTagChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');removeThumbnail();
     const p=$('#uploadPreviewPlayer');if(p.src){p.pause();URL.revokeObjectURL(p.src);p.removeAttribute('src')}$('#uploadVideoPreview').style.display='none';
     closeUploadModal();notify(`«${title}» загружен!`);await loadClips();
     if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile);
