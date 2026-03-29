@@ -267,6 +267,10 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
 
 /* Footer */
 .footer{border-top:1px solid var(--border);padding:1.5rem 1rem;text-align:center;position:relative;z-index:1}
+.footer-socials{display:flex;justify-content:center;gap:.8rem;margin-bottom:.6rem}
+.footer-social{color:var(--text-muted);transition:color .2s,transform .2s;display:flex;align-items:center}
+.footer-social:hover{color:var(--gold);transform:translateY(-2px)}
+.footer-author{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--text-muted);margin-bottom:.4rem}
 .footer-text{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--text-muted);letter-spacing:.04em}
 
 /* Notification */
