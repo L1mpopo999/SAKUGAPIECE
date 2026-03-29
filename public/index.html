@@ -46,7 +46,7 @@
 <div id="page-browse" class="page active">
   <section class="hero">
     <h1 class="hero-title">ONE PIECE <span class="hl">SAKUGA</span> ARCHIVE</h1>
-    <p class="hero-sub">Клипы с сакугой из One Piece в высоком качестве — поиск по аниматорам, аркам и эпизодам</p>
+    <p class="hero-sub">Клипы с крутой анимацией из One Piece в высоком качестве — поиск по аниматорам, аркам и эпизодам</p>
     <div class="search-wrapper">
       <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input class="search-input" id="searchInput" type="text" placeholder="Поиск по аниматорам, эпизодам, аркам..." autocomplete="off">
@@ -351,8 +351,12 @@
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Теги — через запятую</label>
-      <input class="form-input" id="editTagsInput" type="text">
+      <label class="form-label">Теги</label>
+      <div class="animator-select-wrapper" id="editTagSelectWrapper">
+        <div class="animator-chips" id="editTagChips"></div>
+        <input class="form-input" id="editTagsInput" type="text" placeholder="Начните вводить тег..." autocomplete="off">
+        <div class="animator-dropdown" id="editTagDropdown"></div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Заметки</label>
@@ -362,6 +366,14 @@
       <label class="form-label">Таймкоды аниматоров</label>
       <textarea class="form-textarea" id="editTimecodesInput" placeholder="0:00 - Vincent Chansard&#10;0:15 - Tu Yong-Ce"></textarea>
       <div class="form-hint">Каждый с новой строки: 0:00 - Имя</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Видео</label>
+      <div class="edit-thumbnail-area">
+        <video id="editVideoPreview" style="max-width:200px;max-height:120px;border-radius:var(--radius);border:1px solid var(--border);display:none" muted></video>
+        <input type="file" id="editVideoInput" accept="video/*" hidden>
+        <button type="button" class="btn-submit" style="width:auto;padding:.4rem .8rem;font-size:.65rem;margin:0" id="editVideoBtn">Заменить видео</button>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Обложка</label>

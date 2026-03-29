@@ -830,6 +830,8 @@ function tryLogin(){
 // ===== EDIT CLIP =====
 let editingClipId = null;
 
+let editSelectedTags = [];
+
 function openEditModal(id) {
   const clip = allClips.find(c => c.id === id);
   if (!clip) return;
@@ -838,10 +840,16 @@ function openEditModal(id) {
   $('#editAnimatorInput').value = clip.animators.join(', ');
   $('#editEpisodeInput').value = clip.episode;
   $('#editArcSelect').value = clip.arc;
-  $('#editTagsInput').value = clip.tags.join(', ');
+  editSelectedTags = [...clip.tags];
+  renderEditTagChips();
+  $('#editTagsInput').value = '';
   $('#editNotesInput').value = clip.notes || '';
   $('#editTimecodesInput').value = clip.timecodes || '';
   $('#editClipOrderInput').value = clip.clipOrder || 0;
+  // Video preview
+  const vp = $('#editVideoPreview');
+  if (clip.videoUrl) { vp.src = clip.videoUrl; vp.style.display = 'block'; }
+  else { vp.removeAttribute('src'); vp.style.display = 'none'; }
   // Thumbnail preview
   const tp = $('#editThumbnailPreview');
   const rb = $('#editThumbnailRemoveBtn');
@@ -859,6 +867,71 @@ function closeEditModal() {
 
 $('#closeEditBtn').addEventListener('click', closeEditModal);
 $('#editCancelBtn').addEventListener('click', closeEditModal);
+
+// ===== EDIT TAG AUTOCOMPLETE =====
+const editTagInput=$('#editTagsInput'), editTagDropdown=$('#editTagDropdown');
+
+editTagInput.addEventListener('input',()=>{
+  const q=editTagInput.value.toLowerCase().trim();
+  const available=FILTERS.filter(f=>!editSelectedTags.includes(f.id));
+  const matches=q ? available.filter(f=>f.id.toLowerCase().includes(q)||f.label.toLowerCase().includes(q)) : available;
+  if(!matches.length){editTagDropdown.classList.remove('visible');return}
+  editTagDropdown.innerHTML=matches.slice(0,10).map(f=>`<div class="animator-dropdown-item" data-id="${esc(f.id)}" data-label="${esc(f.label)}">${esc(f.label)} <span style="opacity:.5;font-size:.75em">(${esc(f.id)})</span></div>`).join('');
+  editTagDropdown.querySelectorAll('.animator-dropdown-item').forEach(el=>el.addEventListener('click',()=>{
+    if(!editSelectedTags.includes(el.dataset.id))editSelectedTags.push(el.dataset.id);
+    renderEditTagChips();editTagInput.value='';editTagDropdown.classList.remove('visible');
+  }));
+  editTagDropdown.classList.add('visible');
+});
+editTagInput.addEventListener('focus',()=>{
+  const available=FILTERS.filter(f=>!editSelectedTags.includes(f.id));
+  if(available.length){
+    editTagDropdown.innerHTML=available.slice(0,10).map(f=>`<div class="animator-dropdown-item" data-id="${esc(f.id)}" data-label="${esc(f.label)}">${esc(f.label)} <span style="opacity:.5;font-size:.75em">(${esc(f.id)})</span></div>`).join('');
+    editTagDropdown.querySelectorAll('.animator-dropdown-item').forEach(el=>el.addEventListener('click',()=>{
+      if(!editSelectedTags.includes(el.dataset.id))editSelectedTags.push(el.dataset.id);
+      renderEditTagChips();editTagInput.value='';editTagDropdown.classList.remove('visible');
+    }));
+    editTagDropdown.classList.add('visible');
+  }
+});
+document.addEventListener('click',e=>{if(!e.target.closest('#editTagSelectWrapper'))editTagDropdown.classList.remove('visible')});
+
+function renderEditTagChips(){
+  const c=$('#editTagChips');
+  c.innerHTML=editSelectedTags.map(t=>{
+    const f=FILTERS.find(f=>f.id===t);
+    const label=f?f.label:t;
+    return`<span class="animator-chip tag-chip">${esc(label)}<button class="animator-chip-remove" data-tag="${esc(t)}">&times;</button></span>`;
+  }).join('');
+  c.querySelectorAll('.animator-chip-remove').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();editSelectedTags=editSelectedTags.filter(t=>t!==b.dataset.tag);renderEditTagChips()}));
+}
+
+// ===== EDIT VIDEO =====
+$('#editVideoBtn').addEventListener('click', () => $('#editVideoInput').click());
+$('#editVideoInput').addEventListener('change', async () => {
+  const f = $('#editVideoInput').files[0];
+  if (!f || !editingClipId) return;
+  if (!f.type.startsWith('video/')) { notify('Выберите видеофайл', true); return; }
+  if (f.size > 200*1024*1024) { notify('Видео слишком большое (макс 200 МБ)', true); return; }
+  const fd = new FormData();
+  fd.append('video', f);
+  try {
+    notify('Загрузка видео...');
+    const res = await fetch(`/api/clips/${editingClipId}/video`, {
+      method: 'POST',
+      headers: { 'X-Admin-Password': ADMIN_PASSWORD },
+      body: fd
+    });
+    const data = await res.json();
+    if (data.success) {
+      $('#editVideoPreview').src = data.videoUrl;
+      $('#editVideoPreview').style.display = 'block';
+      notify('Видео обновлено');
+      await loadClips();
+    } else notify(data.error, true);
+  } catch { notify('Ошибка сети', true); }
+  $('#editVideoInput').value = '';
+});
 
 // Edit thumbnail
 $('#editThumbnailBtn').addEventListener('click', () => $('#editThumbnailInput').click());
@@ -892,7 +965,7 @@ $('#editSaveBtn').addEventListener('click', async () => {
     animators: $('#editAnimatorInput').value.trim(),
     episode: $('#editEpisodeInput').value.trim(),
     arc: $('#editArcSelect').value,
-    tags: $('#editTagsInput').value.trim(),
+    tags: editSelectedTags.join(','),
     notes: $('#editNotesInput').value.trim(),
     timecodes: $('#editTimecodesInput').value.trim(),
     clipOrder: $('#editClipOrderInput').value.trim() || '0'

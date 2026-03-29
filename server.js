@@ -255,6 +255,34 @@ app.post('/api/clips/:id/thumbnail', thumbnailUpload, (req, res) => {
   res.json({ success: true, thumbnailUrl: clip.thumbnailUrl });
 });
 
+// Upload/replace video for existing clip (admin only)
+const videoUpload = uploadFiles.single('video');
+app.post('/api/clips/:id/video', videoUpload, (req, res) => {
+  if (!checkAdmin(req, res)) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    return;
+  }
+  const clips = loadClips();
+  const id = parseInt(req.params.id);
+  const clip = clips.find(c => c.id === id);
+  if (!clip) { if (req.file) fs.unlinkSync(req.file.path); return res.status(404).json({ error: 'Клип не найден' }); }
+  if (!req.file) return res.status(400).json({ error: 'Файл обязателен' });
+
+  // Remove old video if exists
+  if (clip.filename) {
+    const oldPath = path.join(uploadsDir, clip.filename);
+    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  }
+
+  clip.filename = req.file.filename;
+  clip.videoUrl = '/uploads/' + req.file.filename;
+  clip.type = 'video';
+  clip.quality = '1080p';
+  clip.size = req.file.size;
+  saveClips(clips);
+  res.json({ success: true, videoUrl: clip.videoUrl });
+});
+
 // Delete a clip (admin only)
 app.delete('/api/clips/:id', (req, res) => {
   if (!checkAdmin(req, res)) return;
