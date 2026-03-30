@@ -725,6 +725,31 @@ function openPlayer(id) {
   $('#playerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">Эп. ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}${clip.tags.map(t=>`<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}`;
   $('#playerDetails').querySelectorAll('.clip-tag.animator').forEach(t=>t.addEventListener('click',()=>{closePlayer();navigateTo('animator-profile',t.dataset.animator)}));
 
+  // Notes
+  const notesEl = $('#playerNotes');
+  if (clip.notes && clip.notes.trim()) {
+    notesEl.innerHTML = `<div class="player-notes-label">Заметки</div><div class="player-notes-text">${esc(clip.notes).replace(/\n/g, '<br>')}</div>`;
+    notesEl.style.display = '';
+  } else {
+    notesEl.innerHTML = '';
+    notesEl.style.display = 'none';
+  }
+
+  // Attached images
+  const imagesEl = $('#playerImages');
+  if (clip.images && clip.images.length) {
+    imagesEl.innerHTML = `<div class="player-notes-label">Фотографии</div><div class="player-images-grid">${clip.images.map((img, idx) => `<img class="player-image-thumb" src="${img.url}" data-idx="${idx}" alt="">`).join('')}</div>`;
+    imagesEl.querySelectorAll('.player-image-thumb').forEach(img => {
+      img.addEventListener('click', () => {
+        openClipPageImageViewer(clip.images.map(i => i.url), parseInt(img.dataset.idx));
+      });
+    });
+    imagesEl.style.display = '';
+  } else {
+    imagesEl.innerHTML = '';
+    imagesEl.style.display = 'none';
+  }
+
   currentTimecodes = parseTimecodes(clip.timecodes);
 
   // Render timecode list

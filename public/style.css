@@ -213,6 +213,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .timecode-time{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--gold);min-width:3rem;flex-shrink:0}
 .timecode-name{font-size:.85rem;color:var(--text-primary)}
 .player-current-animator{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--gold);margin-bottom:.4rem;min-height:1.1rem}
+.player-notes{margin-top:.8rem}
+.player-notes-label{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem}
+.player-notes-text{font-size:.85rem;color:var(--text-secondary);line-height:1.5}
+.player-images{margin-top:.8rem}
+.player-images-grid{display:flex;flex-wrap:wrap;gap:.5rem}
+.player-image-thumb{width:120px;height:80px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer;transition:border-color .2s,transform .2s}
+.player-image-thumb:hover{border-color:var(--gold);transform:scale(1.05)}
 .form-hint{font-size:.7rem;color:var(--text-muted);margin-top:.3rem}
 
 /* Clip Page */
