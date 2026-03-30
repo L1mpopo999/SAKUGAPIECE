@@ -116,6 +116,16 @@ function loadEpisodes() {
 }
 function saveEpisodes(data) { fs.writeFileSync(EPISODES_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
 
+// ===== HIDDEN ANIMATORS =====
+const HIDDEN_ANIMATORS_FILE = path.join(dataDir, 'hidden_animators.json');
+
+function loadHiddenAnimators() {
+  if (!fs.existsSync(HIDDEN_ANIMATORS_FILE)) { saveHiddenAnimators([]); return []; }
+  try { return JSON.parse(fs.readFileSync(HIDDEN_ANIMATORS_FILE, 'utf-8')); }
+  catch { return []; }
+}
+function saveHiddenAnimators(list) { fs.writeFileSync(HIDDEN_ANIMATORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+
 // ===== MIDDLEWARE =====
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -202,6 +212,20 @@ app.post('/api/clips', uploadHandler, (req, res) => {
 
   clips.unshift(newClip);
   saveClips(clips);
+
+  // Auto-add new animators to the list
+  const animatorList = loadAnimators();
+  let animatorsChanged = false;
+  newClip.animators.forEach(a => {
+    if (!animatorList.find(existing => existing.toLowerCase() === a.toLowerCase())) {
+      animatorList.push(a);
+      animatorsChanged = true;
+    }
+  });
+  if (animatorsChanged) {
+    animatorList.sort((a, b) => a.localeCompare(b));
+    saveAnimators(animatorList);
+  }
 
   res.json({ success: true, clip: newClip });
 });
@@ -361,6 +385,29 @@ app.put('/api/animators/rename', (req, res) => {
   res.json({ success: true, renamed: changed });
 });
 
+// Hidden animators
+app.get('/api/animators/hidden', (req, res) => { res.json(loadHiddenAnimators()); });
+
+app.post('/api/animators/hide', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Имя обязательно' });
+  const list = loadHiddenAnimators();
+  if (!list.includes(name)) list.push(name);
+  saveHiddenAnimators(list);
+  res.json({ success: true, hidden: list });
+});
+
+app.post('/api/animators/unhide', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Имя обязательно' });
+  let list = loadHiddenAnimators();
+  list = list.filter(a => a !== name);
+  saveHiddenAnimators(list);
+  res.json({ success: true, hidden: list });
+});
+
 // ===== FILTERS API =====
 app.get('/api/filters', (req, res) => { res.json(loadFilters()); });
 
@@ -448,6 +495,8 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(FILTERS_FILE)) archive.file(FILTERS_FILE, { name: 'filters.json' });
   // Add episodes.json
   if (fs.existsSync(EPISODES_FILE)) archive.file(EPISODES_FILE, { name: 'episodes.json' });
+  // Add hidden_animators.json
+  if (fs.existsSync(HIDDEN_ANIMATORS_FILE)) archive.file(HIDDEN_ANIMATORS_FILE, { name: 'hidden_animators.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 

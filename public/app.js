@@ -2,11 +2,13 @@
 let ANIMATORS = [];
 let FILTERS = [];
 let EPISODES_DATA = { hidden: [], renamed: {} };
+let HIDDEN_ANIMATORS = [];
 
 async function loadAnimatorsAndFilters() {
   try { ANIMATORS = await (await fetch('/api/animators')).json(); } catch { ANIMATORS = []; }
   try { FILTERS = await (await fetch('/api/filters')).json(); } catch { FILTERS = []; }
   try { EPISODES_DATA = await (await fetch('/api/episodes')).json(); } catch { EPISODES_DATA = { hidden: [], renamed: {} }; }
+  try { HIDDEN_ANIMATORS = await (await fetch('/api/animators/hidden')).json(); } catch { HIDDEN_ANIMATORS = []; }
 }
 
 // ===== STATE =====
@@ -204,7 +206,11 @@ function renderAnimatorGrid() {
     const key = a.toLowerCase();
     counts.set(key, (counts.get(key) || 0) + 1);
   }));
-  let list=ANIMATORS.map(n=>({name:n,count:counts.get(n.toLowerCase())||0}));
+  let list=ANIMATORS.map(n=>({name:n,count:counts.get(n.toLowerCase())||0,hidden:HIDDEN_ANIMATORS.includes(n)}));
+  
+  // Hide hidden animators for non-admins
+  if (!isAdmin) list = list.filter(a => !a.hidden);
+  
   if(q) list=list.filter(a=>a.name.toLowerCase().includes(q));
   list.sort((a,b)=>b.count!==a.count?b.count-a.count:a.name.localeCompare(b.name));
 
@@ -218,16 +224,15 @@ function renderAnimatorGrid() {
 
   if(!list.length && !isAdmin){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Аниматор не найден</p></div>`;return}
 
-  grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
+  grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card${a.hidden?' episode-hidden':''}" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
     <div class="animator-avatar">${getInitials(a.name)}</div>
-    <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}</div><div class="animator-card-count">${a.count} клип${pluralRu(a.count)}</div></div>
-    ${isAdmin ? `<button class="animator-card-edit" data-edit-name="${esc(a.name)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">×</button>` : ''}
+    <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}${a.hidden?' <span style="font-size:.6rem;color:var(--text-muted)">(скрыт)</span>':''}</div><div class="animator-card-count">${a.count} клип${pluralRu(a.count)}</div></div>
+    ${isAdmin ? `<button class="animator-card-edit" data-edit-name="${esc(a.name)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="anim-hide-btn" data-hide-name="${esc(a.name)}" title="${a.hidden?'Показать':'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.2rem">${a.hidden?'👁':'×'}</button><button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить навсегда" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.8rem;margin-right:.3rem">🗑</button>` : ''}
     <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`).join('');
 
   grid.querySelectorAll('.animator-card[data-name]').forEach(c=>c.addEventListener('click', e => {
-    if (e.target.closest('.animator-card-delete')) return;
-    if (e.target.closest('.animator-card-edit')) return;
+    if (e.target.closest('.animator-card-delete') || e.target.closest('.animator-card-edit') || e.target.closest('.anim-hide-btn')) return;
     navigateTo('animator-profile',c.dataset.name);
   }));
 
@@ -241,12 +246,28 @@ function renderAnimatorGrid() {
     });
   }
 
-  // Admin: delete animator
+  // Admin: hide/unhide animator
+  grid.querySelectorAll('.anim-hide-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.hideName;
+      const hidden = HIDDEN_ANIMATORS.includes(name);
+      const endpoint = hidden ? '/api/animators/unhide' : '/api/animators/hide';
+      try {
+        const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({name}) });
+        const data = await res.json();
+        if (data.success) { HIDDEN_ANIMATORS = data.hidden; renderAnimatorGrid(); notify(hidden ? `${name} показан` : `${name} скрыт`); }
+        else notify(data.error, true);
+      } catch { notify('Ошибка сети', true); }
+    });
+  });
+
+  // Admin: delete animator permanently
   grid.querySelectorAll('.animator-card-delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const name = btn.dataset.delName;
-      if (!confirm(`Удалить аниматора «${name}»?`)) return;
+      if (!confirm(`Удалить аниматора «${name}» навсегда?`)) return;
       await fetch('/api/animators', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({name}) });
       await loadAnimatorsAndFilters();
       renderAnimatorGrid();
@@ -650,7 +671,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
     });
     $('#uploadForm').reset();selectedAnimators=[];selectedTags=[];selectedImages=[];selectedFile=null;selectedThumbnail=null;renderAnimatorChips();renderTagChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');removeThumbnail();
     const p=$('#uploadPreviewPlayer');if(p.src){p.pause();URL.revokeObjectURL(p.src);p.removeAttribute('src')}$('#uploadVideoPreview').style.display='none';
-    closeUploadModal();notify(`«${title}» загружен!`);await loadClips();
+    closeUploadModal();notify(`«${title}» загружен!`);await loadAnimatorsAndFilters();await loadClips();
     if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile);
   }catch(err){notify(err.message||'Ошибка загрузки',true)}
   finally{$('#submitBtn').disabled=false;$('#uploadProgress').classList.remove('visible');$('#progressBarFill').style.width='0%'}
