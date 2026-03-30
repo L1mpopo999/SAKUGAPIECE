@@ -903,6 +903,7 @@ function openEditModal(id) {
   else { tp.src = ''; tp.style.display = 'none'; rb.style.display = 'none'; }
   $('#editModal').classList.add('visible');
   document.body.style.overflow = 'hidden';
+  renderEditImagesGrid();
 }
 
 function closeEditModal() {
@@ -1003,6 +1004,54 @@ $('#editThumbnailInput').addEventListener('change', async () => {
   } catch { notify('Ошибка сети', true); }
   $('#editThumbnailInput').value = '';
 });
+
+// Edit images
+$('#editImagesBtn').addEventListener('click', () => $('#editImagesInput').click());
+$('#editImagesInput').addEventListener('change', async () => {
+  const files = $('#editImagesInput').files;
+  if (!files.length || !editingClipId) return;
+  const fd = new FormData();
+  for (const f of files) fd.append('images', f);
+  try {
+    notify('Загрузка фото...');
+    const res = await fetch(`/api/clips/${editingClipId}/images`, {
+      method: 'POST',
+      headers: { 'X-Admin-Password': ADMIN_PASSWORD },
+      body: fd
+    });
+    const data = await res.json();
+    if (data.success) {
+      await loadClips();
+      renderEditImagesGrid();
+      notify(`Добавлено ${files.length} фото`);
+    } else notify(data.error, true);
+  } catch { notify('Ошибка сети', true); }
+  $('#editImagesInput').value = '';
+});
+
+function renderEditImagesGrid() {
+  const clip = allClips.find(c => c.id === editingClipId);
+  const grid = $('#editImagesGrid');
+  if (!clip || !clip.images || !clip.images.length) { grid.innerHTML = '<span style="font-size:.75rem;color:var(--text-muted)">Нет фото</span>'; return; }
+  grid.innerHTML = clip.images.map(img => `<div class="edit-image-item">
+    <img src="${img.url}" alt="">
+    <button class="edit-image-remove" data-filename="${esc(img.filename)}" title="Удалить">&times;</button>
+  </div>`).join('');
+  grid.querySelectorAll('.edit-image-remove').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch(`/api/clips/${editingClipId}/images/${btn.dataset.filename}`, {
+          method: 'DELETE',
+          headers: { 'X-Admin-Password': ADMIN_PASSWORD }
+        });
+        const data = await res.json();
+        if (data.success) { await loadClips(); renderEditImagesGrid(); notify('Фото удалено'); }
+        else notify(data.error, true);
+      } catch { notify('Ошибка сети', true); }
+    });
+  });
+}
 
 $('#editSaveBtn').addEventListener('click', async () => {
   if (!editingClipId) return;

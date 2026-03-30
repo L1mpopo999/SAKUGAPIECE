@@ -307,6 +307,46 @@ app.post('/api/clips/:id/video', videoUpload, (req, res) => {
   res.json({ success: true, videoUrl: clip.videoUrl });
 });
 
+// Add images to existing clip (admin only)
+const imagesUpload = uploadFiles.array('images', 20);
+app.post('/api/clips/:id/images', imagesUpload, (req, res) => {
+  if (!checkAdmin(req, res)) {
+    if (req.files) req.files.forEach(f => { if (fs.existsSync(f.path)) fs.unlinkSync(f.path); });
+    return;
+  }
+  const clips = loadClips();
+  const id = parseInt(req.params.id);
+  const clip = clips.find(c => c.id === id);
+  if (!clip) { if (req.files) req.files.forEach(f => fs.unlinkSync(f.path)); return res.status(404).json({ error: 'Клип не найден' }); }
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'Файлы обязательны' });
+
+  if (!clip.images) clip.images = [];
+  req.files.forEach(f => {
+    clip.images.push({ filename: f.filename, url: '/uploads/' + f.filename });
+  });
+  saveClips(clips);
+  res.json({ success: true, images: clip.images });
+});
+
+// Remove single image from clip (admin only)
+app.delete('/api/clips/:id/images/:filename', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const clips = loadClips();
+  const id = parseInt(req.params.id);
+  const clip = clips.find(c => c.id === id);
+  if (!clip) return res.status(404).json({ error: 'Клип не найден' });
+
+  const filename = req.params.filename;
+  const img = clip.images?.find(i => i.filename === filename);
+  if (img) {
+    const fp = path.join(uploadsDir, filename);
+    if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    clip.images = clip.images.filter(i => i.filename !== filename);
+    saveClips(clips);
+  }
+  res.json({ success: true, images: clip.images || [] });
+});
+
 // Delete a clip (admin only)
 app.delete('/api/clips/:id', (req, res) => {
   if (!checkAdmin(req, res)) return;

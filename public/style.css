@@ -220,6 +220,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .player-images-grid{display:flex;flex-wrap:wrap;gap:.5rem}
 .player-image-thumb{width:120px;height:80px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer;transition:border-color .2s,transform .2s}
 .player-image-thumb:hover{border-color:var(--gold);transform:scale(1.05)}
+.edit-images-grid{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem}
+.edit-image-item{position:relative;width:80px;height:55px}
+.edit-image-item img{width:100%;height:100%;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border)}
+.edit-image-remove{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
 .form-hint{font-size:.7rem;color:var(--text-muted);margin-top:.3rem}
 
 /* Clip Page */
