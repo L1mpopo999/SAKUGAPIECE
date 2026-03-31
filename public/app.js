@@ -25,7 +25,7 @@ let clipToDelete = null;
 let viewerImages = [];
 let viewerIndex = 0;
 
-const ADMIN_PASSWORD = 'jefp1ece2005';
+let adminToken = null;
 
 // ===== HELPERS =====
 const $ = s => document.querySelector(s);
@@ -35,6 +35,7 @@ function tagLabel(t){return TAG_RU[t]||t}
 function pluralRu(n){const m=n%10,h=n%100;if(m===1&&h!==11)return'';if(m>=2&&m<=4&&(h<12||h>14))return'а';return'ов'}
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
 function getInitials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+function adminHeaders(extra={}){return{'X-Admin-Token':adminToken||'',...extra}}
 
 // ===== PAGE NAVIGATION =====
 function navigateTo(page, data) {
@@ -207,7 +208,7 @@ async function editFilterDescription(filterId) {
   try {
     const res = await fetch(`/api/filters/${filterId}/description`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': ADMIN_PASSWORD },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
       body: JSON.stringify({ description: desc.trim() })
     });
     const data = await res.json();
@@ -291,7 +292,7 @@ function renderAnimatorGrid() {
       const hidden = HIDDEN_ANIMATORS.includes(name);
       const endpoint = hidden ? '/api/animators/unhide' : '/api/animators/hide';
       try {
-        const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({name}) });
+        const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({name}) });
         const data = await res.json();
         if (data.success) { HIDDEN_ANIMATORS = data.hidden; renderAnimatorGrid(); notify(hidden ? `${name} показан` : `${name} скрыт`); }
         else notify(data.error, true);
@@ -305,7 +306,7 @@ function renderAnimatorGrid() {
       e.stopPropagation();
       const name = btn.dataset.delName;
       if (!confirm(`Удалить аниматора «${name}» навсегда?`)) return;
-      await fetch('/api/animators', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({name}) });
+      await fetch('/api/animators', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({name}) });
       await loadAnimatorsAndFilters();
       renderAnimatorGrid();
       notify(`«${name}» удалён`);
@@ -321,7 +322,7 @@ function renderAnimatorGrid() {
       if (!newName || !newName.trim() || newName.trim() === oldName) return;
       const res = await fetch('/api/animators/rename', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': ADMIN_PASSWORD },
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
         body: JSON.stringify({ oldName, newName: newName.trim() })
       });
       const data = await res.json();
@@ -332,7 +333,7 @@ function renderAnimatorGrid() {
 }
 
 async function addAnimator(name) {
-  const res = await fetch('/api/animators', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({name}) });
+  const res = await fetch('/api/animators', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({name}) });
   const data = await res.json();
   if (data.success) { await loadAnimatorsAndFilters(); renderAnimatorGrid(); notify(`«${name}» добавлен`); }
   else notify(data.error, true);
@@ -443,7 +444,7 @@ function renderEpisodeGrid() {
       const newEp = prompt(`Новый номер для серии «${oldEp}»:`, oldEp);
       if (!newEp || newEp.trim() === oldEp) return;
       try {
-        const res = await fetch('/api/episodes/rename', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({oldEpisode:oldEp, newEpisode:newEp.trim()}) });
+        const res = await fetch('/api/episodes/rename', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({oldEpisode:oldEp, newEpisode:newEp.trim()}) });
         const data = await res.json();
         if (data.success) { await loadAnimatorsAndFilters(); await loadClips(); renderEpisodeGrid(); notify(`Серия «${oldEp}» → «${newEp.trim()}»`); }
         else notify(data.error, true);
@@ -459,7 +460,7 @@ function renderEpisodeGrid() {
       const hidden = EPISODES_DATA.hidden.includes(ep);
       const endpoint = hidden ? '/api/episodes/unhide' : '/api/episodes/hide';
       try {
-        const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({episode:ep}) });
+        const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({episode:ep}) });
         const data = await res.json();
         if (data.success) { EPISODES_DATA = data.episodes; renderEpisodeGrid(); notify(hidden ? `Серия ${ep} показана` : `Серия ${ep} скрыта`); }
         else notify(data.error, true);
@@ -704,7 +705,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
     await new Promise((ok,no)=>{
       xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300)ok(JSON.parse(xhr.responseText));else{try{no(new Error(JSON.parse(xhr.responseText).error))}catch{no(new Error('Ошибка'))}}};
       xhr.onerror=()=>no(new Error('Ошибка сети'));
-      xhr.open('POST','/api/clips');xhr.setRequestHeader('X-Admin-Password',ADMIN_PASSWORD);xhr.send(fd);
+      xhr.open('POST','/api/clips');xhr.setRequestHeader('X-Admin-Token',adminToken);xhr.send(fd);
     });
     $('#uploadForm').reset();selectedAnimators=[];selectedTags=[];selectedImages=[];selectedFile=null;selectedThumbnail=null;renderAnimatorChips();renderTagChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');removeThumbnail();
     const p=$('#uploadPreviewPlayer');if(p.src){p.pause();URL.revokeObjectURL(p.src);p.removeAttribute('src')}$('#uploadVideoPreview').style.display='none';
@@ -895,14 +896,24 @@ $('#imgPrevBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex
 $('#imgNextBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}});
 
 // ===== ADMIN =====
-// Restore admin session
-if (sessionStorage.getItem('sp_admin') === ADMIN_PASSWORD) {
-  isAdmin = true;
-  document.body.classList.add('admin-mode');
-}
+// Restore admin session from token
+(async()=>{
+  const savedToken = sessionStorage.getItem('sp_admin_token');
+  if(savedToken){
+    try{
+      const r=await fetch('/api/verify',{headers:{'X-Admin-Token':savedToken}});
+      const d=await r.json();
+      if(d.valid){adminToken=savedToken;isAdmin=true;document.body.classList.add('admin-mode');}
+      else{sessionStorage.removeItem('sp_admin_token');}
+    }catch{sessionStorage.removeItem('sp_admin_token');}
+  }
+})();
 
-$('#adminToggleBtn').addEventListener('click',()=>{
-  if(isAdmin){isAdmin=false;document.body.classList.remove('admin-mode');sessionStorage.removeItem('sp_admin');notify('Вышли из режима админа');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();}
+$('#adminToggleBtn').addEventListener('click',async()=>{
+  if(isAdmin){
+    try{await fetch('/api/logout',{method:'POST',headers:{'X-Admin-Token':adminToken}})}catch{}
+    isAdmin=false;adminToken=null;document.body.classList.remove('admin-mode');sessionStorage.removeItem('sp_admin_token');notify('Вышли из режима админа');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();
+  }
   else{$('#adminLoginModal').classList.add('visible');document.body.style.overflow='hidden';$('#adminPasswordInput').value='';$('#adminLoginError').style.display='none';setTimeout(()=>$('#adminPasswordInput').focus(),100)}
 });
 $('#passwordToggleBtn').addEventListener('click', () => {
@@ -918,9 +929,18 @@ $('#adminLoginModal').addEventListener('click',e=>{if(e.target===$('#adminLoginM
 $('#adminLoginBtn').addEventListener('click',tryLogin);
 $('#adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
 
-function tryLogin(){
-  if($('#adminPasswordInput').value===ADMIN_PASSWORD){isAdmin=true;document.body.classList.add('admin-mode');sessionStorage.setItem('sp_admin',ADMIN_PASSWORD);$('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';notify('Режим админа включён');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();}
-  else{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
+async function tryLogin(){
+  const pwd=$('#adminPasswordInput').value;
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
+    const d=await r.json();
+    if(d.success&&d.token){
+      adminToken=d.token;isAdmin=true;document.body.classList.add('admin-mode');
+      sessionStorage.setItem('sp_admin_token',d.token);
+      $('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';
+      notify('Режим админа включён');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();
+    }else{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
+  }catch{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
 }
 
 // ===== EDIT CLIP =====
@@ -1016,7 +1036,7 @@ $('#editVideoInput').addEventListener('change', async () => {
     notify('Загрузка видео...');
     const res = await fetch(`/api/clips/${editingClipId}/video`, {
       method: 'POST',
-      headers: { 'X-Admin-Password': ADMIN_PASSWORD },
+      headers: { 'X-Admin-Token': adminToken },
       body: fd
     });
     const data = await res.json();
@@ -1040,7 +1060,7 @@ $('#editThumbnailInput').addEventListener('change', async () => {
   try {
     const res = await fetch(`/api/clips/${editingClipId}/thumbnail`, {
       method: 'POST',
-      headers: { 'X-Admin-Password': ADMIN_PASSWORD },
+      headers: { 'X-Admin-Token': adminToken },
       body: fd
     });
     const data = await res.json();
@@ -1066,7 +1086,7 @@ $('#editImagesInput').addEventListener('change', async () => {
     notify('Загрузка фото...');
     const res = await fetch(`/api/clips/${editingClipId}/images`, {
       method: 'POST',
-      headers: { 'X-Admin-Password': ADMIN_PASSWORD },
+      headers: { 'X-Admin-Token': adminToken },
       body: fd
     });
     const data = await res.json();
@@ -1093,7 +1113,7 @@ function renderEditImagesGrid() {
       try {
         const res = await fetch(`/api/clips/${editingClipId}/images/${btn.dataset.filename}`, {
           method: 'DELETE',
-          headers: { 'X-Admin-Password': ADMIN_PASSWORD }
+          headers: { 'X-Admin-Token': adminToken }
         });
         const data = await res.json();
         if (data.success) { await loadClips(); renderEditImagesGrid(); notify('Фото удалено'); }
@@ -1122,7 +1142,7 @@ $('#editSaveBtn').addEventListener('click', async () => {
   try {
     const res = await fetch(`/api/clips/${editingClipId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': ADMIN_PASSWORD },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
       body: JSON.stringify(body)
     });
     const data = await res.json();
@@ -1148,7 +1168,7 @@ $('#deleteConfirmModal').addEventListener('click',e=>{if(e.target===$('#deleteCo
 
 $('#deleteConfirmBtn').addEventListener('click',async()=>{
   if(!clipToDelete)return;const id=clipToDelete;closeDeleteModal();
-  try{const r=await fetch(`/api/clips/${id}`,{method:'DELETE',headers:{'X-Admin-Password':ADMIN_PASSWORD}});const d=await r.json();
+  try{const r=await fetch(`/api/clips/${id}`,{method:'DELETE',headers:{'X-Admin-Token':adminToken}});const d=await r.json();
     if(d.success){notify('Клип удалён');await loadClips();if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile)}
     else notify(d.error||'Ошибка',true)}
   catch{notify('Ошибка сети',true)}
@@ -1273,7 +1293,7 @@ function openFilterManager() {
     `).join('');
     list.querySelectorAll('.filter-mgr-del').forEach(btn => {
       btn.addEventListener('click', async () => {
-        await fetch('/api/filters', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({id:btn.dataset.id}) });
+        await fetch('/api/filters', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({id:btn.dataset.id}) });
         await loadAnimatorsAndFilters(); renderList(); renderFilterChips();
       });
     });
@@ -1285,7 +1305,7 @@ function openFilterManager() {
     const label = overlay.querySelector('#newFilterLabel').value.trim();
     const type = overlay.querySelector('#newFilterType').value;
     if (!id || !label) { notify('Заполните ID и название', true); return; }
-    const res = await fetch('/api/filters', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Password':ADMIN_PASSWORD}, body:JSON.stringify({id,label,type}) });
+    const res = await fetch('/api/filters', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({id,label,type}) });
     const data = await res.json();
     if (data.success) { await loadAnimatorsAndFilters(); renderList(); renderFilterChips(); overlay.querySelector('#newFilterId').value=''; overlay.querySelector('#newFilterLabel').value=''; notify('Вкладка добавлена'); }
     else notify(data.error, true);

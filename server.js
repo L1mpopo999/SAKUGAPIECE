@@ -132,16 +132,43 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
 // ===== API =====
-const ADMIN_PASSWORD = 'jefp1ece2005';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'jefp1ece2005';
+const crypto = require('crypto');
+let adminTokens = new Set();
 
 function checkAdmin(req, res) {
-  const pwd = req.headers['x-admin-password'];
-  if (pwd !== ADMIN_PASSWORD) {
+  const token = req.headers['x-admin-token'];
+  if (!token || !adminTokens.has(token)) {
     res.status(403).json({ error: 'Доступ запрещён. Войдите как админ.' });
     return false;
   }
   return true;
 }
+
+// Login endpoint
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD) {
+    const token = crypto.randomBytes(32).toString('hex');
+    adminTokens.add(token);
+    res.json({ success: true, token });
+  } else {
+    res.status(403).json({ error: 'Неверный пароль' });
+  }
+});
+
+// Logout endpoint
+app.post('/api/logout', (req, res) => {
+  const token = req.headers['x-admin-token'];
+  if (token) adminTokens.delete(token);
+  res.json({ success: true });
+});
+
+// Verify token
+app.get('/api/verify', (req, res) => {
+  const token = req.headers['x-admin-token'];
+  res.json({ valid: !!(token && adminTokens.has(token)) });
+});
 
 // Get all clips
 app.get('/api/clips', (req, res) => {
@@ -529,8 +556,8 @@ app.post('/api/episodes/rename', (req, res) => {
 
 // ===== BACKUP (admin only) =====
 app.get('/api/backup', (req, res) => {
-  const pwd = req.query.pwd;
-  if (pwd !== ADMIN_PASSWORD) return res.status(403).send('Доступ запрещён');
+  const token = req.query.token || req.headers['x-admin-token'];
+  if (!token || !adminTokens.has(token)) return res.status(403).send('Доступ запрещён');
 
   const archiver = require('archiver');
   const archive = archiver('zip', { zlib: { level: 5 } });
