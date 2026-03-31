@@ -472,6 +472,17 @@ app.delete('/api/filters', (req, res) => {
   res.json({ success: true, filters: list });
 });
 
+// Update filter description
+app.put('/api/filters/:id/description', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const list = loadFilters();
+  const filter = list.find(f => f.id === req.params.id);
+  if (!filter) return res.status(404).json({ error: 'Фильтр не найден' });
+  filter.description = req.body.description || '';
+  saveFilters(list);
+  res.json({ success: true, filter });
+});
+
 // ===== EPISODES API =====
 app.get('/api/episodes', (req, res) => { res.json(loadEpisodes()); });
 

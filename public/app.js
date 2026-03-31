@@ -176,7 +176,44 @@ function applyFilters() {
     clips = clips.filter(c => c.tags.includes(currentFilter) || c.arc.toLowerCase() === currentFilter.toLowerCase());
   }
   if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
+  
+  // Show filter description
+  const descEl = $('#filterDescription');
+  if (descEl) {
+    const filter = FILTERS.find(f => f.id === currentFilter);
+    if (filter && filter.description) {
+      descEl.innerHTML = `<div class="filter-desc-text">${esc(filter.description)}</div>${isAdmin ? `<button class="filter-desc-edit" id="editFilterDescBtn">✎</button>` : ''}`;
+      descEl.style.display = '';
+      const editBtn = descEl.querySelector('#editFilterDescBtn');
+      if (editBtn) editBtn.addEventListener('click', () => editFilterDescription(currentFilter));
+    } else if (isAdmin && currentFilter !== 'all' && !currentFilter.startsWith('type:')) {
+      descEl.innerHTML = `<button class="filter-desc-add" id="addFilterDescBtn">+ Добавить описание</button>`;
+      descEl.style.display = '';
+      descEl.querySelector('#addFilterDescBtn').addEventListener('click', () => editFilterDescription(currentFilter));
+    } else {
+      descEl.innerHTML = '';
+      descEl.style.display = 'none';
+    }
+  }
+  
   renderClips(clips);
+}
+
+async function editFilterDescription(filterId) {
+  const filter = FILTERS.find(f => f.id === filterId);
+  const current = filter?.description || '';
+  const desc = prompt('Описание для тега:', current);
+  if (desc === null) return;
+  try {
+    const res = await fetch(`/api/filters/${filterId}/description`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': ADMIN_PASSWORD },
+      body: JSON.stringify({ description: desc.trim() })
+    });
+    const data = await res.json();
+    if (data.success) { await loadAnimatorsAndFilters(); applyFilters(); notify('Описание обновлено'); }
+    else notify(data.error, true);
+  } catch { notify('Ошибка сети', true); }
 }
 // Filter chips are rendered dynamically in renderFilterChips()
 
@@ -823,6 +860,19 @@ function openPlayer(id) {
 function closePlayer(){if(timecodeInterval){clearInterval(timecodeInterval);timecodeInterval=null}$('#playerVideo').pause();$('#playerVideo').removeAttribute('src');$('#playerOverlay').classList.remove('visible');document.body.style.overflow=''}
 $('#playerCloseBtn').addEventListener('click',closePlayer);
 
+// ===== PLAYER FRAME-BY-FRAME =====
+(function(){
+  const video=$('#playerVideo'), info=$('#playerFrameInfo'), fpsSelect=$('#playerFpsSelect');
+  let fps=24;
+  fpsSelect.addEventListener('change',()=>{fps=parseInt(fpsSelect.value)});
+  function fmt(t){const m=Math.floor(t/60),s=Math.floor(t%60),ms=Math.floor((t%1)*1000);return`${m}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`}
+  function updateInfo(){info.textContent=`Кадр: ${fmt(video.currentTime)}`}
+  $('#playerFramePrev').addEventListener('click',()=>{video.pause();video.currentTime=Math.max(0,video.currentTime-1/fps);updateInfo()});
+  $('#playerFrameNext').addEventListener('click',()=>{video.pause();video.currentTime=video.currentTime+1/fps;updateInfo()});
+  video.addEventListener('timeupdate',updateInfo);
+  video.addEventListener('seeked',updateInfo);
+})();
+
 // ===== IMAGE VIEWER =====
 function openImageViewer(clip) {
   viewerImages=clip.images.map(img=>img.url);viewerIndex=0;
@@ -1112,6 +1162,10 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeUploadModal();closePlayer();closeImageViewer();closeDeleteModal();closeEditModal();$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}
   if(e.key==='/'&&!e.target.closest('input,textarea,select')){e.preventDefault();if(currentPage==='animators')$('#animatorSearchInput').focus();else $('#searchInput').focus()}
   if($('#imageViewerOverlay').classList.contains('visible')){if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;updateImageViewer()}if(e.key==='ArrowRight'&&viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}}
+  if($('#playerOverlay').classList.contains('visible')&&!e.target.closest('input,textarea,select')){
+    if(e.key==='ArrowLeft'){e.preventDefault();$('#playerFramePrev').click()}
+    if(e.key==='ArrowRight'){e.preventDefault();$('#playerFrameNext').click()}
+  }
 });
 
 // Swipe support for image viewer
