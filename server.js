@@ -606,22 +606,21 @@ app.post('/api/clips/:id/comments', (req, res) => {
   const { nickname, text, userToken } = req.body;
   if (!nickname || !nickname.trim()) return res.status(400).json({ error: 'Укажите ник' });
   if (!text || !text.trim()) return res.status(400).json({ error: 'Напишите комментарий' });
-  if (!userToken) return res.status(400).json({ error: 'Ошибка авторизации' });
   if (nickname.trim().length > 30) return res.status(400).json({ error: 'Ник слишком длинный (макс 30 символов)' });
   if (text.trim().length > 1000) return res.status(400).json({ error: 'Комментарий слишком длинный (макс 1000 символов)' });
 
   const nick = nickname.trim().toLowerCase();
   const nicknames = loadNicknames();
 
-  // Check if nickname is taken by someone else
-  if (nicknames[nick] && nicknames[nick] !== userToken) {
-    return res.status(400).json({ error: 'Этот ник уже занят другим пользователем' });
-  }
-
-  // Register nickname for this token
-  if (!nicknames[nick]) {
-    nicknames[nick] = userToken;
-    saveNicknames(nicknames);
+  // Only check nickname ownership if userToken is provided
+  if (userToken) {
+    if (nicknames[nick] && nicknames[nick] !== userToken) {
+      return res.status(400).json({ error: 'Такой никнейм уже существует' });
+    }
+    if (!nicknames[nick]) {
+      nicknames[nick] = userToken;
+      saveNicknames(nicknames);
+    }
   }
 
   const comments = loadComments();
