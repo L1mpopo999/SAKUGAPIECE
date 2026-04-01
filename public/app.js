@@ -152,11 +152,11 @@ function attachClipEvents(container) {
         openPlayer(clip.id);
       } else if (clip.images && clip.images.length >= 4) {
         // Many photos: record view + open in new tab
-        fetch(`/api/clips/${clip.id}/view`,{method:'POST'}).catch(()=>{});
+        fetch(`/api/clips/${clip.id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).catch(()=>{});
         window.open(`/clip/${clip.id}`, '_blank');
       } else if (clip.images && clip.images.length > 0) {
         // Few photos: record view + open lightbox
-        fetch(`/api/clips/${clip.id}/view`,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
+        fetch(`/api/clips/${clip.id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
         openClipPageImageViewer(clip.images.map(i => i.url), 0);
       }
     });
@@ -769,7 +769,7 @@ let timecodeInterval = null;
 function openPlayer(id) {
   const clip=allClips.find(c=>c.id===id);if(!clip)return;
   // Record view
-  fetch(`/api/clips/${id}/view`,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
+  fetch(`/api/clips/${id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
   $('#playerTitle').textContent=clip.title;
   $('#playerCurrentAnimator').textContent='';
   $('#playerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">Эп. ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}${clip.tags.map(t=>`<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}`;
@@ -899,7 +899,7 @@ async function loadClipComments(clipId) {
   const savedNick = localStorage.getItem('sp_comment_nick');
   if (savedNick) $('#commentNick').value = savedNick;
   try {
-    const res = await fetch(`/api/clips/${clipId}/comments`);
+    const res = await fetch(`/api/clips/${clipId}/comments`, {headers:{'X-User-Token':getUserToken()}});
     const comments = await res.json();
     renderComments(comments, clipId);
   } catch {
@@ -916,11 +916,13 @@ function renderComments(comments, clipId) {
   list.innerHTML = comments.map(c => {
     const date = new Date(c.createdAt);
     const timeStr = date.toLocaleDateString('ru-RU', {day:'numeric',month:'short'}) + ' ' + date.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
-    return `<div class="comment-item">
+    const edited = c.editedAt ? ' <span style="font-size:.6rem;color:var(--text-muted)">(ред.)</span>' : '';
+    return `<div class="comment-item${c.isOwn ? ' comment-own' : ''}">
       <div class="comment-header">
         <span class="comment-nickname">${esc(c.nickname)}</span>
-        <span class="comment-time">${timeStr}</span>
-        ${isAdmin ? `<button class="comment-delete" data-clip-id="${clipId}" data-comment-id="${c.id}" title="Удалить">×</button>` : ''}
+        <span class="comment-time">${timeStr}${edited}</span>
+        ${c.isOwn ? `<button class="comment-edit-btn" data-clip-id="${clipId}" data-comment-id="${c.id}" data-text="${esc(c.text)}" title="Редактировать">✎</button>` : ''}
+        ${c.isOwn || isAdmin ? `<button class="comment-delete" data-clip-id="${clipId}" data-comment-id="${c.id}" title="Удалить">×</button>` : ''}
       </div>
       <div class="comment-body">${esc(c.text).replace(/\n/g, '<br>')}</div>
     </div>`;
@@ -928,9 +930,30 @@ function renderComments(comments, clipId) {
 
   list.querySelectorAll('.comment-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (!confirm('Удалить комментарий?')) return;
+      try {
+        const headers = {};
+        if (isAdmin) headers['X-Admin-Token'] = adminToken;
+        headers['X-User-Token'] = getUserToken();
+        const res = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`, {
+          method: 'DELETE', headers
+        });
+        const d = await res.json();
+        if (d.success) loadClipComments(parseInt(btn.dataset.clipId));
+        else notify(d.error, true);
+      } catch { notify('Ошибка сети', true); }
+    });
+  });
+
+  list.querySelectorAll('.comment-edit-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const newText = prompt('Редактировать комментарий:', btn.dataset.text);
+      if (newText === null || !newText.trim()) return;
       try {
         const res = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`, {
-          method: 'DELETE', headers: { 'X-Admin-Token': adminToken }
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-User-Token': getUserToken() },
+          body: JSON.stringify({ text: newText.trim() })
         });
         const d = await res.json();
         if (d.success) loadClipComments(parseInt(btn.dataset.clipId));

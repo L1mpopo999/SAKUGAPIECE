@@ -318,6 +318,9 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
 .comment-time{font-size:.65rem;color:var(--text-muted)}
 .comment-delete{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;margin-left:auto;line-height:1}
 .comment-delete:hover{color:var(--accent)}
+.comment-edit-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.8rem;line-height:1}
+.comment-edit-btn:hover{color:var(--gold)}
+.comment-own{border-color:rgba(244,162,38,.2)}
 .comment-body{font-size:.85rem;color:var(--text-secondary);line-height:1.5}
 .comment-form{display:flex;flex-direction:column;gap:.4rem;margin-top:.6rem}
 .comment-nick{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-family:'Noto Sans',sans-serif;font-size:.8rem;padding:.4rem .6rem;width:200px}

@@ -193,15 +193,45 @@ app.get('/api/clips', (req, res) => {
   res.json(loadClips());
 });
 
-// Record a view
+// Record a view (unique per user token)
+const VIEWS_FILE = path.join(dataDir, 'views.json');
+function loadViews() {
+  if (!fs.existsSync(VIEWS_FILE)) { saveViews({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(VIEWS_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveViews(data) { fs.writeFileSync(VIEWS_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+
 app.post('/api/clips/:id/view', (req, res) => {
+  const { userToken } = req.body;
   const clips = loadClips();
   const id = parseInt(req.params.id);
   const clip = clips.find(c => c.id === id);
   if (!clip) return res.status(404).json({ error: 'Клип не найден' });
-  clip.views = (clip.views || 0) + 1;
-  saveClips(clips);
-  res.json({ success: true, views: clip.views });
+
+  const views = loadViews();
+  const clipKey = String(id);
+  if (!views[clipKey]) views[clipKey] = [];
+
+  // Only count if this user hasn't viewed before
+  if (userToken && !views[clipKey].includes(userToken)) {
+    views[clipKey].push(userToken);
+    saveViews(views);
+    clip.views = views[clipKey].length;
+    saveClips(clips);
+  } else if (!userToken) {
+    // No token — use IP as fallback
+    const ip = req.headers['x-real-ip'] || req.ip;
+    const ipKey = 'ip_' + ip;
+    if (!views[clipKey].includes(ipKey)) {
+      views[clipKey].push(ipKey);
+      saveViews(views);
+      clip.views = views[clipKey].length;
+      saveClips(clips);
+    }
+  }
+
+  res.json({ success: true, views: clip.views || views[clipKey]?.length || 0 });
 });
 
 // Clip page — serve index.html for client-side routing
@@ -588,7 +618,18 @@ app.post('/api/episodes/rename', (req, res) => {
 app.get('/api/clips/:id/comments', (req, res) => {
   const comments = loadComments();
   const clipId = req.params.id;
-  res.json(comments[clipId] || []);
+  const list = comments[clipId] || [];
+  const reqToken = req.headers['x-user-token'];
+  // Return comments with isOwn flag, never expose userTokens
+  const safe = list.map(c => ({
+    id: c.id,
+    nickname: c.nickname,
+    text: c.text,
+    createdAt: c.createdAt,
+    editedAt: c.editedAt || null,
+    isOwn: !!(reqToken && c.userToken && c.userToken === reqToken)
+  }));
+  res.json(safe);
 });
 
 // Get comment counts for all clips
@@ -631,6 +672,7 @@ app.post('/api/clips/:id/comments', (req, res) => {
     id: Date.now(),
     nickname: nickname.trim(),
     text: text.trim(),
+    userToken: userToken || null,
     createdAt: new Date().toISOString()
   };
 
@@ -639,16 +681,58 @@ app.post('/api/clips/:id/comments', (req, res) => {
   res.json({ success: true, comment });
 });
 
-// Delete comment (admin only)
+// Delete comment (admin or own comment)
 app.delete('/api/clips/:id/comments/:commentId', (req, res) => {
-  if (!checkAdmin(req, res)) return;
   const comments = loadComments();
   const clipId = req.params.id;
   const commentId = parseInt(req.params.commentId);
   if (!comments[clipId]) return res.status(404).json({ error: 'Комментарий не найден' });
+  
+  const comment = comments[clipId].find(c => c.id === commentId);
+  if (!comment) return res.status(404).json({ error: 'Комментарий не найден' });
+
+  // Check: admin or own comment
+  const adminToken = req.headers['x-admin-token'];
+  const userToken = req.headers['x-user-token'];
+  const isAdminReq = adminToken && adminTokens.has(adminToken);
+  const isOwner = userToken && comment.userToken && comment.userToken === userToken;
+
+  if (!isAdminReq && !isOwner) {
+    return res.status(403).json({ error: 'Можно удалять только свои комментарии' });
+  }
+
   comments[clipId] = comments[clipId].filter(c => c.id !== commentId);
   saveComments(comments);
   res.json({ success: true });
+});
+
+// Edit comment (own comment only)
+app.put('/api/clips/:id/comments/:commentId', (req, res) => {
+  const comments = loadComments();
+  const clipId = req.params.id;
+  const commentId = parseInt(req.params.commentId);
+  if (!comments[clipId]) return res.status(404).json({ error: 'Комментарий не найден' });
+
+  const comment = comments[clipId].find(c => c.id === commentId);
+  if (!comment) return res.status(404).json({ error: 'Комментарий не найден' });
+
+  const userToken = req.headers['x-user-token'];
+  const adminToken = req.headers['x-admin-token'];
+  const isAdminReq = adminToken && adminTokens.has(adminToken);
+  const isOwner = userToken && comment.userToken && comment.userToken === userToken;
+
+  if (!isAdminReq && !isOwner) {
+    return res.status(403).json({ error: 'Можно редактировать только свои комментарии' });
+  }
+
+  const { text } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Напишите комментарий' });
+  if (text.trim().length > 1000) return res.status(400).json({ error: 'Комментарий слишком длинный' });
+
+  comment.text = text.trim();
+  comment.editedAt = new Date().toISOString();
+  saveComments(comments);
+  res.json({ success: true, comment });
 });
 
 // ===== BACKUP (admin only) =====
