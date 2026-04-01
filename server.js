@@ -583,6 +583,16 @@ app.get('/api/clips/:id/comments', (req, res) => {
   res.json(comments[clipId] || []);
 });
 
+// Get comment counts for all clips
+app.get('/api/comments/counts', (req, res) => {
+  const comments = loadComments();
+  const counts = {};
+  for (const [clipId, arr] of Object.entries(comments)) {
+    if (arr.length) counts[clipId] = arr.length;
+  }
+  res.json(counts);
+});
+
 // Add comment to a clip (no auth needed)
 app.post('/api/clips/:id/comments', (req, res) => {
   const { nickname, text } = req.body;

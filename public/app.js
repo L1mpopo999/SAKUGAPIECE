@@ -27,6 +27,7 @@ let viewerImages = [];
 let viewerIndex = 0;
 
 let adminToken = null;
+let commentCounts = {};
 
 // ===== HELPERS =====
 const $ = s => document.querySelector(s);
@@ -71,6 +72,7 @@ $('#backToAnimatorsBtn').addEventListener('click', () => navigateTo('animators')
 // ===== LOAD CLIPS =====
 async function loadClips() {
   try { allClips = await (await fetch('/api/clips')).json(); } catch { allClips = []; }
+  try { commentCounts = await (await fetch('/api/comments/counts')).json(); } catch { commentCounts = {}; }
   applyFilters();
 }
 
@@ -105,7 +107,7 @@ function renderClipCard(clip, i) {
     </div>
     <div class="clip-info">
       <div class="clip-title">${esc(clip.title)}</div>
-      <div class="clip-meta"><span>Эп. ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}</div>
+      <div class="clip-meta"><span>Эп. ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
         ${clip.tags.slice(0,2).map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}
@@ -1353,9 +1355,15 @@ function renderFilterChips() {
 
   container.querySelectorAll('.sort-chip[data-sort]').forEach(ch => {
     ch.addEventListener('click', () => {
-      container.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
-      ch.classList.add('active');
-      currentSort = ch.dataset.sort;
+      if (currentSort === ch.dataset.sort) {
+        // Toggle off
+        currentSort = 'newest';
+        ch.classList.remove('active');
+      } else {
+        container.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+        ch.classList.add('active');
+        currentSort = ch.dataset.sort;
+      }
       applyFilters();
     });
   });
