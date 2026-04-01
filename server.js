@@ -126,6 +126,16 @@ function loadHiddenAnimators() {
 }
 function saveHiddenAnimators(list) { fs.writeFileSync(HIDDEN_ANIMATORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
 
+// ===== COMMENTS =====
+const COMMENTS_FILE = path.join(dataDir, 'comments.json');
+
+function loadComments() {
+  if (!fs.existsSync(COMMENTS_FILE)) { saveComments({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(COMMENTS_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveComments(data) { fs.writeFileSync(COMMENTS_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+
 // ===== MIDDLEWARE =====
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -565,6 +575,50 @@ app.post('/api/episodes/rename', (req, res) => {
   res.json({ success: true, renamed: changed });
 });
 
+// ===== COMMENTS API =====
+// Get comments for a clip
+app.get('/api/clips/:id/comments', (req, res) => {
+  const comments = loadComments();
+  const clipId = req.params.id;
+  res.json(comments[clipId] || []);
+});
+
+// Add comment to a clip (no auth needed)
+app.post('/api/clips/:id/comments', (req, res) => {
+  const { nickname, text } = req.body;
+  if (!nickname || !nickname.trim()) return res.status(400).json({ error: 'Укажите ник' });
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Напишите комментарий' });
+  if (nickname.trim().length > 30) return res.status(400).json({ error: 'Ник слишком длинный (макс 30 символов)' });
+  if (text.trim().length > 1000) return res.status(400).json({ error: 'Комментарий слишком длинный (макс 1000 символов)' });
+
+  const comments = loadComments();
+  const clipId = req.params.id;
+  if (!comments[clipId]) comments[clipId] = [];
+
+  const comment = {
+    id: Date.now(),
+    nickname: nickname.trim(),
+    text: text.trim(),
+    createdAt: new Date().toISOString()
+  };
+
+  comments[clipId].push(comment);
+  saveComments(comments);
+  res.json({ success: true, comment });
+});
+
+// Delete comment (admin only)
+app.delete('/api/clips/:id/comments/:commentId', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const comments = loadComments();
+  const clipId = req.params.id;
+  const commentId = parseInt(req.params.commentId);
+  if (!comments[clipId]) return res.status(404).json({ error: 'Комментарий не найден' });
+  comments[clipId] = comments[clipId].filter(c => c.id !== commentId);
+  saveComments(comments);
+  res.json({ success: true });
+});
+
 // ===== BACKUP (admin only) =====
 app.get('/api/backup', (req, res) => {
   const token = req.query.token || req.headers['x-admin-token'];
@@ -586,6 +640,8 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(EPISODES_FILE)) archive.file(EPISODES_FILE, { name: 'episodes.json' });
   // Add hidden_animators.json
   if (fs.existsSync(HIDDEN_ANIMATORS_FILE)) archive.file(HIDDEN_ANIMATORS_FILE, { name: 'hidden_animators.json' });
+  // Add comments.json
+  if (fs.existsSync(COMMENTS_FILE)) archive.file(COMMENTS_FILE, { name: 'comments.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 

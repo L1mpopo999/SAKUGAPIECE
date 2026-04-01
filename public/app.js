@@ -867,6 +867,8 @@ function openPlayer(id) {
   }
 
   $('#playerOverlay').classList.add('visible');document.body.style.overflow='hidden';
+  // Load comments
+  loadClipComments(clip.id);
 }
 function closePlayer(){if(timecodeInterval){clearInterval(timecodeInterval);timecodeInterval=null}$('#playerVideo').pause();$('#playerVideo').removeAttribute('src');$('#playerOverlay').classList.remove('visible');document.body.style.overflow=''}
 $('#playerCloseBtn').addEventListener('click',closePlayer);
@@ -883,6 +885,83 @@ $('#playerCloseBtn').addEventListener('click',closePlayer);
   video.addEventListener('timeupdate',updateInfo);
   video.addEventListener('seeked',updateInfo);
 })();
+
+// ===== COMMENTS =====
+let currentCommentClipId = null;
+
+async function loadClipComments(clipId) {
+  currentCommentClipId = clipId;
+  const list = $('#commentsList');
+  list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Загрузка...</span>';
+  // Restore nickname
+  const savedNick = localStorage.getItem('sp_comment_nick');
+  if (savedNick) $('#commentNick').value = savedNick;
+  try {
+    const res = await fetch(`/api/clips/${clipId}/comments`);
+    const comments = await res.json();
+    renderComments(comments, clipId);
+  } catch {
+    list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Ошибка загрузки</span>';
+  }
+}
+
+function renderComments(comments, clipId) {
+  const list = $('#commentsList');
+  if (!comments.length) {
+    list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Пока нет комментариев</span>';
+    return;
+  }
+  list.innerHTML = comments.map(c => {
+    const date = new Date(c.createdAt);
+    const timeStr = date.toLocaleDateString('ru-RU', {day:'numeric',month:'short'}) + ' ' + date.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+    return `<div class="comment-item">
+      <div class="comment-header">
+        <span class="comment-nickname">${esc(c.nickname)}</span>
+        <span class="comment-time">${timeStr}</span>
+        ${isAdmin ? `<button class="comment-delete" data-clip-id="${clipId}" data-comment-id="${c.id}" title="Удалить">×</button>` : ''}
+      </div>
+      <div class="comment-body">${esc(c.text).replace(/\n/g, '<br>')}</div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.comment-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`, {
+          method: 'DELETE', headers: { 'X-Admin-Token': adminToken }
+        });
+        const d = await res.json();
+        if (d.success) loadClipComments(parseInt(btn.dataset.clipId));
+        else notify(d.error, true);
+      } catch { notify('Ошибка сети', true); }
+    });
+  });
+}
+
+$('#commentSubmitBtn').addEventListener('click', async () => {
+  const nick = $('#commentNick').value.trim();
+  const text = $('#commentText').value.trim();
+  if (!nick) { notify('Укажите ник', true); return; }
+  if (!text) { notify('Напишите комментарий', true); return; }
+  if (!currentCommentClipId) return;
+  localStorage.setItem('sp_comment_nick', nick);
+  try {
+    const res = await fetch(`/api/clips/${currentCommentClipId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname: nick, text })
+    });
+    const d = await res.json();
+    if (d.success) {
+      $('#commentText').value = '';
+      loadClipComments(currentCommentClipId);
+    } else notify(d.error, true);
+  } catch { notify('Ошибка сети', true); }
+});
+
+$('#commentText').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#commentSubmitBtn').click(); }
+});
 
 // ===== IMAGE VIEWER =====
 function openImageViewer(clip) {
@@ -1259,7 +1338,6 @@ function renderFilterChips() {
     ${arcFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
     ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="filter-separator"></span>
-    <button class="filter-chip sort-chip${currentSort==='newest'?' active':''}" data-sort="newest">Новые</button>
     <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 Просмотры</button>
     <span class="results-count" id="resultsCount"></span>
   `;

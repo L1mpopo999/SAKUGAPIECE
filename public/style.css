@@ -309,6 +309,24 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
 .filter-desc-add{font-size:.75rem;color:var(--text-muted)}
 .filter-desc-add:hover,.filter-desc-edit:hover{color:var(--gold)}
 
+/* Comments */
+.player-comments{margin-top:1.2rem;border-top:1px solid var(--border);padding-top:.8rem}
+.comments-list{display:flex;flex-direction:column;gap:.6rem;margin:.6rem 0;max-height:400px;overflow-y:auto}
+.comment-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem .8rem}
+.comment-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem}
+.comment-nickname{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--gold);font-weight:700}
+.comment-time{font-size:.65rem;color:var(--text-muted)}
+.comment-delete{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;margin-left:auto;line-height:1}
+.comment-delete:hover{color:var(--accent)}
+.comment-body{font-size:.85rem;color:var(--text-secondary);line-height:1.5}
+.comment-form{display:flex;flex-direction:column;gap:.4rem;margin-top:.6rem}
+.comment-nick{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-family:'Noto Sans',sans-serif;font-size:.8rem;padding:.4rem .6rem;width:200px}
+.comment-nick:focus{outline:none;border-color:var(--gold)}
+.comment-text{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-family:'Noto Sans',sans-serif;font-size:.85rem;padding:.5rem .6rem;resize:vertical;min-height:50px;max-height:150px}
+.comment-text:focus{outline:none;border-color:var(--gold)}
+.comment-submit{align-self:flex-end;background:var(--gold);color:#000;border:none;font-family:'Space Mono',monospace;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:.45rem 1rem;border-radius:var(--radius);cursor:pointer;transition:opacity .2s}
+.comment-submit:hover{opacity:.85}
+
 /* Mobile */
 @media(max-width:768px){
   .header{padding:0 1rem}

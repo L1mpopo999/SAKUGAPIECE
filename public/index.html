@@ -316,10 +316,17 @@
     <div class="player-notes" id="playerNotes"></div>
     <div class="timecode-list" id="timecodeList"></div>
     <div class="player-images" id="playerImages"></div>
+    <div class="player-comments" id="playerComments">
+      <div class="player-notes-label">Комментарии</div>
+      <div class="comments-list" id="commentsList"></div>
+      <div class="comment-form">
+        <input class="comment-nick" id="commentNick" type="text" placeholder="Ваш ник" maxlength="30" autocomplete="off">
+        <textarea class="comment-text" id="commentText" placeholder="Написать комментарий..." maxlength="1000"></textarea>
+        <button class="comment-submit" id="commentSubmitBtn">Отправить</button>
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- IMAGE VIEWER -->
 <div class="player-overlay" id="imageViewerOverlay">
   <button class="player-close" id="imageViewerCloseBtn">&times;</button>
   <div class="image-viewer-wrapper">
