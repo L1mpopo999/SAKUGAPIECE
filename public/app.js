@@ -899,7 +899,9 @@ async function loadClipComments(clipId) {
   const savedNick = localStorage.getItem('sp_comment_nick');
   if (savedNick) $('#commentNick').value = savedNick;
   try {
-    const res = await fetch(`/api/clips/${clipId}/comments`, {headers:{'X-User-Token':getUserToken()}});
+    const hdrs = {'X-User-Token':getUserToken()};
+    if (adminToken) hdrs['X-Admin-Token'] = adminToken;
+    const res = await fetch(`/api/clips/${clipId}/comments`, {headers:hdrs});
     const comments = await res.json();
     renderComments(comments, clipId);
   } catch {
@@ -923,6 +925,7 @@ function renderComments(comments, clipId) {
         <span class="comment-time">${timeStr}${edited}</span>
         ${c.isOwn ? `<button class="comment-edit-btn" data-clip-id="${clipId}" data-comment-id="${c.id}" data-text="${esc(c.text)}" title="Редактировать">✎</button>` : ''}
         ${c.isOwn || isAdmin ? `<button class="comment-delete" data-clip-id="${clipId}" data-comment-id="${c.id}" title="Удалить">×</button>` : ''}
+        ${isAdmin && c.userToken && !c.isOwn ? `<button class="comment-ban-btn" data-user-token="${esc(c.userToken)}" data-nickname="${esc(c.nickname)}" title="Забанить пользователя">🚫</button>` : ''}
       </div>
       <div class="comment-body">${esc(c.text).replace(/\n/g, '<br>')}</div>
     </div>`;
@@ -957,6 +960,24 @@ function renderComments(comments, clipId) {
         });
         const d = await res.json();
         if (d.success) loadClipComments(parseInt(btn.dataset.clipId));
+        else notify(d.error, true);
+      } catch { notify('Ошибка сети', true); }
+    });
+  });
+
+  // Ban user (admin only)
+  list.querySelectorAll('.comment-ban-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const nick = btn.dataset.nickname;
+      if (!confirm(`Забанить пользователя «${nick}»? Он больше не сможет комментировать.`)) return;
+      try {
+        const res = await fetch('/api/comments/ban', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+          body: JSON.stringify({ userToken: btn.dataset.userToken })
+        });
+        const d = await res.json();
+        if (d.success) notify(`${nick} забанен`);
         else notify(d.error, true);
       } catch { notify('Ошибка сети', true); }
     });

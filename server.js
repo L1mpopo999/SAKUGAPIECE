@@ -620,14 +620,17 @@ app.get('/api/clips/:id/comments', (req, res) => {
   const clipId = req.params.id;
   const list = comments[clipId] || [];
   const reqToken = req.headers['x-user-token'];
-  // Return comments with isOwn flag, never expose userTokens
+  const reqAdminToken = req.headers['x-admin-token'];
+  const isAdminReq = reqAdminToken && adminTokens.has(reqAdminToken);
   const safe = list.map(c => ({
     id: c.id,
     nickname: c.nickname,
     text: c.text,
     createdAt: c.createdAt,
     editedAt: c.editedAt || null,
-    isOwn: !!(reqToken && c.userToken && c.userToken === reqToken)
+    isOwn: !!(reqToken && c.userToken && c.userToken === reqToken),
+    // Only expose userToken to admin for banning
+    userToken: isAdminReq ? (c.userToken || null) : undefined
   }));
   res.json(safe);
 });
@@ -642,6 +645,54 @@ app.get('/api/comments/counts', (req, res) => {
   res.json(counts);
 });
 
+// ===== COMMENT ANTI-SPAM =====
+const BANNED_USERS_FILE = path.join(dataDir, 'banned_users.json');
+const commentRateLimit = new Map(); // userToken -> last comment timestamp
+
+function loadBannedUsers() {
+  if (!fs.existsSync(BANNED_USERS_FILE)) { saveBannedUsers([]); return []; }
+  try { return JSON.parse(fs.readFileSync(BANNED_USERS_FILE, 'utf-8')); }
+  catch { return []; }
+}
+function saveBannedUsers(list) { fs.writeFileSync(BANNED_USERS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+
+function containsLinks(text) {
+  return /https?:\/\/|www\.|\.com|\.ru|\.org|\.net|\.io|t\.me\//i.test(text);
+}
+
+function getUserDailyCommentCount(userToken) {
+  const comments = loadComments();
+  const today = new Date().toISOString().slice(0, 10);
+  let count = 0;
+  for (const arr of Object.values(comments)) {
+    arr.forEach(c => {
+      if (c.userToken === userToken && c.createdAt && c.createdAt.startsWith(today)) count++;
+    });
+  }
+  return count;
+}
+
+// Ban user (admin only)
+app.post('/api/comments/ban', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { userToken } = req.body;
+  if (!userToken) return res.status(400).json({ error: 'Токен обязателен' });
+  const list = loadBannedUsers();
+  if (!list.includes(userToken)) { list.push(userToken); saveBannedUsers(list); }
+  res.json({ success: true });
+});
+
+// Unban user (admin only)
+app.post('/api/comments/unban', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { userToken } = req.body;
+  if (!userToken) return res.status(400).json({ error: 'Токен обязателен' });
+  let list = loadBannedUsers();
+  list = list.filter(t => t !== userToken);
+  saveBannedUsers(list);
+  res.json({ success: true });
+});
+
 // Add comment to a clip (no auth needed)
 app.post('/api/clips/:id/comments', (req, res) => {
   const { nickname, text, userToken } = req.body;
@@ -649,6 +700,30 @@ app.post('/api/clips/:id/comments', (req, res) => {
   if (!text || !text.trim()) return res.status(400).json({ error: 'Напишите комментарий' });
   if (nickname.trim().length > 30) return res.status(400).json({ error: 'Ник слишком длинный (макс 30 символов)' });
   if (text.trim().length > 1000) return res.status(400).json({ error: 'Комментарий слишком длинный (макс 1000 символов)' });
+
+  // Check ban
+  if (userToken && loadBannedUsers().includes(userToken)) {
+    return res.status(403).json({ error: 'Вы заблокированы и не можете оставлять комментарии' });
+  }
+
+  // Check links
+  if (containsLinks(text)) {
+    return res.status(400).json({ error: 'Ссылки в комментариях запрещены' });
+  }
+
+  // Rate limit: 1 comment per 30 seconds
+  if (userToken) {
+    const lastTime = commentRateLimit.get(userToken);
+    if (lastTime && Date.now() - lastTime < 30000) {
+      const wait = Math.ceil((30000 - (Date.now() - lastTime)) / 1000);
+      return res.status(429).json({ error: `Подождите ${wait} сек. перед следующим комментарием` });
+    }
+  }
+
+  // Daily limit: 50 comments per day
+  if (userToken && getUserDailyCommentCount(userToken) >= 50) {
+    return res.status(429).json({ error: 'Достигнут лимит комментариев на сегодня (50)' });
+  }
 
   const nick = nickname.trim().toLowerCase();
   const nicknames = loadNicknames();
@@ -678,6 +753,10 @@ app.post('/api/clips/:id/comments', (req, res) => {
 
   comments[clipId].push(comment);
   saveComments(comments);
+
+  // Update rate limit
+  if (userToken) commentRateLimit.set(userToken, Date.now());
+
   res.json({ success: true, comment });
 });
 
@@ -758,6 +837,8 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(HIDDEN_ANIMATORS_FILE)) archive.file(HIDDEN_ANIMATORS_FILE, { name: 'hidden_animators.json' });
   // Add comments.json
   if (fs.existsSync(COMMENTS_FILE)) archive.file(COMMENTS_FILE, { name: 'comments.json' });
+  // Add banned_users.json
+  if (fs.existsSync(BANNED_USERS_FILE)) archive.file(BANNED_USERS_FILE, { name: 'banned_users.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 
