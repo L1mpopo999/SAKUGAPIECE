@@ -81,6 +81,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-tag.animator{background:var(--tag-animator-bg);color:var(--tag-animator-text);cursor:pointer}
 .clip-tag.animator:hover{background:rgba(244,162,38,.25)}
 .clip-tag.category{background:var(--tag-bg);color:var(--tag-text)}
+.clip-views{font-size:.7rem;opacity:.7}
 .clip-tags-more{background:rgba(255,255,255,.08);color:var(--text-muted);cursor:pointer;font-size:.65rem;padding:.15rem .5rem;border-radius:3px;font-family:'Space Mono',monospace;transition:background .2s}
 .clip-tags-more:hover{background:rgba(255,255,255,.15);color:var(--text-primary)}
 

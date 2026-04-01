@@ -14,6 +14,7 @@ async function loadAnimatorsAndFilters() {
 // ===== STATE =====
 let allClips = [];
 let currentFilter = 'all';
+let currentSort = 'newest';
 let selectedFile = null;
 let selectedImages = [];
 let selectedThumbnail = null;
@@ -104,7 +105,7 @@ function renderClipCard(clip, i) {
     </div>
     <div class="clip-info">
       <div class="clip-title">${esc(clip.title)}</div>
-      <div class="clip-meta"><span>Эп. ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span></div>
+      <div class="clip-meta"><span>Эп. ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}</div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
         ${clip.tags.slice(0,2).map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}
@@ -148,10 +149,12 @@ function attachClipEvents(container) {
         // Video: open in overlay on same page
         openPlayer(clip.id);
       } else if (clip.images && clip.images.length >= 4) {
-        // Many photos: open in new tab
+        // Many photos: record view + open in new tab
+        fetch(`/api/clips/${clip.id}/view`,{method:'POST'}).catch(()=>{});
         window.open(`/clip/${clip.id}`, '_blank');
       } else if (clip.images && clip.images.length > 0) {
-        // Few photos: open lightbox
+        // Few photos: record view + open lightbox
+        fetch(`/api/clips/${clip.id}/view`,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
         openClipPageImageViewer(clip.images.map(i => i.url), 0);
       }
     });
@@ -177,6 +180,11 @@ function applyFilters() {
     clips = clips.filter(c => c.tags.includes(currentFilter) || c.arc.toLowerCase() === currentFilter.toLowerCase());
   }
   if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
+  
+  // Sort
+  if (currentSort === 'views') {
+    clips = [...clips].sort((a, b) => (b.views || 0) - (a.views || 0));
+  }
   
   // Show filter description
   const descEl = $('#filterDescription');
@@ -758,6 +766,8 @@ let timecodeInterval = null;
 // ===== VIDEO PLAYER =====
 function openPlayer(id) {
   const clip=allClips.find(c=>c.id===id);if(!clip)return;
+  // Record view
+  fetch(`/api/clips/${id}/view`,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
   $('#playerTitle').textContent=clip.title;
   $('#playerCurrentAnimator').textContent='';
   $('#playerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">Эп. ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}${clip.tags.map(t=>`<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}`;
@@ -1248,14 +1258,26 @@ function renderFilterChips() {
     <span class="filter-separator"></span>
     ${arcFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
     ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
+    <span class="filter-separator"></span>
+    <button class="filter-chip sort-chip${currentSort==='newest'?' active':''}" data-sort="newest">Новые</button>
+    <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 Просмотры</button>
     <span class="results-count" id="resultsCount"></span>
   `;
 
   container.querySelectorAll('.filter-chip[data-filter]').forEach(ch => {
     ch.addEventListener('click', () => {
-      container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      container.querySelectorAll('.filter-chip[data-filter]').forEach(c => c.classList.remove('active'));
       ch.classList.add('active');
       currentFilter = ch.dataset.filter;
+      applyFilters();
+    });
+  });
+
+  container.querySelectorAll('.sort-chip[data-sort]').forEach(ch => {
+    ch.addEventListener('click', () => {
+      container.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+      ch.classList.add('active');
+      currentSort = ch.dataset.sort;
       applyFilters();
     });
   });

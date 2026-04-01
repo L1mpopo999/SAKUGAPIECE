@@ -175,6 +175,17 @@ app.get('/api/clips', (req, res) => {
   res.json(loadClips());
 });
 
+// Record a view
+app.post('/api/clips/:id/view', (req, res) => {
+  const clips = loadClips();
+  const id = parseInt(req.params.id);
+  const clip = clips.find(c => c.id === id);
+  if (!clip) return res.status(404).json({ error: 'Клип не найден' });
+  clip.views = (clip.views || 0) + 1;
+  saveClips(clips);
+  res.json({ success: true, views: clip.views });
+});
+
 // Clip page — serve index.html for client-side routing
 app.get('/clip/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
