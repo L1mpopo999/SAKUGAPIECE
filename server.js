@@ -647,7 +647,7 @@ app.get('/api/comments/counts', (req, res) => {
 
 // ===== COMMENT ANTI-SPAM =====
 const BANNED_USERS_FILE = path.join(dataDir, 'banned_users.json');
-const commentRateLimit = new Map(); // userToken -> last comment timestamp
+const commentRateLimit = new Map(); // userToken -> array of timestamps
 
 function loadBannedUsers() {
   if (!fs.existsSync(BANNED_USERS_FILE)) { saveBannedUsers([]); return []; }
@@ -711,11 +711,14 @@ app.post('/api/clips/:id/comments', (req, res) => {
     return res.status(400).json({ error: 'Ссылки в комментариях запрещены' });
   }
 
-  // Rate limit: 1 comment per 30 seconds
+  // Rate limit: after 3 comments in a row, 30 sec cooldown
   if (userToken) {
-    const lastTime = commentRateLimit.get(userToken);
-    if (lastTime && Date.now() - lastTime < 30000) {
-      const wait = Math.ceil((30000 - (Date.now() - lastTime)) / 1000);
+    const times = commentRateLimit.get(userToken) || [];
+    // Clean old timestamps (older than 30 sec)
+    const recent = times.filter(t => Date.now() - t < 30000);
+    if (recent.length >= 3) {
+      const oldest = recent[0];
+      const wait = Math.ceil((30000 - (Date.now() - oldest)) / 1000);
       return res.status(429).json({ error: `Подождите ${wait} сек. перед следующим комментарием` });
     }
   }
@@ -755,7 +758,11 @@ app.post('/api/clips/:id/comments', (req, res) => {
   saveComments(comments);
 
   // Update rate limit
-  if (userToken) commentRateLimit.set(userToken, Date.now());
+  if (userToken) {
+    const times = (commentRateLimit.get(userToken) || []).filter(t => Date.now() - t < 30000);
+    times.push(Date.now());
+    commentRateLimit.set(userToken, times);
+  }
 
   res.json({ success: true, comment });
 });
