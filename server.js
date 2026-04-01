@@ -128,6 +128,7 @@ function saveHiddenAnimators(list) { fs.writeFileSync(HIDDEN_ANIMATORS_FILE, JSO
 
 // ===== COMMENTS =====
 const COMMENTS_FILE = path.join(dataDir, 'comments.json');
+const NICKNAMES_FILE = path.join(dataDir, 'nicknames.json');
 
 function loadComments() {
   if (!fs.existsSync(COMMENTS_FILE)) { saveComments({}); return {}; }
@@ -135,6 +136,13 @@ function loadComments() {
   catch { return {}; }
 }
 function saveComments(data) { fs.writeFileSync(COMMENTS_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+
+function loadNicknames() {
+  if (!fs.existsSync(NICKNAMES_FILE)) { saveNicknames({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(NICKNAMES_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveNicknames(data) { fs.writeFileSync(NICKNAMES_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
 
 // ===== MIDDLEWARE =====
 app.use(express.json());
@@ -595,11 +603,26 @@ app.get('/api/comments/counts', (req, res) => {
 
 // Add comment to a clip (no auth needed)
 app.post('/api/clips/:id/comments', (req, res) => {
-  const { nickname, text } = req.body;
+  const { nickname, text, userToken } = req.body;
   if (!nickname || !nickname.trim()) return res.status(400).json({ error: 'Укажите ник' });
   if (!text || !text.trim()) return res.status(400).json({ error: 'Напишите комментарий' });
+  if (!userToken) return res.status(400).json({ error: 'Ошибка авторизации' });
   if (nickname.trim().length > 30) return res.status(400).json({ error: 'Ник слишком длинный (макс 30 символов)' });
   if (text.trim().length > 1000) return res.status(400).json({ error: 'Комментарий слишком длинный (макс 1000 символов)' });
+
+  const nick = nickname.trim().toLowerCase();
+  const nicknames = loadNicknames();
+
+  // Check if nickname is taken by someone else
+  if (nicknames[nick] && nicknames[nick] !== userToken) {
+    return res.status(400).json({ error: 'Этот ник уже занят другим пользователем' });
+  }
+
+  // Register nickname for this token
+  if (!nicknames[nick]) {
+    nicknames[nick] = userToken;
+    saveNicknames(nicknames);
+  }
 
   const comments = loadComments();
   const clipId = req.params.id;

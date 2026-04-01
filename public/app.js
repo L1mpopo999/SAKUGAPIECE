@@ -940,6 +940,16 @@ function renderComments(comments, clipId) {
   });
 }
 
+// Generate/load persistent user token for nickname ownership
+function getUserToken() {
+  let token = localStorage.getItem('sp_user_token');
+  if (!token) {
+    token = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');
+    localStorage.setItem('sp_user_token', token);
+  }
+  return token;
+}
+
 $('#commentSubmitBtn').addEventListener('click', async () => {
   const nick = $('#commentNick').value.trim();
   const text = $('#commentText').value.trim();
@@ -951,7 +961,7 @@ $('#commentSubmitBtn').addEventListener('click', async () => {
     const res = await fetch(`/api/clips/${currentCommentClipId}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname: nick, text })
+      body: JSON.stringify({ nickname: nick, text, userToken: getUserToken() })
     });
     const d = await res.json();
     if (d.success) {
