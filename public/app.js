@@ -1414,13 +1414,16 @@ function renderFilterChips() {
     <button class="filter-chip" data-filter="type:video">Видео</button>
     <button class="filter-chip" data-filter="type:images">Фото</button>
     <span class="filter-separator"></span>
-    ${tagFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+    <button class="filter-chip filter-tags-toggle" id="filterTagsToggle">Разделы ▾</button>
     <span class="filter-separator"></span>
     ${arcFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
-    ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="filter-separator"></span>
     <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 Просмотры</button>
+    ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="results-count" id="resultsCount"></span>
+    <div class="filter-tags-dropdown" id="filterTagsDropdown">
+      ${tagFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+    </div>
   `;
 
   container.querySelectorAll('.filter-chip[data-filter]').forEach(ch => {
@@ -1449,6 +1452,49 @@ function renderFilterChips() {
 
   const manageBtn = container.querySelector('.admin-manage-filters-btn');
   if (manageBtn) manageBtn.addEventListener('click', openFilterManager);
+
+  // Tags dropdown toggle
+  const toggleBtn = container.querySelector('#filterTagsToggle');
+  const dropdown = container.querySelector('#filterTagsDropdown');
+  if (toggleBtn && dropdown) {
+    // If a tag filter is active, show it on the button
+    const activeTag = tagFilters.find(f => f.id === currentFilter);
+    if (activeTag) {
+      toggleBtn.textContent = activeTag.label + ' ✕';
+      toggleBtn.classList.add('active');
+      toggleBtn.addEventListener('click', (e) => {
+        // If clicking the active tag button, either clear or toggle dropdown
+        if (dropdown.classList.contains('visible')) {
+          dropdown.classList.remove('visible');
+        } else {
+          // Reset filter
+          currentFilter = 'all';
+          container.querySelector('[data-filter="all"]').classList.add('active');
+          toggleBtn.classList.remove('active');
+          applyFilters();
+          renderFilterChips();
+        }
+      });
+    } else {
+      toggleBtn.addEventListener('click', () => {
+        dropdown.classList.toggle('visible');
+      });
+    }
+    // Close dropdown when clicking a tag inside it
+    dropdown.querySelectorAll('.filter-chip[data-filter]').forEach(ch => {
+      ch.addEventListener('click', () => {
+        dropdown.classList.remove('visible');
+      });
+    });
+  }
+
+  // Close tags dropdown on outside click
+  document.addEventListener('click', (e) => {
+    const dd = document.querySelector('#filterTagsDropdown');
+    if (dd && !e.target.closest('#filterTagsToggle') && !e.target.closest('#filterTagsDropdown')) {
+      dd.classList.remove('visible');
+    }
+  }, { once: false });
 }
 
 // ===== FILTER MANAGER =====
