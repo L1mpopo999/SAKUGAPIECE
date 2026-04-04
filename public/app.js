@@ -50,6 +50,7 @@ function navigateTo(page, data) {
   if (nav) nav.classList.add('active');
   if (page === 'animator-profile' && data) {
     currentAnimatorProfile = data;
+    animatorProfileFilter = 'all';
     $(`.nav-link[data-page="animators"]`).classList.add('active');
     renderAnimatorProfile(data);
   }
@@ -351,17 +352,41 @@ async function addAnimator(name) {
 $('#animatorSearchInput')?.addEventListener('input', renderAnimatorGrid);
 
 // ===== ANIMATOR PROFILE =====
+let animatorProfileFilter = 'all';
+
 function renderAnimatorProfile(name) {
   $('#animatorProfileName').textContent=name;
-  const clips=allClips.filter(c=>c.animators.some(a=>a.toLowerCase()===name.toLowerCase()));
-  const arcs=[...new Set(clips.map(c=>c.arc))];
-  let stats=`${clips.length} клип${pluralRu(clips.length)}`;
+  const allAnimatorClips=allClips.filter(c=>c.animators.some(a=>a.toLowerCase()===name.toLowerCase()));
+  const arcs=[...new Set(allAnimatorClips.map(c=>c.arc))];
+  const videoCount = allAnimatorClips.filter(c => c.videoUrl).length;
+  const photoCount = allAnimatorClips.filter(c => !c.videoUrl).length;
+  let stats=`${allAnimatorClips.length} клип${pluralRu(allAnimatorClips.length)}`;
   if(arcs.length)stats+=` · ${arcs.join(', ')}`;
   $('#animatorProfileStats').textContent=stats;
+
+  // Apply filter
+  let clips = allAnimatorClips;
+  if (animatorProfileFilter === 'video') clips = clips.filter(c => c.videoUrl);
+  else if (animatorProfileFilter === 'photo') clips = clips.filter(c => !c.videoUrl);
+
+  // Update filter buttons
+  const filterBar = $('#animatorProfileFilters');
+  filterBar.querySelectorAll('.filter-chip').forEach(ch => {
+    ch.classList.toggle('active', ch.dataset.animatorFilter === animatorProfileFilter);
+  });
+
   const grid=$('#animatorClipGrid');
-  if(!clips.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Пока нет загруженных клипов</p><p style="color:var(--text-muted);font-size:.8rem;margin-top:.4rem">Загрузите клип для этого аниматора!</p></div>`}
+  if(!clips.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Нет клипов в этой категории</p></div>`}
   else{grid.innerHTML=clips.map((c,i)=>renderClipCard(c,i)).join('');attachClipEvents(grid)}
 }
+
+// Animator profile filter clicks
+document.querySelectorAll('[data-animator-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    animatorProfileFilter = btn.dataset.animatorFilter;
+    if (currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
+  });
+});
 
 // ===== EPISODES PAGE =====
 let episodeSortMode = 'clips';
