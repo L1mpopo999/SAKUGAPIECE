@@ -13,7 +13,9 @@ async function loadAnimatorsAndFilters() {
 
 // ===== STATE =====
 let allClips = [];
-let currentFilter = 'all';
+let currentTypeFilter = 'all'; // all, type:video, type:images
+let currentTagFilter = null;   // null or tag id
+let currentArcFilter = null;   // null or arc name
 let currentSort = 'newest';
 let selectedFile = null;
 let selectedImages = [];
@@ -235,13 +237,24 @@ window.addEventListener('scroll', () => {
 function applyFilters() {
   const q = ($('#searchInput')?.value||'').toLowerCase().trim();
   let clips = allClips;
-  if (currentFilter === 'type:video') {
+  
+  // Type filter
+  if (currentTypeFilter === 'type:video') {
     clips = clips.filter(c => c.videoUrl);
-  } else if (currentFilter === 'type:images') {
+  } else if (currentTypeFilter === 'type:images') {
     clips = clips.filter(c => !c.videoUrl && c.images && c.images.length > 0);
-  } else if (currentFilter !== 'all') {
-    clips = clips.filter(c => c.tags.includes(currentFilter) || c.arc.toLowerCase() === currentFilter.toLowerCase());
   }
+  
+  // Tag filter
+  if (currentTagFilter) {
+    clips = clips.filter(c => c.tags.includes(currentTagFilter));
+  }
+  
+  // Arc filter
+  if (currentArcFilter) {
+    clips = clips.filter(c => c.arc.toLowerCase() === currentArcFilter.toLowerCase());
+  }
+  
   if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
   
   // Sort
@@ -252,16 +265,16 @@ function applyFilters() {
   // Show filter description
   const descEl = $('#filterDescription');
   if (descEl) {
-    const filter = FILTERS.find(f => f.id === currentFilter);
+    const filter = FILTERS.find(f => f.id === currentTagFilter);
     if (filter && filter.description) {
       descEl.innerHTML = `<div class="filter-desc-text">${esc(filter.description)}</div>${isAdmin ? `<button class="filter-desc-edit" id="editFilterDescBtn">✎</button>` : ''}`;
       descEl.style.display = '';
       const editBtn = descEl.querySelector('#editFilterDescBtn');
-      if (editBtn) editBtn.addEventListener('click', () => editFilterDescription(currentFilter));
-    } else if (isAdmin && currentFilter !== 'all' && !currentFilter.startsWith('type:')) {
+      if (editBtn) editBtn.addEventListener('click', () => editFilterDescription(currentTagFilter));
+    } else if (isAdmin && currentTagFilter) {
       descEl.innerHTML = `<button class="filter-desc-add" id="addFilterDescBtn">+ Добавить описание</button>`;
       descEl.style.display = '';
-      descEl.querySelector('#addFilterDescBtn').addEventListener('click', () => editFilterDescription(currentFilter));
+      descEl.querySelector('#addFilterDescBtn').addEventListener('click', () => editFilterDescription(currentTagFilter));
     } else {
       descEl.innerHTML = '';
       descEl.style.display = 'none';
@@ -1128,21 +1141,21 @@ $('#imgNextBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex
 // ===== ADMIN =====
 // Restore admin session from token
 (async()=>{
-  const savedToken = sessionStorage.getItem('sp_admin_token');
+  const savedToken = localStorage.getItem('sp_admin_token');
   if(savedToken){
     try{
       const r=await fetch('/api/verify',{headers:{'X-Admin-Token':savedToken}});
       const d=await r.json();
       if(d.valid){adminToken=savedToken;isAdmin=true;document.body.classList.add('admin-mode');}
-      else{sessionStorage.removeItem('sp_admin_token');}
-    }catch{sessionStorage.removeItem('sp_admin_token');}
+      else{localStorage.removeItem('sp_admin_token');}
+    }catch{localStorage.removeItem('sp_admin_token');}
   }
 })();
 
 $('#adminToggleBtn').addEventListener('click',async()=>{
   if(isAdmin){
     try{await fetch('/api/logout',{method:'POST',headers:{'X-Admin-Token':adminToken}})}catch{}
-    isAdmin=false;adminToken=null;document.body.classList.remove('admin-mode');sessionStorage.removeItem('sp_admin_token');notify('Вышли из режима админа');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();
+    isAdmin=false;adminToken=null;document.body.classList.remove('admin-mode');localStorage.removeItem('sp_admin_token');notify('Вышли из режима админа');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();
   }
   else{$('#adminLoginModal').classList.add('visible');document.body.style.overflow='hidden';$('#adminPasswordInput').value='';$('#adminLoginError').style.display='none';setTimeout(()=>$('#adminPasswordInput').focus(),100)}
 });
@@ -1166,7 +1179,7 @@ async function tryLogin(){
     const d=await r.json();
     if(d.success&&d.token){
       adminToken=d.token;isAdmin=true;document.body.classList.add('admin-mode');
-      sessionStorage.setItem('sp_admin_token',d.token);
+      localStorage.setItem('sp_admin_token',d.token);
       $('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';
       notify('Режим админа включён');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();
     }else{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
@@ -1470,42 +1483,45 @@ function renderFilterChips() {
   const arcFilters = FILTERS.filter(f => f.type === 'arc');
 
   container.innerHTML = `
-    <button class="filter-chip active" data-filter="all">Все</button>
-    <button class="filter-chip" data-filter="type:video">Видео</button>
-    <button class="filter-chip" data-filter="type:images">Фото</button>
+    <button class="filter-chip type-chip${currentTypeFilter==='all'?' active':''}" data-type="all">Все</button>
+    <button class="filter-chip type-chip${currentTypeFilter==='type:video'?' active':''}" data-type="type:video">Видео</button>
+    <button class="filter-chip type-chip${currentTypeFilter==='type:images'?' active':''}" data-type="type:images">Фото</button>
     <span class="filter-separator"></span>
-    <button class="filter-chip filter-tags-toggle" id="filterTagsToggle">Разделы ▾</button>
+    <button class="filter-chip filter-tags-toggle${currentTagFilter?' active':''}" id="filterTagsToggle">${currentTagFilter ? (tagFilters.find(f=>f.id===currentTagFilter)?.label||currentTagFilter)+' ✕' : 'Разделы ▾'}</button>
     <span class="filter-separator"></span>
-    ${arcFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+    ${arcFilters.map(f => `<button class="filter-chip arc-chip${currentArcFilter===f.id?' active':''}" data-arc="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
     <span class="filter-separator"></span>
     <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 Просмотры</button>
     ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="results-count" id="resultsCount"></span>
     <div class="filter-tags-dropdown" id="filterTagsDropdown">
-      ${tagFilters.map(f => `<button class="filter-chip" data-filter="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+      ${tagFilters.map(f => `<button class="filter-chip tag-filter-chip${currentTagFilter===f.id?' active':''}" data-tag="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
     </div>
   `;
 
-  container.querySelectorAll('.filter-chip[data-filter]').forEach(ch => {
+  // Type filter clicks (Все/Видео/Фото)
+  container.querySelectorAll('.type-chip').forEach(ch => {
     ch.addEventListener('click', () => {
-      container.querySelectorAll('.filter-chip[data-filter]').forEach(c => c.classList.remove('active'));
-      ch.classList.add('active');
-      currentFilter = ch.dataset.filter;
+      currentTypeFilter = ch.dataset.type;
+      renderFilterChips();
       applyFilters();
     });
   });
 
+  // Arc filter clicks (toggle)
+  container.querySelectorAll('.arc-chip').forEach(ch => {
+    ch.addEventListener('click', () => {
+      currentArcFilter = currentArcFilter === ch.dataset.arc ? null : ch.dataset.arc;
+      renderFilterChips();
+      applyFilters();
+    });
+  });
+
+  // Sort toggle
   container.querySelectorAll('.sort-chip[data-sort]').forEach(ch => {
     ch.addEventListener('click', () => {
-      if (currentSort === ch.dataset.sort) {
-        // Toggle off
-        currentSort = 'newest';
-        ch.classList.remove('active');
-      } else {
-        container.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
-        ch.classList.add('active');
-        currentSort = ch.dataset.sort;
-      }
+      currentSort = currentSort === ch.dataset.sort ? 'newest' : ch.dataset.sort;
+      renderFilterChips();
       applyFilters();
     });
   });
@@ -1513,42 +1529,31 @@ function renderFilterChips() {
   const manageBtn = container.querySelector('.admin-manage-filters-btn');
   if (manageBtn) manageBtn.addEventListener('click', openFilterManager);
 
-  // Tags dropdown toggle
+  // Tags dropdown
   const toggleBtn = container.querySelector('#filterTagsToggle');
   const dropdown = container.querySelector('#filterTagsDropdown');
   if (toggleBtn && dropdown) {
-    // If a tag filter is active, show it on the button
-    const activeTag = tagFilters.find(f => f.id === currentFilter);
-    if (activeTag) {
-      toggleBtn.textContent = activeTag.label + ' ✕';
-      toggleBtn.classList.add('active');
-      toggleBtn.addEventListener('click', (e) => {
-        // If clicking the active tag button, either clear or toggle dropdown
-        if (dropdown.classList.contains('visible')) {
-          dropdown.classList.remove('visible');
-        } else {
-          // Reset filter
-          currentFilter = 'all';
-          container.querySelector('[data-filter="all"]').classList.add('active');
-          toggleBtn.classList.remove('active');
-          applyFilters();
-          renderFilterChips();
-        }
-      });
-    } else {
-      toggleBtn.addEventListener('click', () => {
+    toggleBtn.addEventListener('click', () => {
+      if (currentTagFilter) {
+        // Clear tag filter
+        currentTagFilter = null;
+        renderFilterChips();
+        applyFilters();
+      } else {
         dropdown.classList.toggle('visible');
-      });
-    }
-    // Close dropdown when clicking a tag inside it
-    dropdown.querySelectorAll('.filter-chip[data-filter]').forEach(ch => {
+      }
+    });
+
+    dropdown.querySelectorAll('.tag-filter-chip').forEach(ch => {
       ch.addEventListener('click', () => {
+        currentTagFilter = currentTagFilter === ch.dataset.tag ? null : ch.dataset.tag;
         dropdown.classList.remove('visible');
+        renderFilterChips();
+        applyFilters();
       });
     });
   }
 
-  // Close tags dropdown on outside click
   document.addEventListener('click', (e) => {
     const dd = document.querySelector('#filterTagsDropdown');
     if (dd && !e.target.closest('#filterTagsToggle') && !e.target.closest('#filterTagsDropdown')) {
