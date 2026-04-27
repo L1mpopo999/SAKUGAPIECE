@@ -58,7 +58,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* Clip Grid */
 .grid-container{max-width:1440px;margin:0 auto;padding:1.5rem 2rem 4rem;position:relative;z-index:1}
 .clip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.2rem}
-.clip-card{background:var(--bg-card);border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);transition:all .3s cubic-bezier(.25,.46,.45,.94);cursor:pointer;position:relative;animation:fadeUp .4s ease both}
+.clip-card{background:var(--bg-card);border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);transition:all .3s cubic-bezier(.25,.46,.45,.94);cursor:pointer;position:relative;animation:fadeUp .4s ease both;text-decoration:none;color:inherit;display:block}
 .clip-card:hover{border-color:var(--border-light);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .clip-thumb{position:relative;aspect-ratio:16/9;background:var(--bg-secondary);overflow:hidden}
 .clip-thumb video,.clip-thumb img{width:100%;height:100%;object-fit:cover;display:block}

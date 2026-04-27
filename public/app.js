@@ -94,7 +94,7 @@ function renderClipCard(clip, i) {
   const badge = hasVideo ? (clip.quality || '1080p') : (hasImages ? 'ФОТО' : '');
   const imgCount = hasImages && clip.images.length > 1 ? `<span class="clip-img-count">${clip.images.length} фото</span>` : '';
 
-  return `<div class="clip-card" data-id="${clip.id}" style="animation-delay:${i*0.04}s">
+  return `<a class="clip-card" href="/clip/${clip.id}" data-id="${clip.id}" style="animation-delay:${i*0.04}s">
     <div class="clip-thumb">
       <button class="admin-delete-btn" data-delete-id="${clip.id}" title="Удалить">&times;</button>
       <button class="admin-edit-btn" data-edit-id="${clip.id}" title="Редактировать">✎</button>
@@ -115,7 +115,7 @@ function renderClipCard(clip, i) {
         ${clip.episode ? `<span class="clip-tag category">${esc(clip.episode)}</span>` : ''}
       </div>
     </div>
-  </div>`;
+  </a>`;
 }
 
 function attachClipEvents(container) {
@@ -132,6 +132,7 @@ function attachClipEvents(container) {
   container.querySelectorAll('.clip-card').forEach(card => {
     card.addEventListener('click', e => {
       if (e.target.closest('.clip-tags-more')) {
+        e.preventDefault();
         e.stopPropagation();
         const tagsContainer = e.target.closest('.clip-tags');
         tagsContainer.classList.toggle('expanded');
@@ -143,23 +144,10 @@ function attachClipEvents(container) {
         }
         return;
       }
-      if (e.target.closest('.admin-delete-btn')) { e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
-      if (e.target.closest('.admin-edit-btn')) { e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
-      if (e.target.closest('.clip-tag.animator')) { e.stopPropagation(); navigateTo('animator-profile', e.target.closest('.clip-tag.animator').dataset.animator); return; }
-      const clip = allClips.find(c => c.id === parseInt(card.dataset.id));
-      if (!clip) return;
-      if (clip.videoUrl) {
-        // Video: open in overlay on same page
-        openPlayer(clip.id);
-      } else if (clip.images && clip.images.length >= 4) {
-        // Many photos: record view + open in new tab
-        fetch(`/api/clips/${clip.id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).catch(()=>{});
-        window.open(`/clip/${clip.id}`, '_blank');
-      } else if (clip.images && clip.images.length > 0) {
-        // Few photos: record view + open lightbox
-        fetch(`/api/clips/${clip.id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
-        openClipPageImageViewer(clip.images.map(i => i.url), 0);
-      }
+      if (e.target.closest('.admin-delete-btn')) { e.preventDefault(); e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
+      if (e.target.closest('.admin-edit-btn')) { e.preventDefault(); e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
+      if (e.target.closest('.clip-tag.animator')) { e.preventDefault(); e.stopPropagation(); window.location.href = '#animator/' + encodeURIComponent(e.target.closest('.clip-tag.animator').dataset.animator); window.location.reload(); return; }
+      // Normal left click — let the <a> tag handle navigation to /clip/:id
     });
   });
 }
@@ -1737,6 +1725,95 @@ function renderClipPage(clip) {
   galleryItems.forEach((img, idx) => {
     img.addEventListener('click', () => {
       openClipPageImageViewer(clip.images.map(i => i.url), idx);
+    });
+  });
+
+  // Record view
+  fetch(`/api/clips/${clip.id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).catch(()=>{});
+
+  // Add comments section
+  const commentsHtml = `<div class="clip-page-comments" style="max-width:960px;margin:0 auto;padding:0 1rem 3rem">
+    <div class="player-notes-label">Комментарии</div>
+    <div class="comments-list" id="clipPageCommentsList"></div>
+    <div class="comment-form">
+      <input class="comment-nick" id="clipPageCommentNick" type="text" placeholder="Ваш ник" maxlength="30" autocomplete="off">
+      <textarea class="comment-text" id="clipPageCommentText" placeholder="Написать комментарий..." maxlength="1000"></textarea>
+      <button class="comment-submit" id="clipPageCommentBtn">Отправить</button>
+    </div>
+  </div>`;
+  page.insertAdjacentHTML('beforeend', commentsHtml);
+
+  // Load comments
+  loadClipPageComments(clip.id);
+  
+  $('#clipPageCommentBtn').addEventListener('click', async () => {
+    const nick = $('#clipPageCommentNick').value.trim();
+    const text = $('#clipPageCommentText').value.trim();
+    if (!nick) { notify('Укажите ник', true); return; }
+    if (!text) { notify('Напишите комментарий', true); return; }
+    localStorage.setItem('sp_comment_nick', nick);
+    try {
+      const res = await fetch(`/api/clips/${clip.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname: nick, text, userToken: getUserToken() })
+      });
+      const d = await res.json();
+      if (d.success) { $('#clipPageCommentText').value = ''; loadClipPageComments(clip.id); }
+      else notify(d.error, true);
+    } catch { notify('Ошибка сети', true); }
+  });
+  
+  $('#clipPageCommentText').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#clipPageCommentBtn').click(); }
+  });
+
+  // Restore nick
+  const savedNick = localStorage.getItem('sp_comment_nick');
+  if (savedNick && $('#clipPageCommentNick')) $('#clipPageCommentNick').value = savedNick;
+}
+
+async function loadClipPageComments(clipId) {
+  const list = $('#clipPageCommentsList');
+  if (!list) return;
+  const hdrs = {'X-User-Token':getUserToken()};
+  if (adminToken) hdrs['X-Admin-Token'] = adminToken;
+  try {
+    const res = await fetch(`/api/clips/${clipId}/comments`, {headers:hdrs});
+    const comments = await res.json();
+    renderClipPageComments(comments, clipId);
+  } catch { list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Ошибка загрузки</span>'; }
+}
+
+function renderClipPageComments(comments, clipId) {
+  const list = $('#clipPageCommentsList');
+  if (!comments.length) { list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Пока нет комментариев</span>'; return; }
+  list.innerHTML = comments.map(c => {
+    const date = new Date(c.createdAt);
+    const timeStr = date.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}) + ' ' + date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+    const edited = c.editedAt ? ' <span style="font-size:.6rem;color:var(--text-muted)">(ред.)</span>' : '';
+    return `<div class="comment-item${c.isOwn ? ' comment-own' : ''}">
+      <div class="comment-header">
+        <span class="comment-nickname">${esc(c.nickname)}</span>
+        <span class="comment-time">${timeStr}${edited}</span>
+        ${c.isOwn ? `<button class="comment-edit-btn" data-clip-id="${clipId}" data-comment-id="${c.id}" data-text="${esc(c.text)}">✎</button>` : ''}
+        ${c.isOwn || isAdmin ? `<button class="comment-delete" data-clip-id="${clipId}" data-comment-id="${c.id}">×</button>` : ''}
+        ${isAdmin && c.userToken && !c.isOwn ? `<button class="comment-ban-btn" data-user-token="${esc(c.userToken)}" data-nickname="${esc(c.nickname)}">🚫</button>` : ''}
+      </div>
+      <div class="comment-body">${esc(c.text).replace(/\n/g,'<br>')}</div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.comment-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Удалить комментарий?')) return;
+      const headers = {}; if (isAdmin) headers['X-Admin-Token'] = adminToken; headers['X-User-Token'] = getUserToken();
+      try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'DELETE',headers}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify('Ошибка сети',true); }
+    });
+  });
+  list.querySelectorAll('.comment-edit-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const newText = prompt('Редактировать:',btn.dataset.text); if(!newText||!newText.trim()) return;
+      try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-User-Token':getUserToken()},body:JSON.stringify({text:newText.trim()})}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify('Ошибка сети',true); }
     });
   });
 }
