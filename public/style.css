@@ -28,7 +28,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .hero-sub{font-size:.95rem;color:var(--text-secondary);margin-bottom:2.5rem;font-weight:300;padding:0 .5rem}
 
 /* Search */
-.search-wrapper{max-width:640px;margin:0 auto;position:relative}
+.search-wrapper{max-width:640px;margin:0 auto;position:relative;z-index:20}
 .search-icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none}
 .search-input{width:100%;padding:.9rem 1rem .9rem 3rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-primary);font-family:'Noto Sans',sans-serif;font-size:.95rem;outline:none;transition:border-color .25s,box-shadow .25s}
 .search-input::placeholder{color:var(--text-muted)}
@@ -44,7 +44,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .suggestion-count{margin-left:auto;font-size:.7rem;color:var(--text-muted);font-family:'Space Mono',monospace}
 
 /* Filters */
-.filters{max-width:1440px;margin:0 auto;padding:1rem 2rem .5rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;position:relative;z-index:10}
+.filters{max-width:1440px;margin:0 auto;padding:1rem 2rem .5rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;position:relative;z-index:5}
 .filter-chip{font-family:'Space Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;padding:.4rem .9rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;transition:all .2s;white-space:nowrap}
 .filter-chip:hover{border-color:var(--text-secondary);color:var(--text-primary)}
 .filter-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -57,6 +57,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Clip Grid */
 .grid-container{max-width:1440px;margin:0 auto;padding:1.5rem 2rem 4rem;position:relative;z-index:1}
+.pagination{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.8rem 0;flex-wrap:wrap}
+.pagination-btn{font-family:'Space Mono',monospace;font-size:.75rem;padding:.4rem .7rem;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;transition:all .2s;min-width:32px;text-align:center}
+.pagination-btn:hover{border-color:var(--text-secondary);color:var(--text-primary)}
+.pagination-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.pagination-btn.disabled{opacity:.3;cursor:default;pointer-events:none}
+.pagination-dots{color:var(--text-muted);font-size:.8rem;padding:0 .2rem}
 .clip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.2rem}
 .clip-card{background:var(--bg-card);border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);transition:all .3s cubic-bezier(.25,.46,.45,.94);cursor:pointer;position:relative;animation:fadeUp .4s ease both;text-decoration:none;color:inherit;display:block}
 .clip-card:hover{border-color:var(--border-light);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
@@ -84,7 +90,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-tag{font-size:.68rem;padding:.15rem .5rem;border-radius:3px;font-family:'Space Mono',monospace}
 .clip-tag.animator{background:var(--tag-animator-bg);color:var(--tag-animator-text);cursor:pointer}
 .clip-tag.animator:hover{background:rgba(244,162,38,.25)}
-.clip-tag.category{background:var(--tag-bg);color:var(--tag-text)}
+.clip-tag.category{background:var(--tag-bg);color:var(--tag-text);cursor:pointer}
+.clip-tag.category:hover{background:rgba(255,255,255,.12)}
 .clip-views{font-size:.7rem;opacity:.7}
 .clip-tags-more{background:rgba(255,255,255,.08);color:var(--text-muted);cursor:pointer;font-size:.65rem;padding:.15rem .5rem;border-radius:3px;font-family:'Space Mono',monospace;transition:background .2s}
 .clip-tags-more:hover{background:rgba(255,255,255,.15);color:var(--text-primary)}

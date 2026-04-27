@@ -137,7 +137,15 @@ function renderClipCard(clip, i) {
   const badge = hasVideo ? (clip.quality || '1080p') : (hasImages ? 'ФОТО' : '');
   const imgCount = hasImages && clip.images.length > 1 ? `<span class="clip-img-count">${clip.images.length} фото</span>` : '';
 
-  return `<a class="clip-card" href="/clip/${clip.id}" data-id="${clip.id}" style="animation-delay:${i*0.04}s">
+  const shouldOpenNewTab = hasVideo || (hasImages && clip.images.length > 4);
+  const cardTag = shouldOpenNewTab
+    ? `<a class="clip-card" href="/clip/${clip.id}" data-id="${clip.id}" style="animation-delay:${i*0.04}s">`
+    : hasImages
+      ? `<div class="clip-card clip-card-lightbox" data-id="${clip.id}" data-images='${JSON.stringify(clip.images.map(img=>img.url))}' style="animation-delay:${i*0.04}s;cursor:pointer">`
+      : `<a class="clip-card" href="/clip/${clip.id}" data-id="${clip.id}" style="animation-delay:${i*0.04}s">`;
+  const cardClose = (hasImages && !shouldOpenNewTab) ? '</div>' : '</a>';
+
+  return `${cardTag}
     <div class="clip-thumb">
       <button class="admin-delete-btn" data-delete-id="${clip.id}" title="Удалить">&times;</button>
       <button class="admin-edit-btn" data-edit-id="${clip.id}" title="Редактировать">✎</button>
@@ -158,7 +166,7 @@ function renderClipCard(clip, i) {
         ${clip.episode ? `<span class="clip-tag category">${esc(clip.episode)}</span>` : ''}
       </div>
     </div>
-  </a>`;
+  ${cardClose}`;
 }
 
 function attachClipEvents(container) {
@@ -189,49 +197,123 @@ function attachClipEvents(container) {
       }
       if (e.target.closest('.admin-delete-btn')) { e.preventDefault(); e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
       if (e.target.closest('.admin-edit-btn')) { e.preventDefault(); e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
-      if (e.target.closest('.clip-tag.animator')) { e.preventDefault(); e.stopPropagation(); window.location.href = '#animator/' + encodeURIComponent(e.target.closest('.clip-tag.animator').dataset.animator); window.location.reload(); return; }
-      // Normal left click — let the <a> tag handle navigation to /clip/:id
+      if (e.target.closest('.clip-tag.animator')) {
+        e.preventDefault(); e.stopPropagation();
+        navigateTo('animator-profile', e.target.closest('.clip-tag.animator').dataset.animator);
+        return;
+      }
+      if (e.target.closest('.clip-tag.category')) {
+        e.preventDefault(); e.stopPropagation();
+        const tagText = e.target.closest('.clip-tag.category').textContent.trim();
+        // Try to find matching filter
+        const filter = FILTERS.find(f => f.label.toLowerCase() === tagText.toLowerCase() || f.id.toLowerCase() === tagText.toLowerCase());
+        if (filter) {
+          if (filter.type === 'arc') { currentArcFilter = filter.id; currentTagFilter = null; }
+          else { currentTagFilter = filter.id; }
+          currentTypeFilter = 'all';
+          renderFilterChips();
+          applyFilters();
+        } else {
+          // Could be episode number — search for it
+          $('#searchInput').value = tagText;
+          applyFilters();
+        }
+        return;
+      }
+      // Lightbox for small photo posts
+      if (card.classList.contains('clip-card-lightbox')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const images = JSON.parse(card.dataset.images || '[]');
+        if (images.length) {
+          fetch(`/api/clips/${card.dataset.id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).catch(()=>{});
+          openClipPageImageViewer(images, 0);
+        }
+        return;
+      }
     });
   });
 }
 
-const CLIPS_PER_PAGE = 24;
+const CLIPS_PER_PAGE = 30;
 let currentClipList = [];
-let loadedClipCount = 0;
-let isLoadingMore = false;
+let currentPage_clips = 1;
 
 function renderClips(clips) {
   currentClipList = clips;
-  loadedClipCount = 0;
-  const grid = $('#clipGrid');
-  $('#resultsCount').textContent = `${clips.length} клип${pluralRu(clips.length)}`;
-  if (!clips.length) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted);font-size:1rem">Клипы не найдены</p><p style="color:var(--text-muted);font-size:.8rem;margin-top:.4rem">Попробуйте другой запрос или загрузите новый клип</p></div>`; return; }
-  grid.innerHTML = '';
-  loadMoreClips();
+  currentPage_clips = 1;
+  renderClipPage_browse();
 }
 
-function loadMoreClips() {
-  if (isLoadingMore || loadedClipCount >= currentClipList.length) return;
-  isLoadingMore = true;
+function renderClipPage_browse() {
   const grid = $('#clipGrid');
-  const prevCount = grid.querySelectorAll('.clip-card').length;
-  const batch = currentClipList.slice(loadedClipCount, loadedClipCount + CLIPS_PER_PAGE);
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = batch.map((c, i) => renderClipCard(c, loadedClipCount + i)).join('');
-  // Append new cards and attach events
-  while (wrapper.firstChild) grid.appendChild(wrapper.firstChild);
-  attachClipEvents(grid);
-  loadedClipCount += batch.length;
-  isLoadingMore = false;
-}
-
-// Infinite scroll
-window.addEventListener('scroll', () => {
-  if (currentPage !== 'browse') return;
-  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 600) {
-    loadMoreClips();
+  const total = currentClipList.length;
+  const totalPages = Math.ceil(total / CLIPS_PER_PAGE);
+  const page = Math.min(currentPage_clips, totalPages || 1);
+  currentPage_clips = page;
+  
+  $('#resultsCount').textContent = `${total} клип${pluralRu(total)}`;
+  
+  if (!total) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted);font-size:1rem">Клипы не найдены</p></div>`;
+    // Remove any existing pagination
+    document.querySelectorAll('.pagination').forEach(p => p.remove());
+    return;
   }
-});
+  
+  const start = (page - 1) * CLIPS_PER_PAGE;
+  const batch = currentClipList.slice(start, start + CLIPS_PER_PAGE);
+  grid.innerHTML = batch.map((c, i) => renderClipCard(c, i)).join('');
+  attachClipEvents(grid);
+  
+  // Render pagination
+  const paginationHtml = renderPagination(page, totalPages);
+  
+  // Remove old pagination
+  document.querySelectorAll('.pagination').forEach(p => p.remove());
+  
+  // Add pagination above and below grid
+  const gridContainer = grid.closest('.grid-container');
+  if (gridContainer) {
+    gridContainer.insertAdjacentHTML('afterbegin', paginationHtml);
+    gridContainer.insertAdjacentHTML('beforeend', paginationHtml);
+  }
+  
+  // Attach pagination events
+  document.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentPage_clips = parseInt(btn.dataset.page);
+      renderClipPage_browse();
+      window.scrollTo(0, 0);
+    });
+  });
+}
+
+function renderPagination(current, total) {
+  if (total <= 1) return '';
+  let btns = [];
+  
+  btns.push(`<button class="pagination-btn${current<=1?' disabled':''}" data-page="${current-1}">← Назад</button>`);
+  
+  // Always show first page
+  btns.push(`<button class="pagination-btn${current===1?' active':''}" data-page="1">1</button>`);
+  
+  if (current > 4) btns.push(`<span class="pagination-dots">...</span>`);
+  
+  // Pages around current
+  for (let i = Math.max(2, current - 2); i <= Math.min(total - 1, current + 2); i++) {
+    btns.push(`<button class="pagination-btn${current===i?' active':''}" data-page="${i}">${i}</button>`);
+  }
+  
+  if (current < total - 3) btns.push(`<span class="pagination-dots">...</span>`);
+  
+  // Always show last page
+  if (total > 1) btns.push(`<button class="pagination-btn${current===total?' active':''}" data-page="${total}">${total}</button>`);
+  
+  btns.push(`<button class="pagination-btn${current>=total?' disabled':''}" data-page="${current+1}">Вперёд →</button>`);
+  
+  return `<div class="pagination">${btns.join('')}</div>`;
+}
 
 // ===== FILTERS =====
 function applyFilters() {
