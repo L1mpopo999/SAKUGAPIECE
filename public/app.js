@@ -61,12 +61,55 @@ function navigateTo(page, data) {
   if (page === 'animators') renderAnimatorGrid();
   if (page === 'episodes') renderEpisodeGrid();
   // Update URL hash
-  if (page === 'browse') window.history.replaceState(null, '', '#');
-  else if (page === 'animator-profile' && data) window.history.replaceState(null, '', '#animator/' + encodeURIComponent(data));
-  else if (page === 'episode-profile' && data) window.history.replaceState(null, '', '#episode/' + encodeURIComponent(data));
-  else window.history.replaceState(null, '', '#' + page);
+  if (page === 'browse') window.history.pushState({page}, '', '#');
+  else if (page === 'animator-profile' && data) window.history.pushState({page, data}, '', '#animator/' + encodeURIComponent(data));
+  else if (page === 'episode-profile' && data) window.history.pushState({page, data}, '', '#episode/' + encodeURIComponent(data));
+  else window.history.pushState({page}, '', '#' + page);
   window.scrollTo(0, 0);
 }
+
+// Handle browser back/forward button
+window.addEventListener('popstate', () => {
+  const hash = window.location.hash.slice(1);
+  if (hash.startsWith('animator/')) {
+    navigateToSilent('animator-profile', decodeURIComponent(hash.slice(9)));
+  } else if (hash.startsWith('episode/')) {
+    navigateToSilent('episode-profile', decodeURIComponent(hash.slice(8)));
+  } else if (hash === 'episodes') {
+    navigateToSilent('episodes');
+  } else if (hash === 'animators') {
+    navigateToSilent('animators');
+  } else if (hash === 'about') {
+    navigateToSilent('about');
+  } else {
+    navigateToSilent('browse');
+  }
+});
+
+// Same as navigateTo but without pushState (to avoid infinite loop)
+function navigateToSilent(page, data) {
+  currentPage = page;
+  $$('.page').forEach(p => p.classList.remove('active'));
+  $$('.nav-link').forEach(l => l.classList.remove('active'));
+  const el = $(`#page-${page}`);
+  if (el) el.classList.add('active');
+  const nav = $(`.nav-link[data-page="${page}"]`);
+  if (nav) nav.classList.add('active');
+  if (page === 'animator-profile' && data) {
+    currentAnimatorProfile = data;
+    animatorProfileFilter = 'all';
+    $(`.nav-link[data-page="animators"]`).classList.add('active');
+    renderAnimatorProfile(data);
+  }
+  if (page === 'episode-profile' && data) {
+    $(`.nav-link[data-page="episodes"]`).classList.add('active');
+    renderEpisodeProfile(data);
+  }
+  if (page === 'animators') renderAnimatorGrid();
+  if (page === 'episodes') renderEpisodeGrid();
+  window.scrollTo(0, 0);
+}
+
 $$('.nav-link[data-page]').forEach(b => b.addEventListener('click', () => navigateTo(b.dataset.page)));
 $('#backToAnimatorsBtn').addEventListener('click', () => navigateTo('animators'));
 
@@ -84,12 +127,10 @@ function renderClipCard(clip, i) {
   const hasThumbnail = !!clip.thumbnailUrl;
 
   const thumbContent = hasThumbnail
-    ? `<img src="${clip.thumbnailUrl}" alt="">`
-    : hasVideo
-      ? `<video src="${clip.videoUrl}" muted preload="metadata"></video>`
-      : hasImages
-        ? `<img src="${clip.images[0].url}" alt="">`
-        : `<div class="clip-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
+    ? `<img src="${clip.thumbnailUrl}" alt="" loading="lazy">`
+    : hasImages
+      ? `<img src="${clip.images[0].url}" alt="" loading="lazy">`
+      : `<div class="clip-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
 
   const badge = hasVideo ? (clip.quality || '1080p') : (hasImages ? 'ФОТО' : '');
   const imgCount = hasImages && clip.images.length > 1 ? `<span class="clip-img-count">${clip.images.length} фото</span>` : '';
@@ -152,12 +193,43 @@ function attachClipEvents(container) {
   });
 }
 
+const CLIPS_PER_PAGE = 24;
+let currentClipList = [];
+let loadedClipCount = 0;
+let isLoadingMore = false;
+
 function renderClips(clips) {
+  currentClipList = clips;
+  loadedClipCount = 0;
+  const grid = $('#clipGrid');
   $('#resultsCount').textContent = `${clips.length} клип${pluralRu(clips.length)}`;
-  if (!clips.length) { $('#clipGrid').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted);font-size:1rem">Клипы не найдены</p><p style="color:var(--text-muted);font-size:.8rem;margin-top:.4rem">Попробуйте другой запрос или загрузите новый клип</p></div>`; return; }
-  $('#clipGrid').innerHTML = clips.map((c,i) => renderClipCard(c,i)).join('');
-  attachClipEvents($('#clipGrid'));
+  if (!clips.length) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted);font-size:1rem">Клипы не найдены</p><p style="color:var(--text-muted);font-size:.8rem;margin-top:.4rem">Попробуйте другой запрос или загрузите новый клип</p></div>`; return; }
+  grid.innerHTML = '';
+  loadMoreClips();
 }
+
+function loadMoreClips() {
+  if (isLoadingMore || loadedClipCount >= currentClipList.length) return;
+  isLoadingMore = true;
+  const grid = $('#clipGrid');
+  const prevCount = grid.querySelectorAll('.clip-card').length;
+  const batch = currentClipList.slice(loadedClipCount, loadedClipCount + CLIPS_PER_PAGE);
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = batch.map((c, i) => renderClipCard(c, loadedClipCount + i)).join('');
+  // Append new cards and attach events
+  while (wrapper.firstChild) grid.appendChild(wrapper.firstChild);
+  attachClipEvents(grid);
+  loadedClipCount += batch.length;
+  isLoadingMore = false;
+}
+
+// Infinite scroll
+window.addEventListener('scroll', () => {
+  if (currentPage !== 'browse') return;
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 600) {
+    loadMoreClips();
+  }
+});
 
 // ===== FILTERS =====
 function applyFilters() {
