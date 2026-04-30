@@ -98,7 +98,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Animator Grid */
 .animator-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
-#animatorGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+#animatorGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
 #episodeGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
 .animator-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.2rem;cursor:pointer;transition:all .3s;animation:fadeUp .4s ease both;display:flex;align-items:center;gap:1.1rem;min-height:80px}
 .animator-card:hover{border-color:var(--tag-animator-text);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
@@ -111,7 +111,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .episode-card .animator-avatar{font-family:'Manrope',sans-serif;font-weight:800;font-size:2.8rem;color:var(--gold);min-width:96px;letter-spacing:-.03em}
 /* Big animator card — name as the main visual element */
 .animator-card-big{padding:1.4rem 1.5rem;min-height:96px;gap:.8rem}
-.animator-card-big .animator-card-name{font-family:'Manrope',sans-serif;font-weight:800;font-size:1.6rem;line-height:1.05;letter-spacing:-.01em;color:var(--gold);margin-bottom:.5rem;text-transform:uppercase;-webkit-line-clamp:2}
+.animator-card-big .animator-card-name{font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;line-height:1.1;letter-spacing:-.01em;color:var(--gold);margin-bottom:.5rem;text-transform:uppercase;-webkit-line-clamp:2;word-break:normal;overflow-wrap:break-word;hyphens:none}
 .animator-card-big .animator-card-count{font-family:'Noto Sans',sans-serif;font-size:.85rem;color:var(--text-secondary);text-transform:none;letter-spacing:0}
 .animator-card-big .animator-card-count-num{font-family:'Manrope',sans-serif;font-weight:700;color:var(--text-primary);margin-right:.25rem}
 .episode-hidden{opacity:.4}
