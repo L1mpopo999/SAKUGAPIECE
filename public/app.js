@@ -462,9 +462,8 @@ function renderAnimatorGrid() {
 
   if(!list.length && !isAdmin){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Аниматор не найден</p></div>`;return}
 
-  grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card${a.hidden?' episode-hidden':''}" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
-    <div class="animator-avatar">${getInitials(a.name)}</div>
-    <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}${a.hidden?' <span style="font-size:.6rem;color:var(--text-muted)">(скрыт)</span>':''}</div><div class="animator-card-count">${a.count} клип${pluralRu(a.count)}</div></div>
+  grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card animator-card-big${a.hidden?' episode-hidden':''}" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
+    <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}${a.hidden?' <span style="font-size:.6rem;color:var(--text-muted)">(скрыт)</span>':''}</div><div class="animator-card-count"><span class="animator-card-count-num">${a.count}</span> клип${pluralRu(a.count)}</div></div>
     ${isAdmin ? `<button class="animator-card-edit" data-edit-name="${esc(a.name)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="anim-hide-btn" data-hide-name="${esc(a.name)}" title="${a.hidden?'Показать':'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.2rem">${a.hidden?'👁':'×'}</button><button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить навсегда" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.8rem;margin-right:.3rem">🗑</button>` : ''}
     <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`).join('');
