@@ -98,6 +98,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Animator Grid */
 .animator-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+#episodeGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .animator-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.2rem;cursor:pointer;transition:all .3s;animation:fadeUp .4s ease both;display:flex;align-items:center;gap:1.1rem;min-height:80px}
 .animator-card:hover{border-color:var(--tag-animator-text);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
 .animator-avatar{font-family:'Manrope',sans-serif;font-weight:800;font-size:2.4rem;line-height:1;color:var(--gold);flex-shrink:0;letter-spacing:-.02em;min-width:64px;text-align:center}
@@ -365,6 +366,7 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
   .hero-sub{font-size:.82rem;margin-bottom:1.5rem}
   .clip-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
   .animator-grid{grid-template-columns:1fr}
+  #episodeGrid{grid-template-columns:1fr;gap:.8rem}
   .animator-avatar{font-size:1.9rem;min-width:54px}
   .episode-card .animator-avatar{font-size:2.1rem;min-width:72px}
   .animator-card{padding:.8rem 1rem;gap:.9rem;min-height:auto}
