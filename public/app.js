@@ -1704,6 +1704,14 @@ $('#imageViewerOverlay').addEventListener('touchend',e=>{const diff=e.changedTou
 
 // ===== INIT =====
 async function init() {
+  // Read pagination from URL BEFORE anything mutates it (loadClips → applyFilters → renderClips can reset hash)
+  const initialHash = window.location.hash.slice(1);
+  let pendingClipsPage = 1;
+  if (initialHash.startsWith('p=')) {
+    const n = parseInt(initialHash.slice(2));
+    if (n && n > 1) pendingClipsPage = n;
+  }
+
   await loadAnimatorsAndFilters();
   renderFilterChips();
   await loadClips();
@@ -1727,24 +1735,22 @@ async function init() {
   }
 
   // Hash-based routing
-  const hash = window.location.hash.slice(1);
-  if (hash.startsWith('animator/')) {
-    navigateTo('animator-profile', decodeURIComponent(hash.slice(9)));
-  } else if (hash.startsWith('episode/')) {
-    navigateTo('episode-profile', decodeURIComponent(hash.slice(8)));
-  } else if (hash === 'episodes') {
+  if (initialHash.startsWith('animator/')) {
+    navigateTo('animator-profile', decodeURIComponent(initialHash.slice(9)));
+  } else if (initialHash.startsWith('episode/')) {
+    navigateTo('episode-profile', decodeURIComponent(initialHash.slice(8)));
+  } else if (initialHash === 'episodes') {
     navigateTo('episodes');
-  } else if (hash === 'animators') {
+  } else if (initialHash === 'animators') {
     navigateTo('animators');
-  } else if (hash === 'about') {
+  } else if (initialHash === 'about') {
     navigateTo('about');
-  } else if (hash.startsWith('p=')) {
+  } else if (pendingClipsPage > 1) {
     // Restore pagination state on browse page (e.g. user pressed Back from a clip)
-    const pageNum = parseInt(hash.slice(2));
-    if (pageNum && pageNum > 1) {
-      currentPage_clips = pageNum;
-      renderClipPage_browse();
-    }
+    currentPage_clips = pendingClipsPage;
+    // Restore the hash since loadClips() → applyFilters() → renderClips() may have cleared it
+    try { window.history.replaceState({ page: 'browse', clipsPage: pendingClipsPage }, '', '#p=' + pendingClipsPage); } catch {}
+    renderClipPage_browse();
   }
 }
 
