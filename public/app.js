@@ -764,10 +764,20 @@ function refreshEpisodeDirectorDropdown() {
   const dd = $('#episodeDirectorDropdown');
   const toggle = $('#episodeDirectorToggle');
   if (!dd || !toggle) return;
-  // Build list: "Все" + only directors that have at least one assigned episode
-  const usedDirectors = [...new Set(Object.values(EPISODE_DIRECTORS).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const items = [{ key:'all', label:'Все' }, ...usedDirectors.map(d => ({ key:d, label:d }))];
-  dd.innerHTML = items.map(it => `<button class="filter-chip${episodeDirectorFilter === it.key ? ' active' : ''}" data-episode-director="${esc(it.key)}">${esc(it.label)}</button>`).join('');
+  // Build list: "Все" + only directors that have at least one assigned episode.
+  // Count episodes per director, sort by count desc, then alphabetically.
+  const counts = new Map();
+  Object.values(EPISODE_DIRECTORS).forEach(d => {
+    if (d) counts.set(d, (counts.get(d) || 0) + 1);
+  });
+  const usedDirectors = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, n]) => ({ key: name, label: name, count: n }));
+  const totalAssigned = [...counts.values()].reduce((s, n) => s + n, 0);
+  const items = [{ key:'all', label:'Все', count: totalAssigned }, ...usedDirectors];
+  dd.innerHTML = items.map(it =>
+    `<button class="filter-chip director-chip${episodeDirectorFilter === it.key ? ' active' : ''}" data-episode-director="${esc(it.key)}">${esc(it.label)}<span class="director-chip-count">${it.count}</span></button>`
+  ).join('');
   // Update toggle button state
   if (episodeDirectorFilter !== 'all') {
     toggle.textContent = episodeDirectorFilter + ' ✕';

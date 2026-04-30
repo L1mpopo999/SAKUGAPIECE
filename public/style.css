@@ -52,6 +52,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .filter-tags-toggle:hover{background:rgba(244,162,38,.1)}
 .filter-tags-dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.8rem;margin-top:.3rem;flex-wrap:wrap;gap:.4rem;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 .filter-tags-dropdown.visible{display:flex}
+/* Director chips inside the episodes filter dropdown: slightly brighter, with counter */
+.director-chip{color:var(--text-primary);display:inline-flex;align-items:center;gap:.45rem;padding-right:.65rem}
+.director-chip:hover{color:var(--text-primary);border-color:var(--text-primary)}
+.director-chip-count{font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;color:var(--gold);background:rgba(244,162,38,.15);padding:.08rem .4rem;border-radius:8px;letter-spacing:.04em;line-height:1}
+.director-chip.active .director-chip-count{background:rgba(255,255,255,.22);color:#fff}
 .filter-separator{width:1px;height:20px;background:var(--border);margin:0 .3rem}
 .results-count{margin-left:auto;font-size:.8rem;color:var(--text-muted);font-family:'Space Mono',monospace}
 
