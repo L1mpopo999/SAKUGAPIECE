@@ -1664,7 +1664,13 @@ let nt;function notify(t,err){$('#notificationText').textContent=t;$('#notificat
 // ===== KEYBOARD =====
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeUploadModal();closePlayer();closeImageViewer();closeDeleteModal();closeEditModal();$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}
-  if(e.key==='/'&&!e.target.closest('input,textarea,select')){e.preventDefault();if(currentPage==='animators')$('#animatorSearchInput').focus();else $('#searchInput').focus()}
+  if(e.key==='/'&&!e.target.closest('input,textarea,select')){
+    e.preventDefault();
+    // Find the search input on the current active page
+    const activePage = document.querySelector('.page.active');
+    const search = activePage?.querySelector('input.search-input') || $('#searchInput');
+    search?.focus();
+  }
   if($('#imageViewerOverlay').classList.contains('visible')){if(e.key==='ArrowLeft'&&viewerIndex>0){viewerIndex--;updateImageViewer()}if(e.key==='ArrowRight'&&viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}}
   if($('#playerOverlay').classList.contains('visible')&&!e.target.closest('input,textarea,select')){
     if(e.key==='ArrowLeft'){e.preventDefault();$('#playerFramePrev').click()}
