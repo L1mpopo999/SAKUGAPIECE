@@ -126,6 +126,25 @@ function loadHiddenAnimators() {
 }
 function saveHiddenAnimators(list) { fs.writeFileSync(HIDDEN_ANIMATORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
 
+// ===== DIRECTORS =====
+const DIRECTORS_FILE = path.join(dataDir, 'directors.json');
+const EPISODE_DIRECTORS_FILE = path.join(dataDir, 'episode_directors.json');
+
+function loadDirectors() {
+  if (!fs.existsSync(DIRECTORS_FILE)) { saveDirectors([]); return []; }
+  try { return JSON.parse(fs.readFileSync(DIRECTORS_FILE, 'utf-8')); }
+  catch { return []; }
+}
+function saveDirectors(list) { fs.writeFileSync(DIRECTORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+
+function loadEpisodeDirectors() {
+  if (!fs.existsSync(EPISODE_DIRECTORS_FILE)) { saveEpisodeDirectors({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(EPISODE_DIRECTORS_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveEpisodeDirectors(map) { fs.writeFileSync(EPISODE_DIRECTORS_FILE, JSON.stringify(map, null, 2), 'utf-8'); }
+
+
 // ===== COMMENTS =====
 const COMMENTS_FILE = path.join(dataDir, 'comments.json');
 const NICKNAMES_FILE = path.join(dataDir, 'nicknames.json');
@@ -326,7 +345,7 @@ app.put('/api/clips/:id', express.json(), (req, res) => {
 
   if (!clip) return res.status(404).json({ error: 'Клип не найден' });
 
-  const { title, animators, episode, arc, tags, notes, timecodes, clipOrder } = req.body;
+  const { title, animators, episode, arc, tags, notes, timecodes, clipOrder, directorOverride } = req.body;
 
   if (title !== undefined) clip.title = title.trim();
   if (animators !== undefined) clip.animators = animators.split(',').map(a => a.trim()).filter(Boolean);
@@ -336,6 +355,19 @@ app.put('/api/clips/:id', express.json(), (req, res) => {
   if (notes !== undefined) clip.notes = notes;
   if (timecodes !== undefined) clip.timecodes = timecodes;
   if (clipOrder !== undefined) clip.clipOrder = parseInt(clipOrder) || 0;
+  if (directorOverride !== undefined) {
+    const v = (directorOverride || '').trim();
+    if (v) {
+      clip.directorOverride = v;
+      // Auto-add to directors list if needed
+      const dlist = loadDirectors();
+      if (!dlist.find(d => d.toLowerCase() === v.toLowerCase())) {
+        dlist.push(v); dlist.sort((a,b)=>a.localeCompare(b)); saveDirectors(dlist);
+      }
+    } else {
+      delete clip.directorOverride;
+    }
+  }
 
   saveClips(clips);
   res.json({ success: true, clip });
@@ -534,7 +566,109 @@ app.post('/api/animators/unhide', (req, res) => {
   res.json({ success: true, hidden: list });
 });
 
-// ===== FILTERS API =====
+// ===== DIRECTORS API =====
+// Get all directors
+app.get('/api/directors', (req, res) => { res.json(loadDirectors()); });
+
+// Get episode → director map
+app.get('/api/episode-directors', (req, res) => { res.json(loadEpisodeDirectors()); });
+
+// Add new director (admin)
+app.post('/api/directors', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Имя обязательно' });
+  const list = loadDirectors();
+  const trimmed = name.trim();
+  if (list.find(d => d.toLowerCase() === trimmed.toLowerCase())) return res.status(400).json({ error: 'Режиссёр уже существует' });
+  list.push(trimmed);
+  list.sort((a, b) => a.localeCompare(b));
+  saveDirectors(list);
+  res.json({ success: true, directors: list });
+});
+
+// Delete director (admin) — also clears assignments
+app.delete('/api/directors', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Имя обязательно' });
+  let list = loadDirectors();
+  list = list.filter(d => d.toLowerCase() !== name.toLowerCase());
+  saveDirectors(list);
+  // Remove this director from all episode assignments
+  const map = loadEpisodeDirectors();
+  let cleared = 0;
+  for (const ep of Object.keys(map)) {
+    if (map[ep] && map[ep].toLowerCase() === name.toLowerCase()) { delete map[ep]; cleared++; }
+  }
+  if (cleared) saveEpisodeDirectors(map);
+  // Remove from any clip overrides
+  const clips = loadClips();
+  let clipsChanged = 0;
+  clips.forEach(c => {
+    if (c.directorOverride && c.directorOverride.toLowerCase() === name.toLowerCase()) {
+      delete c.directorOverride;
+      clipsChanged++;
+    }
+  });
+  if (clipsChanged) saveClips(clips);
+  res.json({ success: true, directors: list, cleared, clipsChanged });
+});
+
+// Rename director (admin) — propagates everywhere
+app.put('/api/directors/rename', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const { oldName, newName } = req.body;
+  if (!oldName || !newName) return res.status(400).json({ error: 'Укажите старое и новое имя' });
+  const trimmed = newName.trim();
+  // Rename in directors list
+  let list = loadDirectors();
+  const idx = list.findIndex(d => d.toLowerCase() === oldName.toLowerCase());
+  if (idx !== -1) list[idx] = trimmed;
+  saveDirectors(list);
+  // Rename in episode assignments
+  const map = loadEpisodeDirectors();
+  let epChanged = 0;
+  for (const ep of Object.keys(map)) {
+    if (map[ep] && map[ep].toLowerCase() === oldName.toLowerCase()) { map[ep] = trimmed; epChanged++; }
+  }
+  if (epChanged) saveEpisodeDirectors(map);
+  // Rename in clip overrides
+  const clips = loadClips();
+  let clipsChanged = 0;
+  clips.forEach(c => {
+    if (c.directorOverride && c.directorOverride.toLowerCase() === oldName.toLowerCase()) {
+      c.directorOverride = trimmed; clipsChanged++;
+    }
+  });
+  if (clipsChanged) saveClips(clips);
+  res.json({ success: true, epChanged, clipsChanged });
+});
+
+// Assign director to an episode (admin). null/empty value clears it.
+app.put('/api/episode-directors/:episode', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const ep = req.params.episode;
+  const { director } = req.body;
+  const map = loadEpisodeDirectors();
+  if (!director || !String(director).trim()) {
+    delete map[ep];
+  } else {
+    const name = String(director).trim();
+    // Auto-add to directors list if not present
+    const list = loadDirectors();
+    if (!list.find(d => d.toLowerCase() === name.toLowerCase())) {
+      list.push(name);
+      list.sort((a, b) => a.localeCompare(b));
+      saveDirectors(list);
+    }
+    map[ep] = name;
+  }
+  saveEpisodeDirectors(map);
+  res.json({ success: true, episode: ep, director: map[ep] || null });
+});
+
+
 app.get('/api/filters', (req, res) => { res.json(loadFilters()); });
 
 app.post('/api/filters', (req, res) => {
@@ -846,6 +980,10 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(COMMENTS_FILE)) archive.file(COMMENTS_FILE, { name: 'comments.json' });
   // Add banned_users.json
   if (fs.existsSync(BANNED_USERS_FILE)) archive.file(BANNED_USERS_FILE, { name: 'banned_users.json' });
+  // Add directors.json
+  if (fs.existsSync(DIRECTORS_FILE)) archive.file(DIRECTORS_FILE, { name: 'directors.json' });
+  // Add episode_directors.json
+  if (fs.existsSync(EPISODE_DIRECTORS_FILE)) archive.file(EPISODE_DIRECTORS_FILE, { name: 'episode_directors.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 

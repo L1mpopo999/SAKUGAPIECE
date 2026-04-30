@@ -3,12 +3,28 @@ let ANIMATORS = [];
 let FILTERS = [];
 let EPISODES_DATA = { hidden: [], renamed: {} };
 let HIDDEN_ANIMATORS = [];
+let DIRECTORS = [];
+let EPISODE_DIRECTORS = {}; // { "1015": "Megumi Ishitani", ... }
 
 async function loadAnimatorsAndFilters() {
   try { ANIMATORS = await (await fetch('/api/animators')).json(); } catch { ANIMATORS = []; }
   try { FILTERS = await (await fetch('/api/filters')).json(); } catch { FILTERS = []; }
   try { EPISODES_DATA = await (await fetch('/api/episodes')).json(); } catch { EPISODES_DATA = { hidden: [], renamed: {} }; }
   try { HIDDEN_ANIMATORS = await (await fetch('/api/animators/hidden')).json(); } catch { HIDDEN_ANIMATORS = []; }
+  try { DIRECTORS = await (await fetch('/api/directors')).json(); } catch { DIRECTORS = []; }
+  try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors')).json(); } catch { EPISODE_DIRECTORS = {}; }
+}
+
+// Returns the effective director for a clip: override > episode director > null
+function getClipDirector(clip) {
+  if (!clip) return null;
+  if (clip.directorOverride) return clip.directorOverride;
+  const ep = (clip.episode || '').trim();
+  return EPISODE_DIRECTORS[ep] || null;
+}
+// Director for an episode (from the episode-directors map only)
+function getEpisodeDirector(ep) {
+  return EPISODE_DIRECTORS[String(ep).trim()] || null;
 }
 
 // ===== STATE =====
@@ -564,6 +580,7 @@ document.querySelectorAll('[data-animator-filter]').forEach(btn => {
 // ===== EPISODES PAGE =====
 let episodeSortMode = 'clips';
 let episodeArcFilter = 'all';
+let episodeDirectorFilter = 'all'; // 'all' | имя режиссёра
 
 function getEpisodeArc(num) {
   if (num >= 890 && num <= 1088) return 'Wano';
@@ -595,7 +612,8 @@ function renderEpisodeGrid() {
     episode: ep,
     num: parseInt(ep) || 0,
     count: counts.get(ep) || 0,
-    arc: getEpisodeArc(parseInt(ep) || 0)
+    arc: getEpisodeArc(parseInt(ep) || 0),
+    director: getEpisodeDirector(ep)
   }));
 
   // Filter by search
@@ -603,6 +621,11 @@ function renderEpisodeGrid() {
 
   // Filter by arc
   if (episodeArcFilter !== 'all') list = list.filter(e => e.arc === episodeArcFilter);
+
+  // Filter by director
+  if (episodeDirectorFilter !== 'all') {
+    list = list.filter(e => e.director && e.director.toLowerCase() === episodeDirectorFilter.toLowerCase());
+  }
 
   // Sort
   if (episodeSortMode === 'clips') {
@@ -629,15 +652,26 @@ function renderEpisodeGrid() {
 
   const isHidden = (ep) => EPISODES_DATA.hidden.includes(ep);
 
-  grid.innerHTML = adminAddHtml + list.map((e, i) => `<div class="animator-card episode-card${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
-    <div class="animator-avatar">${esc(e.episode)}</div>
-    <div class="animator-card-info">
-      <div class="animator-card-name">Серия ${esc(e.episode)}${isHidden(e.episode) ? ' <span style="font-size:.6rem;color:var(--text-muted)">(скрыта)</span>' : ''}</div>
-      <div class="animator-card-count">${e.arc} · ${e.count} клип${pluralRu(e.count)}</div>
-    </div>
-    ${isAdmin ? `<button class="animator-card-edit" data-edit-ep="${esc(e.episode)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="animator-card-delete ep-hide-btn" data-del-ep="${esc(e.episode)}" title="${isHidden(e.episode) ? 'Показать' : 'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">${isHidden(e.episode) ? '👁' : '×'}</button>` : ''}
-    <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-  </div>`).join('');
+  grid.innerHTML = adminAddHtml + list.map((e, i) => {
+    const hiddenLabel = isHidden(e.episode) ? ' <span style="font-size:.6rem;color:var(--text-muted)">(скрыта)</span>' : '';
+    // Если есть режиссёр — выводим "ED: Имя" как заголовок и арку/клипы как подзаголовок.
+    // Если нет — выводим только арку и количество клипов.
+    const mainLine = e.director
+      ? `ED: ${esc(e.director)}${hiddenLabel}`
+      : `${e.arc} · ${e.count} клип${pluralRu(e.count)}${hiddenLabel}`;
+    const subLine = e.director
+      ? `${e.arc} · ${e.count} клип${pluralRu(e.count)}`
+      : '';
+    return `<div class="animator-card episode-card${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
+      <div class="animator-avatar">${esc(e.episode)}</div>
+      <div class="animator-card-info">
+        <div class="animator-card-name">${mainLine}</div>
+        ${subLine ? `<div class="animator-card-count">${subLine}</div>` : ''}
+      </div>
+      ${isAdmin ? `<button class="animator-card-edit" data-edit-ep="${esc(e.episode)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="animator-card-delete ep-hide-btn" data-del-ep="${esc(e.episode)}" title="${isHidden(e.episode) ? 'Показать' : 'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">${isHidden(e.episode) ? '👁' : '×'}</button>` : ''}
+      <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`;
+  }).join('');
 
   grid.querySelectorAll('.episode-card[data-episode]').forEach(c => c.addEventListener('click', (ev) => {
     if (ev.target.closest('.animator-card-delete') || ev.target.closest('.animator-card-edit')) return;
@@ -707,6 +741,56 @@ document.querySelectorAll('[data-episode-arc]').forEach(btn => {
   });
 });
 
+// Director dropdown filter for episodes page
+function refreshEpisodeDirectorDropdown() {
+  const dd = $('#episodeDirectorDropdown');
+  const toggle = $('#episodeDirectorToggle');
+  if (!dd || !toggle) return;
+  // Build list: "Все" + only directors that have at least one assigned episode
+  const usedDirectors = [...new Set(Object.values(EPISODE_DIRECTORS).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const items = [{ key:'all', label:'Все' }, ...usedDirectors.map(d => ({ key:d, label:d }))];
+  dd.innerHTML = items.map(it => `<button class="filter-chip${episodeDirectorFilter === it.key ? ' active' : ''}" data-episode-director="${esc(it.key)}">${esc(it.label)}</button>`).join('');
+  // Update toggle button state
+  if (episodeDirectorFilter !== 'all') {
+    toggle.textContent = episodeDirectorFilter + ' ✕';
+    toggle.classList.add('active');
+  } else {
+    toggle.textContent = 'Режиссёр ▾';
+    toggle.classList.remove('active');
+  }
+  // Wire up clicks
+  dd.querySelectorAll('[data-episode-director]').forEach(b => {
+    b.addEventListener('click', () => {
+      episodeDirectorFilter = b.dataset.episodeDirector;
+      dd.classList.remove('visible');
+      renderEpisodeGrid();
+      refreshEpisodeDirectorDropdown();
+    });
+  });
+}
+
+$('#episodeDirectorToggle')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const dd = $('#episodeDirectorDropdown');
+  // If a filter is active, click on the active toggle resets it
+  if (episodeDirectorFilter !== 'all' && !dd.classList.contains('visible')) {
+    episodeDirectorFilter = 'all';
+    renderEpisodeGrid();
+    refreshEpisodeDirectorDropdown();
+    return;
+  }
+  refreshEpisodeDirectorDropdown();
+  dd.classList.toggle('visible');
+});
+
+// Close director dropdown on outside click
+document.addEventListener('click', (e) => {
+  const dd = $('#episodeDirectorDropdown');
+  if (dd && dd.classList.contains('visible') && !e.target.closest('#episodeDirectorToggle') && !e.target.closest('#episodeDirectorDropdown')) {
+    dd.classList.remove('visible');
+  }
+});
+
 // ===== EPISODE PROFILE =====
 function renderEpisodeProfile(episode) {
   $('#episodeProfileName').textContent = `Серия ${episode}`;
@@ -716,6 +800,9 @@ function renderEpisodeProfile(episode) {
   let stats = `${arc} · ${clips.length} клип${pluralRu(clips.length)}`;
   if (animators.length) stats += ` · ${animators.length} аниматор${pluralRu(animators.length)}`;
   $('#episodeProfileStats').textContent = stats;
+
+  // Render director block
+  renderEpisodeDirectorBlock(episode);
 
   // Sort: images/photos first, then videos; within each group sort by clipOrder
   clips.sort((a, b) => {
@@ -732,6 +819,57 @@ function renderEpisodeProfile(episode) {
     grid.innerHTML = clips.map((c, i) => renderClipCard(c, i)).join('');
     attachClipEvents(grid);
   }
+}
+
+// Renders the director block on the episode profile page
+function renderEpisodeDirectorBlock(episode) {
+  const block = $('#episodeDirectorBlock');
+  if (!block) return;
+  const dir = getEpisodeDirector(episode);
+  if (dir) {
+    block.innerHTML = `
+      <span class="episode-director-label">ED:</span>
+      <span class="episode-director-name">${esc(dir)}</span>
+      ${isAdmin ? `
+        <button class="episode-director-edit" data-action="edit-director">Изменить</button>
+        <button class="episode-director-clear" data-action="clear-director" title="Убрать режиссёра">×</button>
+      ` : ''}
+    `;
+  } else if (isAdmin) {
+    block.innerHTML = `<button class="episode-director-edit" data-action="edit-director">+ Указать режиссёра</button>`;
+  } else {
+    block.innerHTML = '';
+  }
+
+  // Wire up admin actions
+  block.querySelector('[data-action="edit-director"]')?.addEventListener('click', async () => {
+    const current = getEpisodeDirector(episode) || '';
+    const name = prompt(`Режиссёр серии ${episode}:`, current);
+    if (name === null) return; // cancelled
+    const trimmed = name.trim();
+    await setEpisodeDirector(episode, trimmed);
+  });
+  block.querySelector('[data-action="clear-director"]')?.addEventListener('click', async () => {
+    if (!confirm(`Убрать режиссёра серии ${episode}?`)) return;
+    await setEpisodeDirector(episode, '');
+  });
+}
+
+async function setEpisodeDirector(episode, director) {
+  try {
+    const res = await fetch(`/api/episode-directors/${encodeURIComponent(episode)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ director })
+    });
+    const data = await res.json();
+    if (!data.success) { notify(data.error || 'Не удалось сохранить', true); return; }
+    // Refresh in-memory data
+    EPISODE_DIRECTORS = await (await fetch('/api/episode-directors')).json();
+    DIRECTORS = await (await fetch('/api/directors')).json();
+    renderEpisodeDirectorBlock(episode);
+    notify(director ? `Режиссёр серии ${episode}: ${director}` : `Режиссёр серии ${episode} убран`);
+  } catch { notify('Ошибка сети', true); }
 }
 
 $('#backToEpisodesBtn').addEventListener('click', () => navigateTo('episodes'));
@@ -1305,6 +1443,7 @@ function openEditModal(id) {
   $('#editNotesInput').value = clip.notes || '';
   $('#editTimecodesInput').value = clip.timecodes || '';
   $('#editClipOrderInput').value = clip.clipOrder || 0;
+  $('#editDirectorOverrideInput').value = clip.directorOverride || '';
   // Video preview
   const vp = $('#editVideoPreview');
   if (clip.videoUrl) { vp.src = clip.videoUrl; vp.style.display = 'block'; }
@@ -1476,7 +1615,8 @@ $('#editSaveBtn').addEventListener('click', async () => {
     tags: editSelectedTags.join(','),
     notes: $('#editNotesInput').value.trim(),
     timecodes: $('#editTimecodesInput').value.trim(),
-    clipOrder: $('#editClipOrderInput').value.trim() || '0'
+    clipOrder: $('#editClipOrderInput').value.trim() || '0',
+    directorOverride: $('#editDirectorOverrideInput').value.trim()
   };
   if (!body.title || !body.animators || !body.episode) {
     notify('Заполните название, аниматора и эпизод', true);
@@ -1493,6 +1633,8 @@ $('#editSaveBtn').addEventListener('click', async () => {
       notify('Клип обновлён');
       closeEditModal();
       await loadClips();
+      // Director list may have grown if a new override was set
+      try { DIRECTORS = await (await fetch('/api/directors')).json(); } catch {}
       if (currentPage === 'animator-profile' && currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
     } else {
       notify(data.error || 'Ошибка', true);
