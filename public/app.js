@@ -110,6 +110,14 @@ window.addEventListener('popstate', () => {
     navigateToSilent('animators');
   } else if (hash === 'about') {
     navigateToSilent('about');
+  } else if (hash.startsWith('p=')) {
+    // Browse page with pagination state
+    const pageNum = parseInt(hash.slice(2));
+    navigateToSilent('browse');
+    if (pageNum && pageNum > 1) {
+      currentPage_clips = pageNum;
+      renderClipPage_browse();
+    }
   } else {
     navigateToSilent('browse');
   }
@@ -269,6 +277,10 @@ let currentPage_clips = 1;
 function renderClips(clips) {
   currentClipList = clips;
   currentPage_clips = 1;
+  // If URL had a #p=N from a previous state, clear it (filters changed → start from page 1)
+  if (window.location.hash.startsWith('#p=')) {
+    try { window.history.replaceState({ page: 'browse' }, '', '#'); } catch {}
+  }
   renderClipPage_browse();
 }
 
@@ -310,6 +322,13 @@ function renderClipPage_browse() {
   document.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {
       currentPage_clips = parseInt(btn.dataset.page);
+      // Save current page to URL (replaceState — keeps single history entry for browse)
+      try {
+        const newHash = currentPage_clips > 1 ? `#p=${currentPage_clips}` : '#';
+        if (window.location.hash !== newHash && !(currentPage_clips === 1 && window.location.hash === '')) {
+          window.history.replaceState({ page: 'browse', clipsPage: currentPage_clips }, '', newHash);
+        }
+      } catch {}
       renderClipPage_browse();
       window.scrollTo(0, 0);
     });
@@ -1719,6 +1738,13 @@ async function init() {
     navigateTo('animators');
   } else if (hash === 'about') {
     navigateTo('about');
+  } else if (hash.startsWith('p=')) {
+    // Restore pagination state on browse page (e.g. user pressed Back from a clip)
+    const pageNum = parseInt(hash.slice(2));
+    if (pageNum && pageNum > 1) {
+      currentPage_clips = pageNum;
+      renderClipPage_browse();
+    }
   }
 }
 
