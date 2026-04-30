@@ -40,6 +40,17 @@ function pluralRu(n){const m=n%10,h=n%100;if(m===1&&h!==11)return'';if(m>=2&&m<=
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
 function getInitials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
 function adminHeaders(extra={}){return{'X-Admin-Token':adminToken||'',...extra}}
+// Возвращает приоритет совпадения строки с запросом:
+// 0 — нет совпадения; 3 — строка начинается с запроса; 2 — слово в строке начинается с запроса; 1 — запрос встречается внутри
+function matchScore(str, q){
+  if(!q) return 1;
+  const s = str.toLowerCase();
+  const ql = q.toLowerCase();
+  if(s.startsWith(ql)) return 3;
+  if(s.split(/\s+/).some(w => w.startsWith(ql))) return 2;
+  if(s.includes(ql)) return 1;
+  return 0;
+}
 
 // ===== PAGE NAVIGATION =====
 function navigateTo(page, data) {
@@ -235,7 +246,7 @@ function attachClipEvents(container) {
   });
 }
 
-const CLIPS_PER_PAGE = 30;
+const CLIPS_PER_PAGE = 32;
 let currentClipList = [];
 let currentPage_clips = 1;
 
@@ -395,7 +406,9 @@ function showSuggestions() {
   const am=new Map,tm=new Map;
   allClips.forEach(c=>{c.animators.forEach(a=>{const key=a.toLowerCase();if(key.includes(q))am.set(key,(am.get(key)||0)+1)});c.tags.forEach(t=>{if(t.toLowerCase().includes(q))tm.set(t,(tm.get(t)||0)+1)})});
   ANIMATORS.forEach(a=>{const key=a.toLowerCase();if(key.includes(q)&&!am.has(key))am.set(key,0)});
-  const items=[];am.forEach((c,key)=>{const display=ANIMATORS.find(a=>a.toLowerCase()===key)||key;items.push({type:'animator',name:display,count:c})});tm.forEach((c,n)=>items.push({type:'tag',name:tagLabel(n),raw:n,count:c}));
+  const items=[];am.forEach((c,key)=>{const display=ANIMATORS.find(a=>a.toLowerCase()===key)||key;items.push({type:'animator',name:display,count:c,score:matchScore(display,q)})});tm.forEach((c,n)=>items.push({type:'tag',name:tagLabel(n),raw:n,count:c,score:matchScore(tagLabel(n),q)}));
+  // Сортировка: сначала точные совпадения (с начала), потом по количеству клипов
+  items.sort((a,b)=>b.score-a.score||b.count-a.count);
   if(!items.length){sug.classList.remove('visible');return}
   sug.innerHTML=items.slice(0,8).map(it=>`<div class="suggestion-item" data-value="${esc(it.raw||it.name)}" data-type="${it.type}"><span class="suggestion-type ${it.type}">${it.type==='animator'?'аниматор':'тег'}</span><span class="suggestion-name">${esc(it.name)}</span><span class="suggestion-count">${it.count} клип${pluralRu(it.count)}</span></div>`).join('');
   sug.querySelectorAll('.suggestion-item').forEach(el=>el.addEventListener('click',()=>{if(el.dataset.type==='animator'){sug.classList.remove('visible');$('#searchInput').value='';navigateTo('animator-profile',el.dataset.value)}else{$('#searchInput').value=el.dataset.value;sug.classList.remove('visible');applyFilters()}}));
@@ -415,8 +428,13 @@ function renderAnimatorGrid() {
   // Hide hidden animators for non-admins
   if (!isAdmin) list = list.filter(a => !a.hidden);
   
-  if(q) list=list.filter(a=>a.name.toLowerCase().includes(q));
-  list.sort((a,b)=>b.count!==a.count?b.count-a.count:a.name.localeCompare(b.name));
+  if(q){
+    list = list.map(a => ({...a, _score: matchScore(a.name, q)})).filter(a => a._score > 0);
+    // Приоритет: точность совпадения, потом количество клипов, потом алфавит
+    list.sort((a,b) => b._score - a._score || b.count - a.count || a.name.localeCompare(b.name));
+  } else {
+    list.sort((a,b) => b.count !== a.count ? b.count - a.count : a.name.localeCompare(b.name));
+  }
 
   let adminAddHtml = '';
   if (isAdmin) {
@@ -735,7 +753,7 @@ const animInput=$('#animatorInput'), animDropdown=$('#animatorDropdown');
 animInput.addEventListener('input',()=>{
   const q=animInput.value.toLowerCase().trim();
   if(!q){animDropdown.classList.remove('visible');return}
-  const matches=ANIMATORS.filter(a=>a.toLowerCase().includes(q));
+  const matches=ANIMATORS.map(a=>({name:a, score:matchScore(a,q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name)).map(x=>x.name);
   if(!matches.length) animDropdown.innerHTML=`<div class="animator-dropdown-item" data-name="${esc(animInput.value.trim())}">Добавить: «${esc(animInput.value.trim())}»</div>`;
   else animDropdown.innerHTML=matches.slice(0,8).map(a=>{const sel=selectedAnimators.includes(a);return`<div class="animator-dropdown-item${sel?' selected':''}" data-name="${esc(a)}">${esc(a)}${sel?' ✓':''}</div>`}).join('');
   animDropdown.querySelectorAll('.animator-dropdown-item:not(.selected)').forEach(el=>el.addEventListener('click',()=>{if(!selectedAnimators.includes(el.dataset.name))selectedAnimators.push(el.dataset.name);renderAnimatorChips();animInput.value='';animDropdown.classList.remove('visible')}));
