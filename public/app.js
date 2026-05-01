@@ -2126,6 +2126,21 @@ async function init() {
     if (n && n > 1) pendingClipsPage = n;
   }
 
+  // Activate the right page immediately based on URL — before any data loads.
+  // This prevents the browse-page flash when opening /clip/... directly.
+  const isClipUrl = /^\/clip\/\d+$/.test(window.location.pathname);
+  if (!isClipUrl) {
+    // For non-clip URLs, activate browse (or whichever page hash points to) so user sees something while data loads
+    let targetPageId = 'page-browse';
+    if (initialHash.startsWith('animator/')) targetPageId = 'page-animator-profile';
+    else if (initialHash.startsWith('episode/')) targetPageId = 'page-episode-profile';
+    else if (initialHash === 'episodes') targetPageId = 'page-episodes';
+    else if (initialHash === 'animators') targetPageId = 'page-animators';
+    else if (initialHash === 'about') targetPageId = 'page-about';
+    const target = document.getElementById(targetPageId);
+    if (target) target.classList.add('active');
+  }
+
   await loadAnimatorsAndFilters();
   renderFilterChips();
   await loadClips();
@@ -2139,8 +2154,8 @@ async function init() {
       renderClipPage(clip);
       return;
     }
-    // Clip not found — drop the loading mask and fall through to homepage
-    document.body.classList.remove('loading-clip');
+    // Clip not found — fall through to homepage
+    document.getElementById('page-browse')?.classList.add('active');
   }
 
   // Check if navigating to animator via query param
@@ -2352,10 +2367,6 @@ function openFilterManager() {
 function renderClipPage(clip) {
   // Hide all pages and header nav
   $$('.page').forEach(p => p.classList.remove('active'));
-
-  // Loading-flash protection: remove the body class set by the early inline script in <head>.
-  // From here on, the clip page content takes over and the stub is hidden via CSS.
-  document.body.classList.remove('loading-clip');
 
   // Create clip page
   const page = document.createElement('div');
