@@ -1447,7 +1447,6 @@ $('#passwordToggleBtn').addEventListener('click', () => {
 });
 
 $('#closeAdminLoginBtn').addEventListener('click',()=>{$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''});
-$('#adminLoginModal').addEventListener('click',e=>{if(e.target===$('#adminLoginModal')){$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}});
 $('#adminLoginBtn').addEventListener('click',tryLogin);
 $('#adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
 $('#adminUsernameInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('#adminPasswordInput').focus()});
@@ -1544,7 +1543,6 @@ async function refreshAuditLog() {
 
 $('#usersBtn')?.addEventListener('click', openUsersModal);
 $('#closeUsersBtn')?.addEventListener('click', closeUsersModal);
-$('#usersModal')?.addEventListener('click', e => { if (e.target === $('#usersModal')) closeUsersModal(); });
 
 $('#createUserBtn')?.addEventListener('click', async () => {
   const username = $('#newUserUsername').value.trim();
@@ -1905,7 +1903,7 @@ let nt;function notify(t,err){$('#notificationText').textContent=t;$('#notificat
 
 // ===== KEYBOARD =====
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeUploadModal();closePlayer();closeImageViewer();closeDeleteModal();closeEditModal();$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}
+  if(e.key==='Escape'){closeUploadModal();closePlayer();closeImageViewer();closeDeleteModal();closeEditModal();$('#adminLoginModal').classList.remove('visible');closeUsersModal();document.body.style.overflow=''}
   if(e.key==='/'&&!e.target.closest('input,textarea,select')){
     e.preventDefault();
     // Find the search input on the current active page

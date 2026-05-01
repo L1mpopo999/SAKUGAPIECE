@@ -312,7 +312,7 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
 .backup-btn:disabled{opacity:.6;cursor:wait}
 body.admin-mode .backup-btn{display:none}
 body.owner-mode .backup-btn{display:inline-flex !important;align-items:center;gap:.4rem}
-.users-btn{display:none;position:fixed;bottom:1.2rem;right:11rem;z-index:50;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:24px;padding:.6rem 1rem;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:all .2s}
+.users-btn{display:none;position:fixed;bottom:4.4rem;right:1.2rem;z-index:50;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:24px;padding:.6rem 1rem;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:all .2s}
 .users-btn:hover{border-color:var(--gold);color:var(--gold)}
 body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .user-row{display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;background:var(--bg-darker);border-radius:var(--radius);margin-bottom:.4rem}
