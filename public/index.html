@@ -12,8 +12,31 @@
 <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0a0a0f">
+<style>
+  /* If we're on a /clip/... URL, hide browse page immediately so users don't see it flash before app.js loads */
+  body.loading-clip #page-browse{display:none}
+  /* Loading indicator shown while we wait for clip data */
+  .clip-loading-stub{display:none;text-align:center;padding:6rem 1rem;color:var(--text-muted);font-family:'Space Mono',monospace;font-size:.85rem;letter-spacing:.05em}
+  body.loading-clip .clip-loading-stub{display:block}
+</style>
+<script>
+  // Run before <body> is parsed: if user navigated to /clip/... show empty stub instead of browse flash
+  (function(){
+    if (/^\/clip\/\d+/.test(location.pathname)) {
+      document.documentElement.classList.add('loading-clip-html');
+      document.addEventListener('DOMContentLoaded', function(){
+        document.body.classList.add('loading-clip');
+      }, { once: true });
+    }
+  })();
+</script>
 </head>
 <body>
+
+<!-- Shown only while loading a /clip/... page (set by inline script in <head>) -->
+<div class="clip-loading-stub">
+  <div style="display:inline-block;width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+</div>
 
 <header class="header">
   <div class="header-inner">

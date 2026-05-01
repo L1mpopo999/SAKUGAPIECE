@@ -2139,6 +2139,8 @@ async function init() {
       renderClipPage(clip);
       return;
     }
+    // Clip not found — drop the loading mask and fall through to homepage
+    document.body.classList.remove('loading-clip');
   }
 
   // Check if navigating to animator via query param
@@ -2350,6 +2352,10 @@ function openFilterManager() {
 function renderClipPage(clip) {
   // Hide all pages and header nav
   $$('.page').forEach(p => p.classList.remove('active'));
+
+  // Loading-flash protection: remove the body class set by the early inline script in <head>.
+  // From here on, the clip page content takes over and the stub is hidden via CSS.
+  document.body.classList.remove('loading-clip');
 
   // Create clip page
   const page = document.createElement('div');

@@ -350,6 +350,7 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .notification-text{font-size:.8rem;color:var(--text-primary)}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* Player frame controls */
 .player-frame-controls{display:flex;align-items:center;justify-content:center;gap:.8rem;padding:.5rem 0}
