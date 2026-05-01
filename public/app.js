@@ -225,6 +225,7 @@ let currentAnimatorProfile = null;
 let currentEpisodeProfile = null;
 let isAdmin = false;
 let isOwner = false;
+let canBackup = false;
 let currentUsername = null;
 let clipToDelete = null;
 let viewerImages = [];
@@ -1609,9 +1610,11 @@ $('#imgNextBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex
         adminToken=savedToken;
         isAdmin=true;
         isOwner = d.role === 'owner';
+        canBackup = isOwner || !!d.canBackup;
         currentUsername = d.username || null;
         document.body.classList.add('admin-mode');
         if (isOwner) document.body.classList.add('owner-mode');
+        if (canBackup) document.body.classList.add('can-backup');
       }
       else{localStorage.removeItem('sp_admin_token');}
     }catch{localStorage.removeItem('sp_admin_token');}
@@ -1621,8 +1624,8 @@ $('#imgNextBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex
 $('#adminToggleBtn').addEventListener('click',async()=>{
   if(isAdmin){
     try{await fetch('/api/logout',{method:'POST',headers:{'X-Admin-Token':adminToken}})}catch{}
-    isAdmin=false;isOwner=false;currentUsername=null;adminToken=null;
-    document.body.classList.remove('admin-mode','owner-mode');
+    isAdmin=false;isOwner=false;canBackup=false;currentUsername=null;adminToken=null;
+    document.body.classList.remove('admin-mode','owner-mode','can-backup');
     localStorage.removeItem('sp_admin_token');
     notify('Вышли из режима админа');renderFilterChips();
     if(currentPage==='animators')renderAnimatorGrid();
@@ -1671,6 +1674,7 @@ async function refreshUsersList() {
       <div class="user-row-name">${esc(u.username)}</div>
       <div class="user-row-role">Админ</div>
       <div class="user-row-actions">
+        <button class="user-row-btn ${u.canBackup ? 'can-backup-on' : ''}" data-action="toggle-backup" data-user="${esc(u.username)}" data-current="${u.canBackup ? '1' : '0'}" title="${u.canBackup ? 'Может скачивать бэкап. Нажмите чтобы запретить.' : 'Не может скачивать бэкап. Нажмите чтобы разрешить.'}">${u.canBackup ? '✓ Бэкап' : '+ Бэкап'}</button>
         <button class="user-row-btn" data-action="reset-pwd" data-user="${esc(u.username)}">Сменить пароль</button>
         <button class="user-row-btn danger" data-action="delete" data-user="${esc(u.username)}">Удалить</button>
       </div>
@@ -1706,6 +1710,31 @@ async function refreshUsersList() {
           const d = await res.json();
           if (d.success) { notify(`Пароль изменён. Передайте его «${username}»`); refreshAuditLog(); }
           else notify(d.error || 'Ошибка', true);
+        } catch { notify('Ошибка сети', true); }
+      });
+    });
+    // Toggle backup permission
+    list.querySelectorAll('[data-action="toggle-backup"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const username = btn.dataset.user;
+        const currentlyAllowed = btn.dataset.current === '1';
+        const newValue = !currentlyAllowed;
+        const confirmMsg = newValue
+          ? `Разрешить «${username}» скачивать полный бэкап сайта?\n\nВ бэкапе все клипы, комментарии, ники пользователей и другие данные. Передавайте право только тем, кому действительно доверяете.`
+          : `Забрать у «${username}» право скачивать бэкап?`;
+        if (!confirm(confirmMsg)) return;
+        try {
+          const res = await fetch(`/api/users/${encodeURIComponent(username)}/can-backup`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+            body: JSON.stringify({ canBackup: newValue })
+          });
+          const d = await res.json();
+          if (d.success) {
+            notify(newValue ? `«${username}» теперь может скачивать бэкап` : `Право бэкапа у «${username}» отозвано`);
+            refreshUsersList();
+            refreshAuditLog();
+          } else notify(d.error || 'Ошибка', true);
         } catch { notify('Ошибка сети', true); }
       });
     });
@@ -1833,9 +1862,11 @@ async function tryLogin(){
       adminToken = d.token;
       isAdmin = true;
       isOwner = d.role === 'owner';
+      canBackup = isOwner || !!d.canBackup;
       currentUsername = d.username || username;
       document.body.classList.add('admin-mode');
       if (isOwner) document.body.classList.add('owner-mode');
+      if (canBackup) document.body.classList.add('can-backup');
       localStorage.setItem('sp_admin_token', d.token);
       $('#adminLoginModal').classList.remove('visible');
       document.body.style.overflow='';

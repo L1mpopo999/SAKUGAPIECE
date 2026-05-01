@@ -356,9 +356,9 @@ app.post('/api/login', (req, res) => {
   // Owner login
   if (u === OWNER_USERNAME && password === OWNER_PASSWORD) {
     const token = crypto.randomBytes(32).toString('hex');
-    sessionTokens.set(token, { username: OWNER_USERNAME, role: 'owner', createdAt: Date.now() });
+    sessionTokens.set(token, { username: OWNER_USERNAME, role: 'owner', canBackup: true, createdAt: Date.now() });
     addAudit(OWNER_USERNAME, 'login', null);
-    return res.json({ success: true, token, username: OWNER_USERNAME, role: 'owner' });
+    return res.json({ success: true, token, username: OWNER_USERNAME, role: 'owner', canBackup: true });
   }
 
   // Regular admin login
@@ -366,9 +366,10 @@ app.post('/api/login', (req, res) => {
   const user = users.find(x => x.username.toLowerCase() === u);
   if (user && verifyPassword(password, user.passwordHash)) {
     const token = crypto.randomBytes(32).toString('hex');
-    sessionTokens.set(token, { username: user.username, role: user.role || 'admin', createdAt: Date.now() });
+    const canBackup = !!user.canBackup;
+    sessionTokens.set(token, { username: user.username, role: user.role || 'admin', canBackup, createdAt: Date.now() });
     addAudit(user.username, 'login', null);
-    return res.json({ success: true, token, username: user.username, role: user.role || 'admin' });
+    return res.json({ success: true, token, username: user.username, role: user.role || 'admin', canBackup });
   }
 
   res.status(403).json({ error: 'Неверный логин или пароль' });
@@ -389,7 +390,7 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/verify', (req, res) => {
   const s = getSession(req);
   if (!s) return res.json({ valid: false });
-  res.json({ valid: true, username: s.username, role: s.role });
+  res.json({ valid: true, username: s.username, role: s.role, canBackup: !!s.canBackup });
 });
 
 // ===== USER MANAGEMENT (owner only) =====
@@ -399,6 +400,7 @@ app.get('/api/users', (req, res) => {
   const users = loadUsers().map(u => ({
     username: u.username,
     role: u.role || 'admin',
+    canBackup: !!u.canBackup,
     createdAt: u.createdAt
   }));
   res.json(users);
@@ -468,6 +470,26 @@ app.put('/api/users/:username/password', (req, res) => {
   }
   addAudit(session.username, 'reset_password', target);
   res.json({ success: true });
+});
+
+// Toggle backup permission for a user (owner only)
+app.put('/api/users/:username/can-backup', (req, res) => {
+  const session = requireOwner(req, res);
+  if (!session) return;
+  const target = String(req.params.username).toLowerCase();
+  const { canBackup } = req.body || {};
+  if (target === OWNER_USERNAME) return res.status(400).json({ error: 'У владельца это право всегда есть' });
+  const users = loadUsers();
+  const user = users.find(u => u.username.toLowerCase() === target);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+  user.canBackup = !!canBackup;
+  saveUsers(users);
+  // Update active sessions in memory so the user gets new permission immediately
+  for (const info of sessionTokens.values()) {
+    if (info.username.toLowerCase() === target) info.canBackup = user.canBackup;
+  }
+  addAudit(session.username, user.canBackup ? 'grant_backup' : 'revoke_backup', target);
+  res.json({ success: true, canBackup: user.canBackup });
 });
 
 // Get audit log (owner only) — last 200 entries
@@ -1265,7 +1287,9 @@ function getDirSize(dirPath) {
 app.get('/api/backup', (req, res) => {
   const token = req.query.token || req.headers['x-admin-token'];
   const info = token ? sessionTokens.get(token) : null;
-  if (!info || info.role !== 'owner') return res.status(403).send('Доступ запрещён');
+  // Allow if owner, OR admin who has been explicitly granted canBackup permission by the owner
+  const isAllowed = info && (info.role === 'owner' || info.canBackup === true);
+  if (!isAllowed) return res.status(403).send('Доступ запрещён');
   addAudit(info.username, 'download_backup', null);
 
   // Compute estimated total size (raw, before zip compression).
