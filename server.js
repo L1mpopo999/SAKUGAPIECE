@@ -164,6 +164,57 @@ function loadNicknames() {
 function saveNicknames(data) { fs.writeFileSync(NICKNAMES_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
 
 // ===== MIDDLEWARE =====
+
+// Security headers via helmet — closes clickjacking and various XSS vectors
+const helmet = require('helmet');
+app.use(helmet({
+  // Content Security Policy: keep relaxed defaults so the site keeps working with
+  // inline event handlers and Google Fonts. We can tighten this later.
+  contentSecurityPolicy: false,
+  // Allow same-origin embedding (we don't use iframes ourselves but this is a sane default)
+  crossOriginEmbedderPolicy: false,
+  // Allow images/uploads to be referenced from the same origin without restriction
+  crossOriginResourcePolicy: { policy: 'same-origin' }
+}));
+
+// Trust proxy headers — needed because Timeweb sits in front of our Node process.
+// Without this, req.ip would always be 127.0.0.1 and rate limits would treat all
+// traffic as coming from one host.
+app.set('trust proxy', 1);
+
+// Rate limiting (express-rate-limit)
+const rateLimit = require('express-rate-limit');
+
+// General API limiter: 200 requests/minute per IP. Comfortable for normal use,
+// painful for scrapers and DDoS-lite tools.
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Слишком много запросов. Подождите минуту.' }
+});
+app.use('/api/', generalLimiter);
+
+// Stricter limiter for view counter: prevents view inflation
+const viewLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30, // 30 view-pings per minute per IP — way more than any human needs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Слишком часто.' }
+});
+// Note: applied per-route below, not globally, so it kicks in only on the specific endpoint.
+
+// Stricter limiter for comments: prevents flooding (server-side spam check is also in place)
+const commentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 15, // 15 comment writes per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Слишком много комментариев. Подождите.' }
+});
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
@@ -441,7 +492,7 @@ function loadViews() {
 }
 function saveViews(data) { fs.writeFileSync(VIEWS_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
 
-app.post('/api/clips/:id/view', (req, res) => {
+app.post('/api/clips/:id/view', viewLimiter, (req, res) => {
   const { userToken } = req.body;
   const clips = loadClips();
   const id = parseInt(req.params.id);
@@ -459,8 +510,8 @@ app.post('/api/clips/:id/view', (req, res) => {
     clip.views = views[clipKey].length;
     saveClips(clips);
   } else if (!userToken) {
-    // No token — use IP as fallback
-    const ip = req.headers['x-real-ip'] || req.ip;
+    // No token — use IP as fallback. req.ip is trustworthy because of `app.set('trust proxy', 1)`.
+    const ip = req.ip;
     const ipKey = 'ip_' + ip;
     if (!views[clipKey].includes(ipKey)) {
       views[clipKey].push(ipKey);
@@ -1054,7 +1105,7 @@ app.post('/api/comments/unban', (req, res) => {
 });
 
 // Add comment to a clip (no auth needed)
-app.post('/api/clips/:id/comments', (req, res) => {
+app.post('/api/clips/:id/comments', commentLimiter, (req, res) => {
   const { nickname, text, userToken } = req.body;
   if (!nickname || !nickname.trim()) return res.status(400).json({ error: 'Укажите ник' });
   if (!text || !text.trim()) return res.status(400).json({ error: 'Напишите комментарий' });
