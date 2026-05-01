@@ -173,6 +173,14 @@ function clipTitle(clip) {
   return clip.title || '';
 }
 
+// Returns the display label for a filter (tag/arc/section), language-aware.
+// Falls back to RU label when English is missing.
+function filterLabel(f) {
+  if (!f) return '';
+  if (LANG === 'en' && f.labelEn && f.labelEn.trim()) return f.labelEn;
+  return f.label || f.id || '';
+}
+
 // ===== ANIMATORS & FILTERS — loaded from server =====
 let ANIMATORS = [];
 let FILTERS = [];
@@ -426,7 +434,7 @@ function attachClipEvents(container) {
         e.preventDefault(); e.stopPropagation();
         const tagText = e.target.closest('.clip-tag.category').textContent.trim();
         // Try to find matching filter
-        const filter = FILTERS.find(f => f.label.toLowerCase() === tagText.toLowerCase() || f.id.toLowerCase() === tagText.toLowerCase());
+        const filter = FILTERS.find(f => f.label.toLowerCase() === tagText.toLowerCase() || (f.labelEn && f.labelEn.toLowerCase() === tagText.toLowerCase()) || f.id.toLowerCase() === tagText.toLowerCase());
         if (filter) {
           if (filter.type === 'arc') { currentArcFilter = filter.id; currentTagFilter = null; }
           else { currentTagFilter = filter.id; }
@@ -2172,15 +2180,15 @@ function renderFilterChips() {
     <button class="filter-chip type-chip${currentTypeFilter==='type:video'?' active':''}" data-type="type:video">${LANG==='en'?'Video':'Видео'}</button>
     <button class="filter-chip type-chip${currentTypeFilter==='type:images'?' active':''}" data-type="type:images">${LANG==='en'?'Photo':'Фото'}</button>
     <span class="filter-separator"></span>
-    <button class="filter-chip filter-tags-toggle${currentTagFilter?' active':''}" id="filterTagsToggle">${currentTagFilter ? (tagFilters.find(f=>f.id===currentTagFilter)?.label||currentTagFilter)+' ✕' : (LANG==='en'?'Categories ▾':'Разделы ▾')}</button>
+    <button class="filter-chip filter-tags-toggle${currentTagFilter?' active':''}" id="filterTagsToggle">${currentTagFilter ? (filterLabel(tagFilters.find(f=>f.id===currentTagFilter))||currentTagFilter)+' ✕' : (LANG==='en'?'Categories ▾':'Разделы ▾')}</button>
     <span class="filter-separator"></span>
-    ${arcFilters.map(f => `<button class="filter-chip arc-chip${currentArcFilter===f.id?' active':''}" data-arc="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+    ${arcFilters.map(f => `<button class="filter-chip arc-chip${currentArcFilter===f.id?' active':''}" data-arc="${esc(f.id)}">${esc(filterLabel(f))}</button>`).join('')}
     <span class="filter-separator"></span>
     <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 ${LANG==='en'?'Views':'Просмотры'}</button>
     ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="results-count" id="resultsCount"></span>
     <div class="filter-tags-dropdown" id="filterTagsDropdown">
-      ${tagFilters.map(f => `<button class="filter-chip tag-filter-chip${currentTagFilter===f.id?' active':''}" data-tag="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
+      ${tagFilters.map(f => `<button class="filter-chip tag-filter-chip${currentTagFilter===f.id?' active':''}" data-tag="${esc(f.id)}">${esc(filterLabel(f))}</button>`).join('')}
     </div>
   `;
 
@@ -2252,16 +2260,19 @@ function openFilterManager() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay visible';
   overlay.innerHTML = `
-    <div class="modal">
+    <div class="modal" style="max-width:680px">
       <button class="modal-close" id="closeFilterMgr">&times;</button>
       <h2 class="modal-title">Управление вкладками</h2>
+      <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.8rem">Кликните на «EN: …» рядом с фильтром, чтобы задать английский перевод (например, «бои» → «fighting»). Это нужно для пользователей, переключивших сайт на английский.</p>
       <div id="filterMgrList"></div>
-      <div class="form-row" style="margin-top:1rem">
+      <h3 style="font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;margin-top:1.2rem;margin-bottom:.6rem;color:var(--text-secondary)">Добавить вкладку</h3>
+      <div class="form-row" style="display:flex;gap:.5rem;margin-bottom:.5rem">
         <input class="form-input" id="newFilterId" placeholder="ID (латиницей)" style="flex:1">
-        <input class="form-input" id="newFilterLabel" placeholder="Название" style="flex:1">
+        <input class="form-input" id="newFilterLabel" placeholder="Название (RU)" style="flex:1">
         <select class="form-select" id="newFilterType" style="flex:.7"><option value="tag">Тег</option><option value="arc">Арка</option></select>
       </div>
-      <button class="btn-submit" id="addFilterBtn" style="margin-top:.6rem">Добавить вкладку</button>
+      <input class="form-input" id="newFilterLabelEn" placeholder="Название (EN, опционально — например, fighting)" style="width:100%;margin-bottom:.6rem">
+      <button class="btn-submit" id="addFilterBtn">Добавить вкладку</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -2269,15 +2280,47 @@ function openFilterManager() {
   function renderList() {
     const list = overlay.querySelector('#filterMgrList');
     list.innerHTML = FILTERS.map(f => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .6rem;border-bottom:1px solid var(--border)">
-        <span><strong>${esc(f.label)}</strong> <span style="color:var(--text-muted);font-size:.7rem">(${f.id}, ${f.type})</span></span>
-        <button class="filter-mgr-del" data-id="${esc(f.id)}" style="background:var(--accent);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:.8rem">×</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.55rem .6rem;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div><strong>${esc(f.label)}</strong> <span style="color:var(--text-muted);font-size:.7rem">(${f.id}, ${f.type})</span></div>
+          <button class="filter-mgr-edit-en" data-id="${esc(f.id)}" data-current="${esc(f.labelEn || '')}" style="background:none;border:1px dashed var(--border);color:${f.labelEn ? 'var(--gold)' : 'var(--text-muted)'};font-family:'Space Mono',monospace;font-size:.7rem;padding:.2rem .5rem;border-radius:var(--radius);cursor:pointer;margin-top:.3rem">
+            EN: ${f.labelEn ? esc(f.labelEn) : '— задать перевод —'}
+          </button>
+        </div>
+        <button class="filter-mgr-del" data-id="${esc(f.id)}" title="Удалить" style="background:var(--accent);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:.85rem;flex-shrink:0">×</button>
       </div>
     `).join('');
+
+    // Delete handlers
     list.querySelectorAll('.filter-mgr-del').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (!confirm(`Удалить фильтр «${btn.dataset.id}»?`)) return;
         await fetch('/api/filters', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({id:btn.dataset.id}) });
         await loadAnimatorsAndFilters(); renderList(); renderFilterChips();
+      });
+    });
+
+    // Edit EN-label handlers
+    list.querySelectorAll('.filter-mgr-edit-en').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const current = btn.dataset.current || '';
+        const newVal = prompt(`Английское название для «${id}»\n(например, fighting / character acting / transformation):`, current);
+        if (newVal === null) return; // cancelled
+        try {
+          const res = await fetch(`/api/filters/${encodeURIComponent(id)}/label-en`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+            body: JSON.stringify({ labelEn: newVal.trim() })
+          });
+          const data = await res.json();
+          if (data.success) {
+            await loadAnimatorsAndFilters();
+            renderList();
+            renderFilterChips();
+            notify(newVal.trim() ? `EN-перевод сохранён` : 'EN-перевод убран');
+          } else notify(data.error || 'Ошибка', true);
+        } catch { notify('Ошибка сети', true); }
       });
     });
   }
@@ -2286,12 +2329,18 @@ function openFilterManager() {
   overlay.querySelector('#addFilterBtn').addEventListener('click', async () => {
     const id = overlay.querySelector('#newFilterId').value.trim();
     const label = overlay.querySelector('#newFilterLabel').value.trim();
+    const labelEn = overlay.querySelector('#newFilterLabelEn').value.trim();
     const type = overlay.querySelector('#newFilterType').value;
     if (!id || !label) { notify('Заполните ID и название', true); return; }
-    const res = await fetch('/api/filters', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({id,label,type}) });
+    const res = await fetch('/api/filters', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({id,label,labelEn,type}) });
     const data = await res.json();
-    if (data.success) { await loadAnimatorsAndFilters(); renderList(); renderFilterChips(); overlay.querySelector('#newFilterId').value=''; overlay.querySelector('#newFilterLabel').value=''; notify('Вкладка добавлена'); }
-    else notify(data.error, true);
+    if (data.success) {
+      await loadAnimatorsAndFilters(); renderList(); renderFilterChips();
+      overlay.querySelector('#newFilterId').value='';
+      overlay.querySelector('#newFilterLabel').value='';
+      overlay.querySelector('#newFilterLabelEn').value='';
+      notify('Вкладка добавлена');
+    } else notify(data.error, true);
   });
 
   overlay.querySelector('#closeFilterMgr').addEventListener('click', () => overlay.remove());

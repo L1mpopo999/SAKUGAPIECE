@@ -948,11 +948,11 @@ app.get('/api/filters', (req, res) => { res.json(loadFilters()); });
 
 app.post('/api/filters', (req, res) => {
   if (!checkAdmin(req, res)) return;
-  const { id, label, type } = req.body;
+  const { id, label, labelEn, type } = req.body;
   if (!id || !label) return res.status(400).json({ error: 'ID и название обязательны' });
   const list = loadFilters();
   if (list.find(f => f.id === id)) return res.status(400).json({ error: 'Фильтр с таким ID уже есть' });
-  list.push({ id: id.trim(), label: label.trim(), type: type || 'tag' });
+  list.push({ id: id.trim(), label: label.trim(), labelEn: (labelEn || '').trim(), type: type || 'tag' });
   saveFilters(list);
   res.json({ success: true, filters: list });
 });
@@ -965,6 +965,17 @@ app.delete('/api/filters', (req, res) => {
   list = list.filter(f => f.id !== id);
   saveFilters(list);
   res.json({ success: true, filters: list });
+});
+
+// Update filter English label
+app.put('/api/filters/:id/label-en', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const list = loadFilters();
+  const filter = list.find(f => f.id === req.params.id);
+  if (!filter) return res.status(404).json({ error: 'Фильтр не найден' });
+  filter.labelEn = (req.body.labelEn || '').trim();
+  saveFilters(list);
+  res.json({ success: true, filter });
 });
 
 // Update filter description
