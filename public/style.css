@@ -18,6 +18,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .nav-links{display:flex;align-items:center;gap:1.5rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .nav-link{font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-secondary);text-decoration:none;transition:color .2s;cursor:pointer;background:none;border:none;white-space:nowrap;padding:.3rem 0}
 .nav-link:hover,.nav-link.active{color:var(--text-primary)}
+.nav-lang-btn{font-weight:700;color:var(--gold);border:1px solid var(--border);border-radius:14px;padding:.25rem .55rem !important;min-width:36px;text-align:center}
+.nav-lang-btn:hover{border-color:var(--gold);color:var(--gold)}
 .btn-upload{font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;background:var(--accent);color:#fff;border:none;padding:.5rem 1.2rem;border-radius:var(--radius);cursor:pointer;transition:all .2s;box-shadow:0 0 16px var(--accent-glow);white-space:nowrap}
 .btn-upload:hover{background:#ff4757;box-shadow:0 0 24px var(--accent-glow);transform:translateY(-1px)}
 

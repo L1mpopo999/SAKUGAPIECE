@@ -1,3 +1,170 @@
+// ===== I18N (RU/EN) =====
+let LANG = localStorage.getItem('sp_lang') || 'ru';
+
+const I18N = {
+  // Navigation
+  nav_browse: { ru: 'Обзор', en: 'Browse' },
+  nav_episodes: { ru: 'Серии', en: 'Episodes' },
+  nav_animators: { ru: 'Аниматоры', en: 'Animators' },
+  nav_about: { ru: 'О сайте', en: 'About' },
+  nav_upload: { ru: '+ Загрузить', en: '+ Upload' },
+
+  // Hero / search
+  hero_title_main: { ru: 'ONE PIECE', en: 'ONE PIECE' },
+  hero_title_accent: { ru: 'SAKUGA', en: 'SAKUGA' },
+  hero_title_tail: { ru: 'ARCHIVE', en: 'ARCHIVE' },
+  hero_subtitle: { ru: 'Клипы с сакугой из One Piece в высоком качестве — поиск по аниматорам, аркам и эпизодам', en: 'High-quality sakuga clips from One Piece — search by animator, arc and episode' },
+  search_placeholder: { ru: 'Поиск по аниматорам, эпизодам, аркам...', en: 'Search animators, episodes, arcs...' },
+
+  // Filter chips
+  filter_all: { ru: 'ВСЕ', en: 'ALL' },
+  filter_video: { ru: 'ВИДЕО', en: 'VIDEO' },
+  filter_photo: { ru: 'ФОТО', en: 'PHOTO' },
+  filter_sections: { ru: 'РАЗДЕЛЫ ▾', en: 'CATEGORIES ▾' },
+  filter_views: { ru: 'ПРОСМОТРЫ', en: 'VIEWS' },
+
+  // Episodes page
+  episodes_title: { ru: 'СЕРИИ', en: 'EPISODES' },
+  episodes_subtitle: { ru: 'Все серии с сакуга-моментами — от 890 до последних', en: 'All episodes with sakuga moments — from 890 to latest' },
+  episodes_search_placeholder: { ru: 'Найти серию...', en: 'Find episode...' },
+  episodes_sort_clips: { ru: 'По клипам', en: 'By clips' },
+  episodes_sort_number: { ru: 'По номеру', en: 'By number' },
+  episodes_arc_all: { ru: 'Все арки', en: 'All arcs' },
+  episodes_director_filter: { ru: 'Режиссёр ▾', en: 'Director ▾' },
+  episodes_director_all: { ru: 'Все', en: 'All' },
+  episodes_not_found: { ru: 'Серии не найдены', en: 'No episodes found' },
+  episodes_add: { ru: 'Добавить серию', en: 'Add episode' },
+  episodes_no_clips: { ru: 'Пока нет клипов для этой серии', en: 'No clips in this episode yet' },
+  episodes_back: { ru: 'Все серии', en: 'All episodes' },
+
+  // Animators page
+  animators_title: { ru: 'АНИМАТОРЫ', en: 'ANIMATORS' },
+  animators_title_main: { ru: 'АНИМАТОР', en: 'ANIM' },
+  animators_title_accent: { ru: 'Ы', en: 'ATORS' },
+  animators_subtitle: { ru: 'Все аниматоры, работавшие над сакуга-моментами One Piece', en: 'All animators who worked on One Piece sakuga moments' },
+  animators_search_placeholder: { ru: 'Найти аниматора...', en: 'Find animator...' },
+  animators_add: { ru: 'Добавить аниматора', en: 'Add animator' },
+  animators_not_found: { ru: 'Аниматоры не найдены', en: 'No animators found' },
+  animators_back: { ru: 'Все аниматоры', en: 'All animators' },
+  animators_no_clips: { ru: 'Пока нет клипов с этим аниматором', en: 'No clips with this animator yet' },
+
+  // Director (on episode profile)
+  director_label: { ru: 'РЕЖИССЁР:', en: 'DIRECTOR:' },
+  director_short_label: { ru: 'ED:', en: 'ED:' },
+
+  // Counters / units
+  unit_clips_few: { ru: 'клипа', en: 'clips' },
+  unit_clips_many: { ru: 'клипов', en: 'clips' },
+  unit_clips_one: { ru: 'клип', en: 'clip' },
+  unit_animators_few: { ru: 'аниматора', en: 'animators' },
+  unit_animators_many: { ru: 'аниматоров', en: 'animators' },
+  unit_animators_one: { ru: 'аниматор', en: 'animator' },
+
+  // About page
+  about_title_main: { ru: 'О ', en: 'ABOUT ' },
+  about_title_accent: { ru: 'САЙТЕ', en: 'THE SITE' },
+  about_p1: { ru: '<strong>Sakuga Piece</strong> — это архив сакуга-моментов (моментов с выдающейся анимацией) из аниме One Piece.', en: '<strong>Sakuga Piece</strong> is an archive of sakuga moments (scenes with outstanding animation) from the One Piece anime.' },
+  about_p2: { ru: 'Цель проекта — собрать все значимые сакуга-моменты в высоком качестве с привязкой к аниматорам, эпизодам и аркам. В отличие от других ресурсов, здесь все клипы в HD.', en: 'The goal is to collect every notable sakuga moment in high quality with proper attribution to animators, episodes and arcs. Unlike other resources, all clips here are in HD.' },
+  about_p3: { ru: 'Сайт не аффилирован с Toei Animation или Эйитиро Одой. Все права на аниме One Piece принадлежат их правообладателям.', en: 'This site is not affiliated with Toei Animation or Eiichiro Oda. All rights to the One Piece anime belong to their respective owners.' },
+  about_h_howto: { ru: 'Как пользоваться', en: 'How to use' },
+  about_browse: { ru: '<strong>Обзор</strong> — все загруженные клипы. Здесь работает поиск по аниматорам, аркам, эпизодам и тегам, а также фильтры по разделам и сортировка.', en: '<strong>Browse</strong> — all uploaded clips. Search by animator, arc, episode and tag; filters by category and sorting.' },
+  about_episodes: { ru: '<strong>Серии</strong> — список всех серий, в которых есть сакуга-моменты. Можно фильтровать по аркам и режиссёрам. Нажмите на карточку, чтобы увидеть все клипы из этой серии.', en: '<strong>Episodes</strong> — all episodes that contain sakuga moments. Filter by arc or director. Click a card to see all clips from that episode.' },
+  about_animators: { ru: '<strong>Аниматоры</strong> — список всех аниматоров. Нажмите на карточку, чтобы увидеть все клипы этого аниматора.', en: '<strong>Animators</strong> — list of all animators. Click a card to see every clip by that animator.' },
+  about_comments: { ru: '<strong>Комментарии</strong> — у каждого клипа можно оставить комментарий, указав ник.', en: '<strong>Comments</strong> — leave a comment under any clip with a nickname.' },
+  about_h_keys: { ru: 'Горячие клавиши', en: 'Keyboard shortcuts' },
+  about_keys: { ru: '<kbd>/</kbd> — фокус на поиске &nbsp;&nbsp; <kbd>Esc</kbd> — закрыть окна', en: '<kbd>/</kbd> — focus search &nbsp;&nbsp; <kbd>Esc</kbd> — close dialogs' },
+  about_admin_note: { ru: 'Загружать новые клипы может только администратор сайта. Если у вас есть редкая или неучтённая сакуга и вы хотите её добавить — напишите автору в Telegram (ссылка вверху страницы).', en: 'Only site admins can upload new clips. If you have a rare or missing sakuga moment and want to add it — message the author on Telegram (link at the top).' },
+
+  // Pagination
+  pagination_prev: { ru: '← Назад', en: '← Prev' },
+  pagination_next: { ru: 'Вперёд →', en: 'Next →' },
+
+  // Player / clip page
+  back_to_browse: { ru: 'На главную', en: 'Back to browse' },
+  timecodes_title: { ru: 'Таймкоды аниматоров', en: 'Animator timecodes' },
+  player_frame: { ru: 'Кадр', en: 'Frame' },
+  comments_title: { ru: 'Комментарии', en: 'Comments' },
+  comment_placeholder: { ru: 'Написать комментарий...', en: 'Write a comment...' },
+  comment_nick_placeholder: { ru: 'Ваш ник', en: 'Nickname' },
+  comment_send: { ru: 'Отправить', en: 'Send' },
+  comment_no_comments: { ru: 'Пока нет комментариев. Будьте первым!', en: 'No comments yet. Be the first!' },
+  comment_edit: { ru: 'Изменить', en: 'Edit' },
+  comment_delete: { ru: 'Удалить', en: 'Delete' },
+  comment_save: { ru: 'Сохранить', en: 'Save' },
+  comment_cancel: { ru: 'Отмена', en: 'Cancel' },
+
+  // Footer
+  footer_text: { ru: 'SAKUGA PIECE — Архив анимации One Piece — Не аффилирован с Toei Animation или Эйитиро Одой', en: 'SAKUGA PIECE — One Piece Animation Archive — Not affiliated with Toei Animation or Eiichiro Oda' },
+
+  // Tag labels (override TAG_RU when in EN)
+  tag_fighting: { ru: 'бой', en: 'fighting' },
+  tag_effects: { ru: 'эффекты', en: 'effects' },
+  tag_character_acting: { ru: 'эктинг', en: 'character acting' },
+  tag_transformation: { ru: 'трансформация', en: 'transformation' },
+  tag_gear5: { ru: 'gear 5', en: 'gear 5' },
+  tag_haki: { ru: 'хаки', en: 'haki' },
+
+  // Misc
+  loading: { ru: 'Загрузка...', en: 'Loading...' },
+  hidden_label: { ru: '(скрыта)', en: '(hidden)' },
+
+  // Admin login modal (still RU-only conceptually but the modal itself can be bilingual)
+  admin_modal_title: { ru: 'Вход для админа', en: 'Admin login' },
+  admin_login_btn: { ru: 'Войти', en: 'Sign in' },
+  admin_modal_error: { ru: 'Неверный логин или пароль', en: 'Invalid login or password' },
+  login_username_label: { ru: 'Логин', en: 'Username' },
+  login_password_label: { ru: 'Пароль', en: 'Password' }
+};
+
+function t(key) {
+  const entry = I18N[key];
+  if (!entry) return key;
+  return entry[LANG] || entry.ru || key;
+}
+
+// Pluralization that respects current language.
+// In RU it picks the right grammatical form; in EN it returns singular for 1, else plural.
+function pluralClips(n) {
+  if (LANG === 'en') return n === 1 ? t('unit_clips_one') : t('unit_clips_many');
+  const m = n % 10, h = n % 100;
+  if (m === 1 && h !== 11) return t('unit_clips_one');
+  if (m >= 2 && m <= 4 && (h < 12 || h > 14)) return t('unit_clips_few');
+  return t('unit_clips_many');
+}
+function pluralAnimators(n) {
+  if (LANG === 'en') return n === 1 ? t('unit_animators_one') : t('unit_animators_many');
+  const m = n % 10, h = n % 100;
+  if (m === 1 && h !== 11) return t('unit_animators_one');
+  if (m >= 2 && m <= 4 && (h < 12 || h > 14)) return t('unit_animators_few');
+  return t('unit_animators_many');
+}
+
+// Apply translations to all DOM elements with data-i18n / data-i18n-html / data-i18n-placeholder / data-i18n-title
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  // Update language toggle button label
+  const btn = document.getElementById('langToggleBtn');
+  if (btn) btn.textContent = LANG === 'ru' ? 'EN' : 'RU';
+}
+
+function setLang(lang) {
+  if (lang !== 'ru' && lang !== 'en') return;
+  LANG = lang;
+  localStorage.setItem('sp_lang', lang);
+  applyI18n();
+  // Re-render dynamic parts that include translated strings
+  if (typeof applyFilters === 'function' && currentPage === 'browse') applyFilters();
+  if (typeof renderEpisodeGrid === 'function' && currentPage === 'episodes') renderEpisodeGrid();
+  if (typeof renderAnimatorGrid === 'function' && currentPage === 'animators') renderAnimatorGrid();
+  if (typeof renderEpisodeProfile === 'function' && currentPage === 'episode-profile' && currentEpisodeProfile) renderEpisodeProfile(currentEpisodeProfile);
+  if (typeof renderAnimatorProfile === 'function' && currentPage === 'animator-profile' && currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
+  if (typeof renderFilterChips === 'function') renderFilterChips();
+}
+
 // ===== ANIMATORS & FILTERS — loaded from server =====
 let ANIMATORS = [];
 let FILTERS = [];
@@ -39,6 +206,7 @@ let selectedThumbnail = null;
 let selectedAnimators = [];
 let currentPage = 'browse';
 let currentAnimatorProfile = null;
+let currentEpisodeProfile = null;
 let isAdmin = false;
 let isOwner = false;
 let currentUsername = null;
@@ -53,7 +221,12 @@ let commentCounts = {};
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const TAG_RU = {fighting:'бой',effects:'эффекты',character_acting:'эктинг',transformation:'трансформация',gear5:'gear 5',haki:'хаки'};
-function tagLabel(t){return TAG_RU[t]||t}
+function tagLabel(tag){
+  // Use I18N entry if present (so it follows current language), else fall back to RU map, else raw key.
+  const key = 'tag_' + tag;
+  if (I18N[key]) return t(key);
+  return TAG_RU[tag] || tag;
+}
 function pluralRu(n){const m=n%10,h=n%100;if(m===1&&h!==11)return'';if(m>=2&&m<=4&&(h<12||h>14))return'а';return'ов'}
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
 function getInitials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
@@ -87,6 +260,7 @@ function navigateTo(page, data) {
   }
   if (page === 'episode-profile' && data) {
     $(`.nav-link[data-page="episodes"]`).classList.add('active');
+    currentEpisodeProfile = data;
     renderEpisodeProfile(data);
   }
   if (page === 'animators') renderAnimatorGrid();
@@ -142,6 +316,7 @@ function navigateToSilent(page, data) {
   }
   if (page === 'episode-profile' && data) {
     $(`.nav-link[data-page="episodes"]`).classList.add('active');
+    currentEpisodeProfile = data;
     renderEpisodeProfile(data);
   }
   if (page === 'animators') renderAnimatorGrid();
@@ -171,8 +346,8 @@ function renderClipCard(clip, i) {
       ? `<img src="${clip.images[0].url}" alt="" loading="lazy">`
       : `<div class="clip-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
 
-  const badge = hasVideo ? (clip.quality || '1080p') : (hasImages ? 'ФОТО' : '');
-  const imgCount = hasImages && clip.images.length > 1 ? `<span class="clip-img-count">${clip.images.length} фото</span>` : '';
+  const badge = hasVideo ? (clip.quality || '1080p') : (hasImages ? (LANG==='en'?'PHOTO':'ФОТО') : '');
+  const imgCount = hasImages && clip.images.length > 1 ? `<span class="clip-img-count">${clip.images.length} ${LANG==='en'?'photos':'фото'}</span>` : '';
 
   const shouldOpenNewTab = hasVideo || (hasImages && clip.images.length > 4);
   const cardTag = shouldOpenNewTab
@@ -196,10 +371,10 @@ function renderClipCard(clip, i) {
     </div>
     <div class="clip-info">
       <div class="clip-title">${esc(clip.title)}</div>
-      <div class="clip-meta"><span>Эп. ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}</div>
+      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
-        ${clip.tags.slice(0,2).map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}
+        ${clip.tags.slice(0,2).map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
         ${clip.episode ? `<span class="clip-tag category">${esc(clip.episode)}</span>` : ''}
       </div>
     </div>
@@ -293,10 +468,10 @@ function renderClipPage_browse() {
   const page = Math.min(currentPage_clips, totalPages || 1);
   currentPage_clips = page;
   
-  $('#resultsCount').textContent = `${total} клип${pluralRu(total)}`;
+  $('#resultsCount').textContent = `${total} ${pluralClips(total)}`;
   
   if (!total) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted);font-size:1rem">Клипы не найдены</p></div>`;
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted);font-size:1rem">${LANG==='en'?'No clips found':'Клипы не найдены'}</p></div>`;
     // Remove any existing pagination
     document.querySelectorAll('.pagination').forEach(p => p.remove());
     return;
@@ -341,7 +516,7 @@ function renderPagination(current, total) {
   if (total <= 1) return '';
   let btns = [];
   
-  btns.push(`<button class="pagination-btn${current<=1?' disabled':''}" data-page="${current-1}">← Назад</button>`);
+  btns.push(`<button class="pagination-btn${current<=1?' disabled':''}" data-page="${current-1}">${t("pagination_prev")}</button>`);
   
   // Always show first page
   btns.push(`<button class="pagination-btn${current===1?' active':''}" data-page="1">1</button>`);
@@ -358,7 +533,7 @@ function renderPagination(current, total) {
   // Always show last page
   if (total > 1) btns.push(`<button class="pagination-btn${current===total?' active':''}" data-page="${total}">${total}</button>`);
   
-  btns.push(`<button class="pagination-btn${current>=total?' disabled':''}" data-page="${current+1}">Вперёд →</button>`);
+  btns.push(`<button class="pagination-btn${current>=total?' disabled':''}" data-page="${current+1}">${t("pagination_next")}</button>`);
   
   return `<div class="pagination">${btns.join('')}</div>`;
 }
@@ -447,7 +622,7 @@ function showSuggestions() {
   // Сортировка: сначала точные совпадения (с начала), потом по количеству клипов
   items.sort((a,b)=>b.score-a.score||b.count-a.count);
   if(!items.length){sug.classList.remove('visible');return}
-  sug.innerHTML=items.slice(0,8).map(it=>`<div class="suggestion-item" data-value="${esc(it.raw||it.name)}" data-type="${it.type}"><span class="suggestion-type ${it.type}">${it.type==='animator'?'аниматор':'тег'}</span><span class="suggestion-name">${esc(it.name)}</span><span class="suggestion-count">${it.count} клип${pluralRu(it.count)}</span></div>`).join('');
+  sug.innerHTML=items.slice(0,8).map(it=>`<div class="suggestion-item" data-value="${esc(it.raw||it.name)}" data-type="${it.type}"><span class="suggestion-type ${it.type}">${it.type==='animator'?(LANG==='en'?'animator':'аниматор'):(LANG==='en'?'tag':'тег')}</span><span class="suggestion-name">${esc(it.name)}</span><span class="suggestion-count">${it.count} ${pluralClips(it.count)}</span></div>`).join('');
   sug.querySelectorAll('.suggestion-item').forEach(el=>el.addEventListener('click',()=>{if(el.dataset.type==='animator'){sug.classList.remove('visible');$('#searchInput').value='';navigateTo('animator-profile',el.dataset.value)}else{$('#searchInput').value=el.dataset.value;sug.classList.remove('visible');applyFilters()}}));
   sug.classList.add('visible');
 }
@@ -481,10 +656,10 @@ function renderAnimatorGrid() {
     </div>`;
   }
 
-  if(!list.length && !isAdmin){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Аниматор не найден</p></div>`;return}
+  if(!list.length && !isAdmin){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('animators_not_found')}</p></div>`;return}
 
   grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card animator-card-big${a.hidden?' episode-hidden':''}" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
-    <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}${a.hidden?' <span style="font-size:.6rem;color:var(--text-muted)">(скрыт)</span>':''}</div><div class="animator-card-count"><span class="animator-card-count-num">${a.count}</span> клип${pluralRu(a.count)}</div></div>
+    <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}${a.hidden?` <span style="font-size:.6rem;color:var(--text-muted)">${t('hidden_label')}</span>`:''}</div><div class="animator-card-count"><span class="animator-card-count-num">${a.count}</span> ${pluralClips(a.count)}</div></div>
     ${isAdmin ? `<button class="animator-card-edit" data-edit-name="${esc(a.name)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="anim-hide-btn" data-hide-name="${esc(a.name)}" title="${a.hidden?'Показать':'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.2rem">${a.hidden?'👁':'×'}</button><button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить навсегда" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.8rem;margin-right:.3rem">🗑</button>` : ''}
     <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`).join('');
@@ -569,7 +744,7 @@ function renderAnimatorProfile(name) {
   const arcs=[...new Set(allAnimatorClips.map(c=>c.arc))];
   const videoCount = allAnimatorClips.filter(c => c.videoUrl).length;
   const photoCount = allAnimatorClips.filter(c => !c.videoUrl).length;
-  let stats=`${allAnimatorClips.length} клип${pluralRu(allAnimatorClips.length)}`;
+  let stats=`${allAnimatorClips.length} ${pluralClips(allAnimatorClips.length)}`;
   if(arcs.length)stats+=` · ${arcs.join(', ')}`;
   $('#animatorProfileStats').textContent=stats;
 
@@ -585,7 +760,7 @@ function renderAnimatorProfile(name) {
   });
 
   const grid=$('#animatorClipGrid');
-  if(!clips.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Нет клипов в этой категории</p></div>`}
+  if(!clips.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('animators_no_clips')}</p></div>`}
   else{grid.innerHTML=clips.map((c,i)=>renderClipCard(c,i)).join('');attachClipEvents(grid)}
 }
 
@@ -658,7 +833,7 @@ function renderEpisodeGrid() {
   if (!isAdmin) list = list.filter(e => !EPISODES_DATA.hidden.includes(e.episode));
 
   if (!list.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Серии не найдены</p></div>`;
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('episodes_not_found')}</p></div>`;
     return;
   }
 
@@ -673,14 +848,14 @@ function renderEpisodeGrid() {
   const isHidden = (ep) => EPISODES_DATA.hidden.includes(ep);
 
   grid.innerHTML = adminAddHtml + list.map((e, i) => {
-    const hiddenLabel = isHidden(e.episode) ? ' <span style="font-size:.6rem;color:var(--text-muted)">(скрыта)</span>' : '';
+    const hiddenLabel = isHidden(e.episode) ? ` <span style="font-size:.6rem;color:var(--text-muted)">${t('hidden_label')}</span>` : '';
     // Если есть режиссёр — выводим "ED: Имя" как заголовок и арку/клипы как подзаголовок.
     // Если нет — выводим только арку и количество клипов.
     const mainLine = e.director
       ? `ED: ${esc(e.director)}${hiddenLabel}`
-      : `${e.arc} · ${e.count} клип${pluralRu(e.count)}${hiddenLabel}`;
+      : `${e.arc} · ${e.count} ${pluralClips(e.count)}${hiddenLabel}`;
     const subLine = e.director
-      ? `${e.arc} · ${e.count} клип${pluralRu(e.count)}`
+      ? `${e.arc} · ${e.count} ${pluralClips(e.count)}`
       : '';
     return `<div class="animator-card episode-card${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
       <div class="animator-avatar">${esc(e.episode)}</div>
@@ -776,7 +951,7 @@ function refreshEpisodeDirectorDropdown() {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([name, n]) => ({ key: name, label: name, count: n }));
   const totalAssigned = [...counts.values()].reduce((s, n) => s + n, 0);
-  const items = [{ key:'all', label:'Все', count: totalAssigned }, ...usedDirectors];
+  const items = [{ key:'all', label: t('episodes_director_all'), count: totalAssigned }, ...usedDirectors];
   dd.innerHTML = items.map(it =>
     `<button class="filter-chip director-chip${episodeDirectorFilter === it.key ? ' active' : ''}" data-episode-director="${esc(it.key)}">${esc(it.label)}<span class="director-chip-count">${it.count}</span></button>`
   ).join('');
@@ -785,7 +960,7 @@ function refreshEpisodeDirectorDropdown() {
     toggle.textContent = episodeDirectorFilter + ' ✕';
     toggle.classList.add('active');
   } else {
-    toggle.textContent = 'Режиссёр ▾';
+    toggle.textContent = t('episodes_director_filter');
     toggle.classList.remove('active');
   }
   // Wire up clicks
@@ -827,8 +1002,8 @@ function renderEpisodeProfile(episode) {
   const clips = allClips.filter(c => c.episode.trim() === episode);
   const arc = getEpisodeArc(parseInt(episode) || 0);
   const animators = [...new Set(clips.flatMap(c => c.animators))];
-  let stats = `${arc} · ${clips.length} клип${pluralRu(clips.length)}`;
-  if (animators.length) stats += ` · ${animators.length} аниматор${pluralRu(animators.length)}`;
+  let stats = `${arc} · ${clips.length} ${pluralClips(clips.length)}`;
+  if (animators.length) stats += ` · ${animators.length} ${pluralAnimators(animators.length)}`;
   $('#episodeProfileStats').textContent = stats;
 
   // Render director block
@@ -844,7 +1019,7 @@ function renderEpisodeProfile(episode) {
 
   const grid = $('#episodeClipGrid');
   if (!clips.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">Пока нет клипов для этой серии</p></div>`;
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('episodes_no_clips')}</p></div>`;
   } else {
     grid.innerHTML = clips.map((c, i) => renderClipCard(c, i)).join('');
     attachClipEvents(grid);
@@ -1138,13 +1313,13 @@ function openPlayer(id) {
   fetch(`/api/clips/${id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
   $('#playerTitle').textContent=clip.title;
   $('#playerCurrentAnimator').textContent='';
-  $('#playerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">Эп. ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}${clip.tags.map(t=>`<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}`;
+  $('#playerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}${clip.tags.map(tg=>`<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}`;
   $('#playerDetails').querySelectorAll('.clip-tag.animator').forEach(t=>t.addEventListener('click',()=>{closePlayer();navigateTo('animator-profile',t.dataset.animator)}));
 
   // Notes
   const notesEl = $('#playerNotes');
   if (clip.notes && clip.notes.trim()) {
-    notesEl.innerHTML = `<div class="player-notes-label">Заметки</div><div class="player-notes-text">${esc(clip.notes).replace(/\n/g, '<br>')}</div>`;
+    notesEl.innerHTML = `<div class="player-notes-label">${LANG==='en'?'Notes':'Заметки'}</div><div class="player-notes-text">${esc(clip.notes).replace(/\n/g, '<br>')}</div>`;
     notesEl.style.display = '';
   } else {
     notesEl.innerHTML = '';
@@ -1154,7 +1329,7 @@ function openPlayer(id) {
   // Attached images
   const imagesEl = $('#playerImages');
   if (clip.images && clip.images.length) {
-    imagesEl.innerHTML = `<div class="player-notes-label">Фотографии</div><div class="player-images-grid">${clip.images.map((img, idx) => `<img class="player-image-thumb" src="${img.url}" data-idx="${idx}" alt="">`).join('')}</div>`;
+    imagesEl.innerHTML = `<div class="player-notes-label">${LANG==='en'?'Photos':'Фотографии'}</div><div class="player-images-grid">${clip.images.map((img, idx) => `<img class="player-image-thumb" src="${img.url}" data-idx="${idx}" alt="">`).join('')}</div>`;
     imagesEl.querySelectorAll('.player-image-thumb').forEach(img => {
       img.addEventListener('click', () => {
         openClipPageImageViewer(clip.images.map(i => i.url), parseInt(img.dataset.idx));
@@ -1260,7 +1435,7 @@ let currentCommentClipId = null;
 async function loadClipComments(clipId) {
   currentCommentClipId = clipId;
   const list = $('#commentsList');
-  list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Загрузка...</span>';
+  list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">' + t('loading') + '</span>';
   // Restore nickname
   const savedNick = localStorage.getItem('sp_comment_nick');
   if (savedNick) $('#commentNick').value = savedNick;
@@ -1278,7 +1453,7 @@ async function loadClipComments(clipId) {
 function renderComments(comments, clipId) {
   const list = $('#commentsList');
   if (!comments.length) {
-    list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Пока нет комментариев</span>';
+    list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">' + t('comment_no_comments') + '</span>';
     return;
   }
   list.innerHTML = comments.map(c => {
@@ -1390,7 +1565,7 @@ function openImageViewer(clip) {
   viewerImages=clip.images.map(img=>img.url);viewerIndex=0;
   updateImageViewer();
   $('#imageViewerTitle').textContent=clip.title;
-  $('#imageViewerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">Эп. ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}`;
+  $('#imageViewerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}`;
   $('#imageViewerDetails').querySelectorAll('.clip-tag.animator').forEach(t=>t.addEventListener('click',()=>{closeImageViewer();navigateTo('animator-profile',t.dataset.animator)}));
   $('#imageViewerOverlay').classList.add('visible');document.body.style.overflow='hidden';
 }
@@ -1983,15 +2158,15 @@ function renderFilterChips() {
   const arcFilters = FILTERS.filter(f => f.type === 'arc');
 
   container.innerHTML = `
-    <button class="filter-chip type-chip${currentTypeFilter==='all'?' active':''}" data-type="all">Все</button>
-    <button class="filter-chip type-chip${currentTypeFilter==='type:video'?' active':''}" data-type="type:video">Видео</button>
-    <button class="filter-chip type-chip${currentTypeFilter==='type:images'?' active':''}" data-type="type:images">Фото</button>
+    <button class="filter-chip type-chip${currentTypeFilter==='all'?' active':''}" data-type="all">${LANG==='en'?'All':'Все'}</button>
+    <button class="filter-chip type-chip${currentTypeFilter==='type:video'?' active':''}" data-type="type:video">${LANG==='en'?'Video':'Видео'}</button>
+    <button class="filter-chip type-chip${currentTypeFilter==='type:images'?' active':''}" data-type="type:images">${LANG==='en'?'Photo':'Фото'}</button>
     <span class="filter-separator"></span>
-    <button class="filter-chip filter-tags-toggle${currentTagFilter?' active':''}" id="filterTagsToggle">${currentTagFilter ? (tagFilters.find(f=>f.id===currentTagFilter)?.label||currentTagFilter)+' ✕' : 'Разделы ▾'}</button>
+    <button class="filter-chip filter-tags-toggle${currentTagFilter?' active':''}" id="filterTagsToggle">${currentTagFilter ? (tagFilters.find(f=>f.id===currentTagFilter)?.label||currentTagFilter)+' ✕' : (LANG==='en'?'Categories ▾':'Разделы ▾')}</button>
     <span class="filter-separator"></span>
     ${arcFilters.map(f => `<button class="filter-chip arc-chip${currentArcFilter===f.id?' active':''}" data-arc="${esc(f.id)}">${esc(f.label)}</button>`).join('')}
     <span class="filter-separator"></span>
-    <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 Просмотры</button>
+    <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 ${LANG==='en'?'Views':'Просмотры'}</button>
     ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="results-count" id="resultsCount"></span>
     <div class="filter-tags-dropdown" id="filterTagsDropdown">
@@ -2124,7 +2299,7 @@ function renderClipPage(clip) {
     <div class="clip-page-container">
       <a href="/" class="back-btn clip-page-back">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        На главную
+        ${t('back_to_browse')}
       </a>
 
       ${clip.videoUrl ? `
@@ -2175,7 +2350,7 @@ function renderClipPage(clip) {
 
         <div class="clip-page-tags">
           ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
-          ${clip.tags.map(t => `<span class="clip-tag category">${esc(tagLabel(t))}</span>`).join('')}
+          ${clip.tags.map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
         </div>
 
         ${clip.notes ? `<div class="clip-page-notes">${esc(clip.notes).replace(/\n/g, '<br>')}</div>` : ''}
@@ -2192,7 +2367,7 @@ function renderClipPage(clip) {
   if (timecodes.length) {
     const tcContainer = page.querySelector('#clipPageTimecodes');
     tcContainer.innerHTML = `
-      <h3 class="clip-page-section-title">Таймкоды аниматоров</h3>
+      <h3 class="clip-page-section-title">${t('timecodes_title')}</h3>
       ${timecodes.map((tc, i) => `
         <div class="timecode-item" data-time="${tc.time}">
           <span class="timecode-time">${tc.label}</span>
@@ -2268,7 +2443,7 @@ function renderClipPage(clip) {
     function updateFrameInfo() {
       const t = frameVideo.currentTime;
       const frameNum = Math.round(t * fps);
-      frameInfo.textContent = `Кадр ${frameNum} · ${formatFrameTime(t)}`;
+      frameInfo.textContent = `${LANG==='en'?'Frame':'Кадр'} ${frameNum} · ${formatFrameTime(t)}`;
     }
 
     function stepFrame(direction) {
@@ -2448,5 +2623,13 @@ function openClipPageImageViewer(images, startIdx) {
   update();
   document.body.appendChild(overlay);
 }
+
+// Apply translations once DOM is parsed; init() will run after data load
+applyI18n();
+
+// Language toggle button
+document.getElementById('langToggleBtn')?.addEventListener('click', () => {
+  setLang(LANG === 'ru' ? 'en' : 'ru');
+});
 
 init();

@@ -35,11 +35,12 @@
       <span class="header-socials-name">by <span style="color:var(--gold)">jef999</span></span>
     </div>
     <nav class="nav-links">
-      <button class="nav-link active" data-page="browse">Обзор</button>
-      <button class="nav-link" data-page="episodes">Серии</button>
-      <button class="nav-link" data-page="animators">Аниматоры</button>
-      <button class="nav-link" data-page="about">О сайте</button>
-      <button class="btn-upload admin-only" id="openUploadBtn">+ Загрузить</button>
+      <button class="nav-link active" data-page="browse" data-i18n="nav_browse">Обзор</button>
+      <button class="nav-link" data-page="episodes" data-i18n="nav_episodes">Серии</button>
+      <button class="nav-link" data-page="animators" data-i18n="nav_animators">Аниматоры</button>
+      <button class="nav-link" data-page="about" data-i18n="nav_about">О сайте</button>
+      <button class="btn-upload admin-only" id="openUploadBtn" data-i18n="nav_upload">+ Загрузить</button>
+      <button class="nav-link nav-lang-btn" id="langToggleBtn" title="Switch language">EN</button>
       <button class="nav-link" id="adminToggleBtn" title="Админ">🔒</button>
     </nav>
   </div>
@@ -49,18 +50,18 @@
 <div id="page-browse" class="page active">
   <section class="hero">
     <h1 class="hero-title">ONE PIECE <span class="hl">SAKUGA</span> ARCHIVE</h1>
-    <p class="hero-sub">Клипы с сакугой из One Piece в высоком качестве — поиск по аниматорам, аркам и эпизодам</p>
+    <p class="hero-sub" data-i18n="hero_subtitle">Клипы с сакугой из One Piece в высоком качестве — поиск по аниматорам, аркам и эпизодам</p>
     <div class="search-wrapper">
       <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="search-input" id="searchInput" type="text" placeholder="Поиск по аниматорам, эпизодам, аркам..." autocomplete="off" name="search_nofill" readonly onfocus="this.removeAttribute('readonly')">
+      <input class="search-input" id="searchInput" type="text" placeholder="Поиск по аниматорам, эпизодам, аркам..." data-i18n-placeholder="search_placeholder" autocomplete="off" name="search_nofill" readonly onfocus="this.removeAttribute('readonly')">
       <div class="search-suggestions" id="searchSuggestions"></div>
     </div>
   </section>
 
   <div class="filters">
-    <button class="filter-chip active" data-filter="all">Все</button>
-    <button class="filter-chip" data-filter="type:video">Видео</button>
-    <button class="filter-chip" data-filter="type:images">Фото</button>
+    <button class="filter-chip active" data-filter="all" data-i18n="filter_all">Все</button>
+    <button class="filter-chip" data-filter="type:video" data-i18n="filter_video">Видео</button>
+    <button class="filter-chip" data-filter="type:images" data-i18n="filter_photo">Фото</button>
     <span class="filter-separator"></span>
     <button class="filter-chip" data-filter="fighting">Бои</button>
     <button class="filter-chip" data-filter="effects">Эффекты</button>
@@ -82,23 +83,23 @@
 </div>
 <div id="page-episodes" class="page">
   <section class="hero">
-    <h1 class="hero-title"><span class="hl">СЕРИИ</span></h1>
-    <p class="hero-sub">Все серии с сакуга-моментами — от 890 до последних</p>
+    <h1 class="hero-title"><span class="hl" data-i18n="episodes_title">СЕРИИ</span></h1>
+    <p class="hero-sub" data-i18n="episodes_subtitle">Все серии с сакуга-моментами — от 890 до последних</p>
     <div class="search-wrapper">
       <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="search-input" id="episodeSearchInput" type="text" placeholder="Найти серию..." autocomplete="off" name="epsearch_nofill" readonly onfocus="this.removeAttribute('readonly')">
+      <input class="search-input" id="episodeSearchInput" type="text" placeholder="Найти серию..." data-i18n-placeholder="episodes_search_placeholder" autocomplete="off" name="epsearch_nofill" readonly onfocus="this.removeAttribute('readonly')">
     </div>
   </section>
   <div class="episodes-sort-bar" style="position:relative">
-    <button class="filter-chip active" data-episode-sort="clips">По клипам</button>
-    <button class="filter-chip" data-episode-sort="number">По номеру</button>
+    <button class="filter-chip active" data-episode-sort="clips" data-i18n="episodes_sort_clips">По клипам</button>
+    <button class="filter-chip" data-episode-sort="number" data-i18n="episodes_sort_number">По номеру</button>
     <span class="filter-separator"></span>
-    <button class="filter-chip" data-episode-arc="all">Все арки</button>
+    <button class="filter-chip" data-episode-arc="all" data-i18n="episodes_arc_all">Все арки</button>
     <button class="filter-chip" data-episode-arc="Wano">Wano</button>
     <button class="filter-chip" data-episode-arc="Egghead">Egghead</button>
     <button class="filter-chip" data-episode-arc="Elbaf">Elbaf</button>
     <span class="filter-separator"></span>
-    <button class="filter-chip filter-tags-toggle" id="episodeDirectorToggle">Режиссёр ▾</button>
+    <button class="filter-chip filter-tags-toggle" id="episodeDirectorToggle" data-i18n="episodes_director_filter">Режиссёр ▾</button>
     <div class="filter-tags-dropdown" id="episodeDirectorDropdown"></div>
   </div>
   <div class="grid-container">
@@ -111,7 +112,7 @@
   <section class="animator-profile-header">
     <button class="back-btn" id="backToEpisodesBtn">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      Все серии
+      <span data-i18n="episodes_back">Все серии</span>
     </button>
     <h1 class="animator-profile-name" id="episodeProfileName"></h1>
     <p class="animator-profile-stats" id="episodeProfileStats"></p>
@@ -125,11 +126,11 @@
 <!-- PAGE: ANIMATORS -->
 <div id="page-animators" class="page">
   <section class="hero">
-    <h1 class="hero-title"><span class="hl">АНИМАТОРЫ</span></h1>
-    <p class="hero-sub">Все аниматоры, работавшие над сакуга-моментами One Piece</p>
+    <h1 class="hero-title"><span class="hl" data-i18n="animators_title">АНИМАТОРЫ</span></h1>
+    <p class="hero-sub" data-i18n="animators_subtitle">Все аниматоры, работавшие над сакуга-моментами One Piece</p>
     <div class="search-wrapper">
       <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="search-input" id="animatorSearchInput" type="text" placeholder="Найти аниматора..." autocomplete="off" name="animsearch_nofill" readonly onfocus="this.removeAttribute('readonly')">
+      <input class="search-input" id="animatorSearchInput" type="text" placeholder="Найти аниматора..." data-i18n-placeholder="animators_search_placeholder" autocomplete="off" name="animsearch_nofill" readonly onfocus="this.removeAttribute('readonly')">
     </div>
   </section>
   <div class="grid-container">
@@ -142,15 +143,15 @@
   <section class="animator-profile-header">
     <button class="back-btn" id="backToAnimatorsBtn">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      Все аниматоры
+      <span data-i18n="animators_back">Все аниматоры</span>
     </button>
     <h1 class="animator-profile-name" id="animatorProfileName"></h1>
     <p class="animator-profile-stats" id="animatorProfileStats"></p>
     <button class="btn-upload btn-upload-for-animator admin-only" id="uploadForAnimatorBtn">+ Загрузить клип для этого аниматора</button>
   </section>
   <div class="episodes-sort-bar" id="animatorProfileFilters">
-    <button class="filter-chip active" data-animator-filter="all">Все</button>
-    <button class="filter-chip" data-animator-filter="video">Видео</button>
+    <button class="filter-chip active" data-animator-filter="all" data-i18n="filter_all">Все</button>
+    <button class="filter-chip" data-animator-filter="video" data-i18n="filter_video">Видео</button>
     <button class="filter-chip" data-animator-filter="photo">Фото / Арты</button>
   </div>
   <div class="grid-container">
@@ -161,20 +162,20 @@
 <!-- PAGE: ABOUT -->
 <div id="page-about" class="page">
   <section class="hero">
-    <h1 class="hero-title">О <span class="hl">САЙТЕ</span></h1>
+    <h1 class="hero-title"><span data-i18n="about_title_main">О </span><span class="hl" data-i18n="about_title_accent">САЙТЕ</span></h1>
   </section>
   <div class="about-content">
-    <p><strong>Sakuga Piece</strong> — это архив сакуга-моментов (моментов с выдающейся анимацией) из аниме One Piece.</p>
-    <p>Цель проекта — собрать все значимые сакуга-моменты в высоком качестве с привязкой к аниматорам, эпизодам и аркам. В отличие от других ресурсов, здесь все клипы в HD.</p>
-    <p>Сайт не аффилирован с Toei Animation или Эйитиро Одой. Все права на аниме One Piece принадлежат их правообладателям.</p>
-    <h3>Как пользоваться</h3>
-    <p><strong>Обзор</strong> — все загруженные клипы. Здесь работает поиск по аниматорам, аркам, эпизодам и тегам, а также фильтры по разделам и сортировка.</p>
-    <p><strong>Серии</strong> — список всех серий, в которых есть сакуга-моменты. Можно фильтровать по аркам и режиссёрам. Нажмите на карточку, чтобы увидеть все клипы из этой серии.</p>
-    <p><strong>Аниматоры</strong> — список всех аниматоров. Нажмите на карточку, чтобы увидеть все клипы этого аниматора.</p>
-    <p><strong>Комментарии</strong> — у каждого клипа можно оставить комментарий, указав ник.</p>
-    <h3>Горячие клавиши</h3>
-    <p><kbd>/</kbd> — фокус на поиске &nbsp;&nbsp; <kbd>Esc</kbd> — закрыть окна</p>
-    <p style="font-size:.8rem;color:var(--text-muted);margin-top:1.5rem">Загружать новые клипы может только администратор сайта. Если у вас есть редкая или неучтённая сакуга и вы хотите её добавить — напишите автору в Telegram (ссылка вверху страницы).</p>
+    <p data-i18n-html="about_p1"><strong>Sakuga Piece</strong> — это архив сакуга-моментов (моментов с выдающейся анимацией) из аниме One Piece.</p>
+    <p data-i18n="about_p2">Цель проекта — собрать все значимые сакуга-моменты в высоком качестве с привязкой к аниматорам, эпизодам и аркам. В отличие от других ресурсов, здесь все клипы в HD.</p>
+    <p data-i18n="about_p3">Сайт не аффилирован с Toei Animation или Эйитиро Одой. Все права на аниме One Piece принадлежат их правообладателям.</p>
+    <h3 data-i18n="about_h_howto">Как пользоваться</h3>
+    <p data-i18n-html="about_browse"><strong>Обзор</strong> — все загруженные клипы. Здесь работает поиск по аниматорам, аркам, эпизодам и тегам, а также фильтры по разделам и сортировка.</p>
+    <p data-i18n-html="about_episodes"><strong>Серии</strong> — список всех серий, в которых есть сакуга-моменты. Можно фильтровать по аркам и режиссёрам. Нажмите на карточку, чтобы увидеть все клипы из этой серии.</p>
+    <p data-i18n-html="about_animators"><strong>Аниматоры</strong> — список всех аниматоров. Нажмите на карточку, чтобы увидеть все клипы этого аниматора.</p>
+    <p data-i18n-html="about_comments"><strong>Комментарии</strong> — у каждого клипа можно оставить комментарий, указав ник.</p>
+    <h3 data-i18n="about_h_keys">Горячие клавиши</h3>
+    <p data-i18n-html="about_keys"><kbd>/</kbd> — фокус на поиске &nbsp;&nbsp; <kbd>Esc</kbd> — закрыть окна</p>
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:1.5rem" data-i18n="about_admin_note">Загружать новые клипы может только администратор сайта. Если у вас есть редкая или неучтённая сакуга и вы хотите её добавить — напишите автору в Telegram (ссылка вверху страницы).</p>
   </div>
 </div>
 
@@ -328,12 +329,12 @@
     <div class="timecode-list" id="timecodeList"></div>
     <div class="player-images" id="playerImages"></div>
     <div class="player-comments" id="playerComments">
-      <div class="player-notes-label">Комментарии</div>
+      <div class="player-notes-label" data-i18n="comments_title">Комментарии</div>
       <div class="comments-list" id="commentsList"></div>
       <div class="comment-form">
-        <input class="comment-nick" id="commentNick" type="text" placeholder="Ваш ник" maxlength="30" autocomplete="off">
-        <textarea class="comment-text" id="commentText" placeholder="Написать комментарий..." maxlength="1000"></textarea>
-        <button class="comment-submit" id="commentSubmitBtn">Отправить</button>
+        <input class="comment-nick" id="commentNick" type="text" placeholder="Ваш ник" data-i18n-placeholder="comment_nick_placeholder" maxlength="30" autocomplete="off">
+        <textarea class="comment-text" id="commentText" placeholder="Написать комментарий..." data-i18n-placeholder="comment_placeholder" maxlength="1000"></textarea>
+        <button class="comment-submit" id="commentSubmitBtn" data-i18n="comment_send">Отправить</button>
       </div>
     </div>
   </div>
@@ -410,7 +411,7 @@
       <div class="form-hint">Каждый с новой строки: 0:00 - Имя</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Видео</label>
+      <label class="form-label" data-i18n="filter_video">Видео</label>
       <div class="edit-thumbnail-area">
         <video id="editVideoPreview" style="max-width:200px;max-height:120px;border-radius:var(--radius);border:1px solid var(--border);display:none" muted></video>
         <input type="file" id="editVideoInput" accept="video/*" hidden>
@@ -445,13 +446,13 @@
 <div class="modal-overlay" id="adminLoginModal">
   <div class="modal modal-sm">
     <button class="modal-close" id="closeAdminLoginBtn">&times;</button>
-    <h2 class="modal-title">Вход для админа</h2>
+    <h2 class="modal-title" data-i18n="admin_modal_title">Вход для админа</h2>
     <div class="form-group">
-      <label class="form-label">Логин</label>
+      <label class="form-label" data-i18n="login_username_label">Логин</label>
       <input class="form-input" id="adminUsernameInput" type="text" placeholder="Логин..." autocomplete="username">
     </div>
     <div class="form-group">
-      <label class="form-label">Пароль</label>
+      <label class="form-label" data-i18n="login_password_label">Пароль</label>
       <div class="password-wrapper">
         <input class="form-input" id="adminPasswordInput" type="password" placeholder="Пароль..." autocomplete="current-password">
         <button type="button" class="password-toggle" id="passwordToggleBtn" title="Показать пароль">
@@ -460,8 +461,8 @@
         </button>
       </div>
     </div>
-    <button class="btn-submit" id="adminLoginBtn">Войти</button>
-    <p id="adminLoginError" style="color:var(--accent);font-size:0.8rem;margin-top:0.7rem;display:none;">Неверный логин или пароль</p>
+    <button class="btn-submit" id="adminLoginBtn" data-i18n="admin_login_btn">Войти</button>
+    <p id="adminLoginError" style="color:var(--accent);font-size:0.8rem;margin-top:0.7rem;display:none;" data-i18n="admin_modal_error">Неверный логин или пароль</p>
   </div>
 </div>
 
@@ -485,7 +486,7 @@
 </div>
 
 <footer class="footer">
-  <p class="footer-text">SAKUGA PIECE — Архив анимации One Piece — Не аффилирован с Toei Animation или Эйитиро Одой</p>
+  <p class="footer-text" data-i18n="footer_text">SAKUGA PIECE — Архив анимации One Piece — Не аффилирован с Toei Animation или Эйитиро Одой</p>
 </footer>
 
 <!-- Floating admin backup button (visible only in admin mode) -->
