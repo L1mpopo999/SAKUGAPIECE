@@ -549,7 +549,7 @@ app.post('/api/clips', uploadHandler, (req, res) => {
     return res.status(400).json({ error: 'Загрузите видео или хотя бы одно изображение' });
   }
 
-  const { title, animators, episode, arc, tags, notes, timecodes, clipOrder } = req.body;
+  const { title, titleEn, animators, episode, arc, tags, notes, timecodes, clipOrder } = req.body;
 
   if (!title || !animators || !episode) {
     // Clean up
@@ -563,6 +563,7 @@ app.post('/api/clips', uploadHandler, (req, res) => {
   const newClip = {
     id: Date.now(),
     title: title.trim(),
+    titleEn: titleEn ? titleEn.trim() : '',
     animators: animators.split(',').map(a => a.trim()).filter(Boolean),
     episode: episode.trim(),
     arc: arc || 'Unknown',
@@ -616,9 +617,10 @@ app.put('/api/clips/:id', express.json(), (req, res) => {
 
   if (!clip) return res.status(404).json({ error: 'Клип не найден' });
 
-  const { title, animators, episode, arc, tags, notes, timecodes, clipOrder, directorOverride } = req.body;
+  const { title, titleEn, animators, episode, arc, tags, notes, timecodes, clipOrder, directorOverride } = req.body;
 
   if (title !== undefined) clip.title = title.trim();
+  if (titleEn !== undefined) clip.titleEn = titleEn.trim();
   if (animators !== undefined) clip.animators = animators.split(',').map(a => a.trim()).filter(Boolean);
   if (episode !== undefined) clip.episode = episode.trim();
   if (arc !== undefined) clip.arc = arc;

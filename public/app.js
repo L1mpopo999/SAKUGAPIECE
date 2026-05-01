@@ -165,6 +165,14 @@ function setLang(lang) {
   if (typeof renderFilterChips === 'function') renderFilterChips();
 }
 
+// Returns the title to display for a clip based on current language.
+// EN mode falls back to the RU title if titleEn is empty, so nothing disappears.
+function clipTitle(clip) {
+  if (!clip) return '';
+  if (LANG === 'en' && clip.titleEn && clip.titleEn.trim()) return clip.titleEn;
+  return clip.title || '';
+}
+
 // ===== ANIMATORS & FILTERS — loaded from server =====
 let ANIMATORS = [];
 let FILTERS = [];
@@ -370,7 +378,7 @@ function renderClipCard(clip, i) {
         : `<div class="clip-hover-dim"></div>`}
     </div>
     <div class="clip-info">
-      <div class="clip-title">${esc(clip.title)}</div>
+      <div class="clip-title">${esc(clipTitle(clip))}</div>
       <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
@@ -560,7 +568,7 @@ function applyFilters() {
     clips = clips.filter(c => c.arc.toLowerCase() === currentArcFilter.toLowerCase());
   }
   
-  if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
+  if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || (c.titleEn && c.titleEn.toLowerCase().includes(q)) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
   
   // Sort
   if (currentSort === 'views') {
@@ -1234,7 +1242,7 @@ function formatBytes(b){if(b<1024)return b+' Б';if(b<1048576)return(b/1024).toF
 // ===== UPLOAD SUBMIT =====
 $('#uploadForm').addEventListener('submit',async e=>{
   e.preventDefault();
-  const title=$('#clipTitleInput').value.trim(), episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=selectedTags.join(','), notes=$('#notesInput').value.trim();
+  const title=$('#clipTitleInput').value.trim(), titleEn=$('#clipTitleEnInput')?.value.trim()||'', episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=selectedTags.join(','), notes=$('#notesInput').value.trim();
   if(!selectedFile&&!selectedImages.length){notify('Загрузите видео или хотя бы одно фото',true);return}
   if(!title){notify('Введите название',true);return}
   if(!selectedAnimators.length){notify('Выберите аниматора',true);return}
@@ -1244,7 +1252,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
   if(selectedFile)fd.append('video',selectedFile);
   if(selectedThumbnail)fd.append('thumbnail',selectedThumbnail);
   selectedImages.forEach(f=>fd.append('images',f));
-  fd.append('title',title);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);
+  fd.append('title',title);fd.append('titleEn',titleEn);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);
   fd.append('timecodes', $('#timecodesInput').value.trim());
   fd.append('clipOrder', $('#clipOrderInput').value.trim() || '0');
 
@@ -1311,7 +1319,7 @@ function openPlayer(id) {
   const clip=allClips.find(c=>c.id===id);if(!clip)return;
   // Record view
   fetch(`/api/clips/${id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).then(r=>r.json()).then(d=>{if(d.views)clip.views=d.views}).catch(()=>{});
-  $('#playerTitle').textContent=clip.title;
+  $('#playerTitle').textContent=clipTitle(clip);
   $('#playerCurrentAnimator').textContent='';
   $('#playerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}${clip.tags.map(tg=>`<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}`;
   $('#playerDetails').querySelectorAll('.clip-tag.animator').forEach(t=>t.addEventListener('click',()=>{closePlayer();navigateTo('animator-profile',t.dataset.animator)}));
@@ -1564,7 +1572,7 @@ $('#commentText').addEventListener('keydown', e => {
 function openImageViewer(clip) {
   viewerImages=clip.images.map(img=>img.url);viewerIndex=0;
   updateImageViewer();
-  $('#imageViewerTitle').textContent=clip.title;
+  $('#imageViewerTitle').textContent=clipTitle(clip);
   $('#imageViewerDetails').innerHTML=`<span class="clip-meta" style="font-size:.75rem">${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)} · ${esc(clip.arc)}</span>${clip.animators.map(a=>`<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}`;
   $('#imageViewerDetails').querySelectorAll('.clip-tag.animator').forEach(t=>t.addEventListener('click',()=>{closeImageViewer();navigateTo('animator-profile',t.dataset.animator)}));
   $('#imageViewerOverlay').classList.add('visible');document.body.style.overflow='hidden';
@@ -1848,6 +1856,7 @@ function openEditModal(id) {
   if (!clip) return;
   editingClipId = id;
   $('#editTitleInput').value = clip.title;
+  if ($('#editTitleEnInput')) $('#editTitleEnInput').value = clip.titleEn || '';
   $('#editAnimatorInput').value = clip.animators.join(', ');
   $('#editEpisodeInput').value = clip.episode;
   $('#editArcSelect').value = clip.arc;
@@ -2023,6 +2032,7 @@ $('#editSaveBtn').addEventListener('click', async () => {
   if (!editingClipId) return;
   const body = {
     title: $('#editTitleInput').value.trim(),
+    titleEn: $('#editTitleEnInput')?.value.trim() || '',
     animators: $('#editAnimatorInput').value.trim(),
     episode: $('#editEpisodeInput').value.trim(),
     arc: $('#editArcSelect').value,
@@ -2339,7 +2349,7 @@ function renderClipPage(clip) {
       ` : ''}
 
       <div class="clip-page-info">
-        <h1 class="clip-page-title">${esc(clip.title)}</h1>
+        <h1 class="clip-page-title">${esc(clipTitle(clip))}</h1>
         <div class="clip-page-current-animator" id="clipPageCurrentAnimator"></div>
         <div class="clip-page-meta">
           <span>Эпизод ${esc(clip.episode)}</span>
