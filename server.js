@@ -169,43 +169,263 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
 // ===== API =====
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'jefp1ece2005';
 const crypto = require('crypto');
-let adminTokens = new Set();
 
-function checkAdmin(req, res) {
-  const token = req.headers['x-admin-token'];
-  if (!token || !adminTokens.has(token)) {
-    res.status(403).json({ error: 'Доступ запрещён. Войдите как админ.' });
-    return false;
-  }
-  return true;
+// ===== USERS & AUTH =====
+const USERS_FILE = path.join(dataDir, 'users.json');
+const AUDIT_LOG_FILE = path.join(dataDir, 'audit_log.json');
+
+// Owner credentials come from environment. The OWNER user is implicit and not stored in users.json.
+const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'jef999').toLowerCase();
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD || process.env.ADMIN_PASSWORD || 'jefp1ece2005';
+
+// Hash a password with a per-user random salt. Format: <salt>:<hash>
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+function verifyPassword(password, stored) {
+  if (!stored || typeof stored !== 'string' || !stored.includes(':')) return false;
+  const [salt, hash] = stored.split(':');
+  try {
+    const calc = crypto.scryptSync(password, salt, 64).toString('hex');
+    // constant-time compare
+    const a = Buffer.from(hash, 'hex');
+    const b = Buffer.from(calc, 'hex');
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch { return false; }
 }
 
-// Login endpoint
-app.post('/api/login', (req, res) => {
-  const { password } = req.body;
-  if (password === ADMIN_PASSWORD) {
-    const token = crypto.randomBytes(32).toString('hex');
-    adminTokens.add(token);
-    res.json({ success: true, token });
-  } else {
-    res.status(403).json({ error: 'Неверный пароль' });
+function loadUsers() {
+  if (!fs.existsSync(USERS_FILE)) { saveUsers([]); return []; }
+  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8')); }
+  catch { return []; }
+}
+function saveUsers(list) { fs.writeFileSync(USERS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+
+function loadAuditLog() {
+  if (!fs.existsSync(AUDIT_LOG_FILE)) { saveAuditLog([]); return []; }
+  try { return JSON.parse(fs.readFileSync(AUDIT_LOG_FILE, 'utf-8')); }
+  catch { return []; }
+}
+function saveAuditLog(entries) { fs.writeFileSync(AUDIT_LOG_FILE, JSON.stringify(entries, null, 2), 'utf-8'); }
+
+function addAudit(username, action, target) {
+  try {
+    const log = loadAuditLog();
+    log.push({
+      user: username || 'unknown',
+      action,
+      target: target || null,
+      at: new Date().toISOString()
+    });
+    // Keep only last 90 days
+    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const trimmed = log.filter(e => new Date(e.at).getTime() >= cutoff);
+    saveAuditLog(trimmed);
+  } catch (e) { console.error('audit log error', e); }
+}
+
+// Token store: token → { username, role, createdAt }
+// Tokens are stored in-memory only. They expire after 7 days or on server restart.
+const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+let sessionTokens = new Map();
+
+function cleanupExpiredTokens() {
+  const now = Date.now();
+  for (const [t, info] of sessionTokens.entries()) {
+    if (now - info.createdAt > TOKEN_TTL_MS) sessionTokens.delete(t);
   }
+}
+setInterval(cleanupExpiredTokens, 60 * 60 * 1000); // hourly cleanup
+
+// Returns { username, role } if token is valid, null otherwise
+function getSession(req) {
+  const token = req.headers['x-admin-token'];
+  if (!token) return null;
+  const info = sessionTokens.get(token);
+  if (!info) return null;
+  if (Date.now() - info.createdAt > TOKEN_TTL_MS) {
+    sessionTokens.delete(token);
+    return null;
+  }
+  return { username: info.username, role: info.role };
+}
+
+// Authorization helpers
+// requireAdmin: any signed-in admin (owner or admin). Returns session or null on error.
+function requireAdmin(req, res) {
+  const s = getSession(req);
+  if (!s) { res.status(403).json({ error: 'Доступ запрещён. Войдите как админ.' }); return null; }
+  return s;
+}
+// requireOwner: only the owner.
+function requireOwner(req, res) {
+  const s = getSession(req);
+  if (!s) { res.status(403).json({ error: 'Доступ запрещён. Войдите как админ.' }); return null; }
+  if (s.role !== 'owner') { res.status(403).json({ error: 'Только владелец сайта может это делать.' }); return null; }
+  return s;
+}
+
+// Backward-compatible wrapper for existing endpoints that just need any admin.
+function checkAdmin(req, res) {
+  return !!requireAdmin(req, res);
+}
+
+// Login rate limit (per IP): 5 attempts per minute
+const loginAttempts = new Map(); // ip -> [timestamps]
+function checkLoginRateLimit(ip) {
+  const now = Date.now();
+  const arr = (loginAttempts.get(ip) || []).filter(t => now - t < 60000);
+  loginAttempts.set(ip, arr);
+  return arr.length < 5;
+}
+function recordLoginAttempt(ip) {
+  const arr = loginAttempts.get(ip) || [];
+  arr.push(Date.now());
+  loginAttempts.set(ip, arr);
+}
+
+// Login endpoint — accepts username + password
+app.post('/api/login', (req, res) => {
+  const ip = req.ip;
+  if (!checkLoginRateLimit(ip)) {
+    return res.status(429).json({ error: 'Слишком много попыток. Подождите минуту.' });
+  }
+  recordLoginAttempt(ip);
+
+  let { username, password } = req.body || {};
+  // Backwards compat: if only password is sent (very old client), treat as owner login attempt
+  if (!username && password) username = OWNER_USERNAME;
+  if (!username || !password) return res.status(400).json({ error: 'Укажите логин и пароль' });
+
+  const u = String(username).trim().toLowerCase();
+
+  // Owner login
+  if (u === OWNER_USERNAME && password === OWNER_PASSWORD) {
+    const token = crypto.randomBytes(32).toString('hex');
+    sessionTokens.set(token, { username: OWNER_USERNAME, role: 'owner', createdAt: Date.now() });
+    addAudit(OWNER_USERNAME, 'login', null);
+    return res.json({ success: true, token, username: OWNER_USERNAME, role: 'owner' });
+  }
+
+  // Regular admin login
+  const users = loadUsers();
+  const user = users.find(x => x.username.toLowerCase() === u);
+  if (user && verifyPassword(password, user.passwordHash)) {
+    const token = crypto.randomBytes(32).toString('hex');
+    sessionTokens.set(token, { username: user.username, role: user.role || 'admin', createdAt: Date.now() });
+    addAudit(user.username, 'login', null);
+    return res.json({ success: true, token, username: user.username, role: user.role || 'admin' });
+  }
+
+  res.status(403).json({ error: 'Неверный логин или пароль' });
 });
 
 // Logout endpoint
 app.post('/api/logout', (req, res) => {
   const token = req.headers['x-admin-token'];
-  if (token) adminTokens.delete(token);
+  if (token) {
+    const info = sessionTokens.get(token);
+    if (info) addAudit(info.username, 'logout', null);
+    sessionTokens.delete(token);
+  }
   res.json({ success: true });
 });
 
-// Verify token
+// Verify token — returns role/username so client can adjust UI
 app.get('/api/verify', (req, res) => {
-  const token = req.headers['x-admin-token'];
-  res.json({ valid: !!(token && adminTokens.has(token)) });
+  const s = getSession(req);
+  if (!s) return res.json({ valid: false });
+  res.json({ valid: true, username: s.username, role: s.role });
 });
+
+// ===== USER MANAGEMENT (owner only) =====
+// List users (owner only)
+app.get('/api/users', (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const users = loadUsers().map(u => ({
+    username: u.username,
+    role: u.role || 'admin',
+    createdAt: u.createdAt
+  }));
+  res.json(users);
+});
+
+// Create user (owner only)
+app.post('/api/users', (req, res) => {
+  const session = requireOwner(req, res);
+  if (!session) return;
+  const { username, password, role } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'Логин и пароль обязательны' });
+  const uname = String(username).trim();
+  if (!/^[a-zA-Z0-9_-]{3,20}$/.test(uname)) return res.status(400).json({ error: 'Логин: 3–20 символов, латиница/цифры/_/-' });
+  if (String(password).length < 6) return res.status(400).json({ error: 'Пароль минимум 6 символов' });
+  if (uname.toLowerCase() === OWNER_USERNAME) return res.status(400).json({ error: 'Этот логин зарезервирован' });
+  const users = loadUsers();
+  if (users.find(u => u.username.toLowerCase() === uname.toLowerCase())) {
+    return res.status(400).json({ error: 'Такой логин уже существует' });
+  }
+  const newUser = {
+    username: uname,
+    passwordHash: hashPassword(String(password)),
+    role: role === 'admin' ? 'admin' : 'admin', // currently only 'admin' role for non-owner
+    createdAt: new Date().toISOString()
+  };
+  users.push(newUser);
+  saveUsers(users);
+  addAudit(session.username, 'create_user', uname);
+  res.json({ success: true, username: uname });
+});
+
+// Delete user (owner only)
+app.delete('/api/users/:username', (req, res) => {
+  const session = requireOwner(req, res);
+  if (!session) return;
+  const target = String(req.params.username).toLowerCase();
+  if (target === OWNER_USERNAME) return res.status(400).json({ error: 'Нельзя удалить владельца' });
+  let users = loadUsers();
+  const before = users.length;
+  users = users.filter(u => u.username.toLowerCase() !== target);
+  if (users.length === before) return res.status(404).json({ error: 'Пользователь не найден' });
+  saveUsers(users);
+  // Revoke all active sessions for this user
+  for (const [t, info] of sessionTokens.entries()) {
+    if (info.username.toLowerCase() === target) sessionTokens.delete(t);
+  }
+  addAudit(session.username, 'delete_user', target);
+  res.json({ success: true });
+});
+
+// Reset user password (owner only)
+app.put('/api/users/:username/password', (req, res) => {
+  const session = requireOwner(req, res);
+  if (!session) return;
+  const target = String(req.params.username).toLowerCase();
+  const { password } = req.body || {};
+  if (!password || String(password).length < 6) return res.status(400).json({ error: 'Пароль минимум 6 символов' });
+  if (target === OWNER_USERNAME) return res.status(400).json({ error: 'Пароль владельца меняется через переменные окружения' });
+  const users = loadUsers();
+  const user = users.find(u => u.username.toLowerCase() === target);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+  user.passwordHash = hashPassword(String(password));
+  saveUsers(users);
+  // Revoke all active sessions for this user — they'll need to login again with new password
+  for (const [t, info] of sessionTokens.entries()) {
+    if (info.username.toLowerCase() === target) sessionTokens.delete(t);
+  }
+  addAudit(session.username, 'reset_password', target);
+  res.json({ success: true });
+});
+
+// Get audit log (owner only) — last 200 entries
+app.get('/api/audit-log', (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const log = loadAuditLog();
+  res.json(log.slice(-200).reverse()); // newest first
+});
+
 
 // Get all clips
 app.get('/api/clips', (req, res) => {
@@ -467,7 +687,8 @@ app.delete('/api/clips/:id/images/:filename', (req, res) => {
 
 // Delete a clip (admin only)
 app.delete('/api/clips/:id', (req, res) => {
-  if (!checkAdmin(req, res)) return;
+  const session = requireAdmin(req, res);
+  if (!session) return;
 
   const clips = loadClips();
   const id = parseInt(req.params.id);
@@ -489,6 +710,7 @@ app.delete('/api/clips/:id', (req, res) => {
   }
 
   saveClips(clips.filter(c => c.id !== id));
+  addAudit(session.username, 'delete_clip', `${id}: ${clip.title}`);
   res.json({ success: true });
 });
 
@@ -755,7 +977,7 @@ app.get('/api/clips/:id/comments', (req, res) => {
   const list = comments[clipId] || [];
   const reqToken = req.headers['x-user-token'];
   const reqAdminToken = req.headers['x-admin-token'];
-  const isAdminReq = reqAdminToken && adminTokens.has(reqAdminToken);
+  const isAdminReq = reqAdminToken && sessionTokens.has(reqAdminToken);
   const safe = list.map(c => ({
     id: c.id,
     nickname: c.nickname,
@@ -808,22 +1030,26 @@ function getUserDailyCommentCount(userToken) {
 
 // Ban user (admin only)
 app.post('/api/comments/ban', (req, res) => {
-  if (!checkAdmin(req, res)) return;
+  const session = requireAdmin(req, res);
+  if (!session) return;
   const { userToken } = req.body;
   if (!userToken) return res.status(400).json({ error: 'Токен обязателен' });
   const list = loadBannedUsers();
   if (!list.includes(userToken)) { list.push(userToken); saveBannedUsers(list); }
+  addAudit(session.username, 'ban_user', userToken.slice(0, 12) + '…');
   res.json({ success: true });
 });
 
 // Unban user (admin only)
 app.post('/api/comments/unban', (req, res) => {
-  if (!checkAdmin(req, res)) return;
+  const session = requireAdmin(req, res);
+  if (!session) return;
   const { userToken } = req.body;
   if (!userToken) return res.status(400).json({ error: 'Токен обязателен' });
   let list = loadBannedUsers();
   list = list.filter(t => t !== userToken);
   saveBannedUsers(list);
+  addAudit(session.username, 'unban_user', userToken.slice(0, 12) + '…');
   res.json({ success: true });
 });
 
@@ -914,7 +1140,7 @@ app.delete('/api/clips/:id/comments/:commentId', (req, res) => {
   // Check: admin or own comment
   const adminToken = req.headers['x-admin-token'];
   const userToken = req.headers['x-user-token'];
-  const isAdminReq = adminToken && adminTokens.has(adminToken);
+  const isAdminReq = adminToken && sessionTokens.has(adminToken);
   const isOwner = userToken && comment.userToken && comment.userToken === userToken;
 
   if (!isAdminReq && !isOwner) {
@@ -938,7 +1164,7 @@ app.put('/api/clips/:id/comments/:commentId', (req, res) => {
 
   const userToken = req.headers['x-user-token'];
   const adminToken = req.headers['x-admin-token'];
-  const isAdminReq = adminToken && adminTokens.has(adminToken);
+  const isAdminReq = adminToken && sessionTokens.has(adminToken);
   const isOwner = userToken && comment.userToken && comment.userToken === userToken;
 
   if (!isAdminReq && !isOwner) {
@@ -974,14 +1200,17 @@ function getDirSize(dirPath) {
 
 app.get('/api/backup', (req, res) => {
   const token = req.query.token || req.headers['x-admin-token'];
-  if (!token || !adminTokens.has(token)) return res.status(403).send('Доступ запрещён');
+  const info = token ? sessionTokens.get(token) : null;
+  if (!info || info.role !== 'owner') return res.status(403).send('Доступ запрещён');
+  addAudit(info.username, 'download_backup', null);
 
   // Compute estimated total size (raw, before zip compression).
   // This is what the client uses for the progress bar.
   const filesToInclude = [
     DATA_FILE, ANIMATORS_FILE, FILTERS_FILE, EPISODES_FILE, HIDDEN_ANIMATORS_FILE,
     COMMENTS_FILE, NICKNAMES_FILE, VIEWS_FILE, BANNED_USERS_FILE,
-    DIRECTORS_FILE, EPISODE_DIRECTORS_FILE
+    DIRECTORS_FILE, EPISODE_DIRECTORS_FILE,
+    USERS_FILE, AUDIT_LOG_FILE
   ];
   let estimatedSize = 0;
   for (const f of filesToInclude) {
@@ -1016,6 +1245,10 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(NICKNAMES_FILE)) archive.file(NICKNAMES_FILE, { name: 'nicknames.json' });
   // Add views.json
   if (fs.existsSync(VIEWS_FILE)) archive.file(VIEWS_FILE, { name: 'views.json' });
+  // Add users.json (admin accounts)
+  if (fs.existsSync(USERS_FILE)) archive.file(USERS_FILE, { name: 'users.json' });
+  // Add audit_log.json
+  if (fs.existsSync(AUDIT_LOG_FILE)) archive.file(AUDIT_LOG_FILE, { name: 'audit_log.json' });
   // Add banned_users.json
   if (fs.existsSync(BANNED_USERS_FILE)) archive.file(BANNED_USERS_FILE, { name: 'banned_users.json' });
   // Add directors.json

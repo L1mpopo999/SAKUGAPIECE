@@ -447,9 +447,13 @@
     <button class="modal-close" id="closeAdminLoginBtn">&times;</button>
     <h2 class="modal-title">Вход для админа</h2>
     <div class="form-group">
+      <label class="form-label">Логин</label>
+      <input class="form-input" id="adminUsernameInput" type="text" placeholder="Логин..." autocomplete="username">
+    </div>
+    <div class="form-group">
       <label class="form-label">Пароль</label>
       <div class="password-wrapper">
-        <input class="form-input" id="adminPasswordInput" type="password" placeholder="Введите пароль..." autocomplete="off">
+        <input class="form-input" id="adminPasswordInput" type="password" placeholder="Пароль..." autocomplete="current-password">
         <button type="button" class="password-toggle" id="passwordToggleBtn" title="Показать пароль">
           <svg id="eyeOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg id="eyeClosed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -457,7 +461,7 @@
       </div>
     </div>
     <button class="btn-submit" id="adminLoginBtn">Войти</button>
-    <p id="adminLoginError" style="color:var(--accent);font-size:0.8rem;margin-top:0.7rem;display:none;">Неверный пароль</p>
+    <p id="adminLoginError" style="color:var(--accent);font-size:0.8rem;margin-top:0.7rem;display:none;">Неверный логин или пароль</p>
   </div>
 </div>
 
@@ -486,6 +490,27 @@
 
 <!-- Floating admin backup button (visible only in admin mode) -->
 <button id="backupBtn" class="backup-btn admin-only" title="Скачать полный бэкап всех данных">💾 Бэкап</button>
+
+<!-- Floating users management button (owner only) -->
+<button id="usersBtn" class="users-btn" title="Управление админами">👥 Админы</button>
+
+<!-- USERS MANAGEMENT MODAL -->
+<div class="modal-overlay" id="usersModal">
+  <div class="modal" style="max-width:640px">
+    <button class="modal-close" id="closeUsersBtn">&times;</button>
+    <h2 class="modal-title">Управление админами</h2>
+    <div id="usersList" style="margin-bottom:1.5rem"></div>
+    <h3 style="font-family:'Space Mono',monospace;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;margin-top:1.2rem;margin-bottom:.8rem;color:var(--text-secondary)">Создать нового админа</h3>
+    <div class="form-row" style="display:flex;gap:.6rem;margin-bottom:.8rem">
+      <input class="form-input" id="newUserUsername" type="text" placeholder="Логин (например, helper1)" style="flex:1" autocomplete="off">
+      <input class="form-input" id="newUserPassword" type="text" placeholder="Пароль (мин 6 символов)" style="flex:1" autocomplete="off">
+    </div>
+    <button class="btn-submit" id="createUserBtn">Создать админа</button>
+    <p style="font-size:.7rem;color:var(--text-muted);margin-top:.8rem">Логин: латиница, цифры, _ и -, 3-20 символов. Передавайте логин и пароль помощнику в личке.</p>
+    <h3 style="font-family:'Space Mono',monospace;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;margin-top:1.5rem;margin-bottom:.6rem;color:var(--text-secondary)">Журнал действий (последние 50)</h3>
+    <div id="auditLogList" style="font-family:'Space Mono',monospace;font-size:.7rem;color:var(--text-secondary);max-height:200px;overflow-y:auto;background:var(--bg-darker);padding:.6rem;border-radius:var(--radius)"></div>
+  </div>
+</div>
 
 <script src="/app.js"></script>
 </body>

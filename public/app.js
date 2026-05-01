@@ -40,6 +40,8 @@ let selectedAnimators = [];
 let currentPage = 'browse';
 let currentAnimatorProfile = null;
 let isAdmin = false;
+let isOwner = false;
+let currentUsername = null;
 let clipToDelete = null;
 let viewerImages = [];
 let viewerIndex = 0;
@@ -1412,7 +1414,14 @@ $('#imgNextBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex
     try{
       const r=await fetch('/api/verify',{headers:{'X-Admin-Token':savedToken}});
       const d=await r.json();
-      if(d.valid){adminToken=savedToken;isAdmin=true;document.body.classList.add('admin-mode');}
+      if(d.valid){
+        adminToken=savedToken;
+        isAdmin=true;
+        isOwner = d.role === 'owner';
+        currentUsername = d.username || null;
+        document.body.classList.add('admin-mode');
+        if (isOwner) document.body.classList.add('owner-mode');
+      }
       else{localStorage.removeItem('sp_admin_token');}
     }catch{localStorage.removeItem('sp_admin_token');}
   }
@@ -1421,9 +1430,13 @@ $('#imgNextBtn').addEventListener('click',e=>{e.stopPropagation();if(viewerIndex
 $('#adminToggleBtn').addEventListener('click',async()=>{
   if(isAdmin){
     try{await fetch('/api/logout',{method:'POST',headers:{'X-Admin-Token':adminToken}})}catch{}
-    isAdmin=false;adminToken=null;document.body.classList.remove('admin-mode');localStorage.removeItem('sp_admin_token');notify('Вышли из режима админа');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();
+    isAdmin=false;isOwner=false;currentUsername=null;adminToken=null;
+    document.body.classList.remove('admin-mode','owner-mode');
+    localStorage.removeItem('sp_admin_token');
+    notify('Вышли из режима админа');renderFilterChips();
+    if(currentPage==='animators')renderAnimatorGrid();
   }
-  else{$('#adminLoginModal').classList.add('visible');document.body.style.overflow='hidden';$('#adminPasswordInput').value='';$('#adminLoginError').style.display='none';setTimeout(()=>$('#adminPasswordInput').focus(),100)}
+  else{$('#adminLoginModal').classList.add('visible');document.body.style.overflow='hidden';$('#adminPasswordInput').value='';$('#adminLoginError').style.display='none';setTimeout(()=>($('#adminUsernameInput')||$('#adminPasswordInput')).focus(),100)}
 });
 $('#passwordToggleBtn').addEventListener('click', () => {
   const inp = $('#adminPasswordInput');
@@ -1437,6 +1450,125 @@ $('#closeAdminLoginBtn').addEventListener('click',()=>{$('#adminLoginModal').cla
 $('#adminLoginModal').addEventListener('click',e=>{if(e.target===$('#adminLoginModal')){$('#adminLoginModal').classList.remove('visible');document.body.style.overflow=''}});
 $('#adminLoginBtn').addEventListener('click',tryLogin);
 $('#adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
+$('#adminUsernameInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('#adminPasswordInput').focus()});
+
+// ===== USER MANAGEMENT (owner only) =====
+async function openUsersModal() {
+  if (!isOwner) { notify('Только владелец', true); return; }
+  $('#usersModal').classList.add('visible');
+  document.body.style.overflow = 'hidden';
+  await refreshUsersList();
+  await refreshAuditLog();
+}
+
+function closeUsersModal() {
+  $('#usersModal').classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
+async function refreshUsersList() {
+  try {
+    const r = await fetch('/api/users', { headers: { 'X-Admin-Token': adminToken } });
+    if (!r.ok) throw new Error();
+    const users = await r.json();
+    const list = $('#usersList');
+    // Owner row first
+    const ownerRow = `<div class="user-row">
+      <div class="user-row-name">${esc(currentUsername)} <span style="color:var(--text-muted);font-size:.7rem">(вы)</span></div>
+      <div class="user-row-role owner">Владелец</div>
+    </div>`;
+    const rows = users.map(u => `<div class="user-row">
+      <div class="user-row-name">${esc(u.username)}</div>
+      <div class="user-row-role">Админ</div>
+      <div class="user-row-actions">
+        <button class="user-row-btn" data-action="reset-pwd" data-user="${esc(u.username)}">Сменить пароль</button>
+        <button class="user-row-btn danger" data-action="delete" data-user="${esc(u.username)}">Удалить</button>
+      </div>
+    </div>`).join('');
+    list.innerHTML = ownerRow + (users.length ? rows : '<p style="color:var(--text-muted);font-size:.8rem;text-align:center;padding:1rem">Других админов нет</p>');
+    // Wire buttons
+    list.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const username = btn.dataset.user;
+        if (!confirm(`Удалить админа «${username}»? Действие необратимо.`)) return;
+        try {
+          const res = await fetch(`/api/users/${encodeURIComponent(username)}`, {
+            method: 'DELETE',
+            headers: { 'X-Admin-Token': adminToken }
+          });
+          const d = await res.json();
+          if (d.success) { notify(`Админ «${username}» удалён`); refreshUsersList(); refreshAuditLog(); }
+          else notify(d.error || 'Ошибка', true);
+        } catch { notify('Ошибка сети', true); }
+      });
+    });
+    list.querySelectorAll('[data-action="reset-pwd"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const username = btn.dataset.user;
+        const pwd = prompt(`Новый пароль для «${username}» (мин 6 символов):`);
+        if (!pwd) return;
+        try {
+          const res = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+            body: JSON.stringify({ password: pwd })
+          });
+          const d = await res.json();
+          if (d.success) { notify(`Пароль изменён. Передайте его «${username}»`); refreshAuditLog(); }
+          else notify(d.error || 'Ошибка', true);
+        } catch { notify('Ошибка сети', true); }
+      });
+    });
+  } catch {
+    $('#usersList').innerHTML = '<p style="color:var(--accent)">Не удалось загрузить список</p>';
+  }
+}
+
+async function refreshAuditLog() {
+  try {
+    const r = await fetch('/api/audit-log', { headers: { 'X-Admin-Token': adminToken } });
+    if (!r.ok) throw new Error();
+    const log = await r.json();
+    const el = $('#auditLogList');
+    if (!log.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:.7rem">Записей нет</p>'; return; }
+    el.innerHTML = log.slice(0, 50).map(e => {
+      const t = new Date(e.at);
+      const time = t.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const target = e.target ? ` → ${esc(String(e.target))}` : '';
+      return `<div class="audit-entry"><span class="audit-user">${esc(e.user)}</span> <span class="audit-action">${esc(e.action)}</span>${target} <span class="audit-time">${time}</span></div>`;
+    }).join('');
+  } catch {
+    $('#auditLogList').innerHTML = '<p style="color:var(--accent);font-size:.7rem">Не удалось загрузить</p>';
+  }
+}
+
+$('#usersBtn')?.addEventListener('click', openUsersModal);
+$('#closeUsersBtn')?.addEventListener('click', closeUsersModal);
+$('#usersModal')?.addEventListener('click', e => { if (e.target === $('#usersModal')) closeUsersModal(); });
+
+$('#createUserBtn')?.addEventListener('click', async () => {
+  const username = $('#newUserUsername').value.trim();
+  const password = $('#newUserPassword').value;
+  if (!username || !password) { notify('Заполните оба поля', true); return; }
+  if (password.length < 6) { notify('Пароль минимум 6 символов', true); return; }
+  try {
+    const r = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ username, password })
+    });
+    const d = await r.json();
+    if (d.success) {
+      notify(`Админ «${username}» создан. Передайте логин и пароль.`);
+      $('#newUserUsername').value = '';
+      $('#newUserPassword').value = '';
+      refreshUsersList();
+      refreshAuditLog();
+    } else {
+      notify(d.error || 'Ошибка', true);
+    }
+  } catch { notify('Ошибка сети', true); }
+});
 
 // Backup button — downloads a zip with all data
 $('#backupBtn')?.addEventListener('click', async () => {
@@ -1494,17 +1626,43 @@ $('#backupBtn')?.addEventListener('click', async () => {
 });
 
 async function tryLogin(){
-  const pwd=$('#adminPasswordInput').value;
+  const username = ($('#adminUsernameInput')?.value || '').trim();
+  const pwd = $('#adminPasswordInput').value;
+  if (!username || !pwd) {
+    $('#adminLoginError').textContent = 'Заполните оба поля';
+    $('#adminLoginError').style.display = 'block';
+    return;
+  }
   try{
-    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
-    const d=await r.json();
-    if(d.success&&d.token){
-      adminToken=d.token;isAdmin=true;document.body.classList.add('admin-mode');
-      localStorage.setItem('sp_admin_token',d.token);
-      $('#adminLoginModal').classList.remove('visible');document.body.style.overflow='';
-      notify('Режим админа включён');renderFilterChips();if(currentPage==='animators')renderAnimatorGrid();
-    }else{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
-  }catch{$('#adminLoginError').style.display='block';$('#adminPasswordInput').value='';$('#adminPasswordInput').focus()}
+    const r = await fetch('/api/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password: pwd })
+    });
+    const d = await r.json();
+    if (d.success && d.token) {
+      adminToken = d.token;
+      isAdmin = true;
+      isOwner = d.role === 'owner';
+      currentUsername = d.username || username;
+      document.body.classList.add('admin-mode');
+      if (isOwner) document.body.classList.add('owner-mode');
+      localStorage.setItem('sp_admin_token', d.token);
+      $('#adminLoginModal').classList.remove('visible');
+      document.body.style.overflow='';
+      notify('Вы вошли как ' + currentUsername);
+      renderFilterChips();
+      if (currentPage === 'animators') renderAnimatorGrid();
+    } else {
+      $('#adminLoginError').textContent = d.error || 'Неверный логин или пароль';
+      $('#adminLoginError').style.display = 'block';
+      $('#adminPasswordInput').value = '';
+      $('#adminPasswordInput').focus();
+    }
+  } catch {
+    $('#adminLoginError').textContent = 'Ошибка сети';
+    $('#adminLoginError').style.display='block';
+  }
 }
 
 // ===== EDIT CLIP =====

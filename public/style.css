@@ -310,7 +310,24 @@ body.admin-mode #adminToggleBtn{color:var(--accent)}
 .backup-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(244,162,38,.5)}
 .backup-btn:active{transform:translateY(0)}
 .backup-btn:disabled{opacity:.6;cursor:wait}
-body.admin-mode .backup-btn{display:inline-flex !important;align-items:center;gap:.4rem}
+body.admin-mode .backup-btn{display:none}
+body.owner-mode .backup-btn{display:inline-flex !important;align-items:center;gap:.4rem}
+.users-btn{display:none;position:fixed;bottom:1.2rem;right:11rem;z-index:50;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:24px;padding:.6rem 1rem;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:all .2s}
+.users-btn:hover{border-color:var(--gold);color:var(--gold)}
+body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
+.user-row{display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;background:var(--bg-darker);border-radius:var(--radius);margin-bottom:.4rem}
+.user-row-name{font-weight:600;flex:1}
+.user-row-role{font-family:'Space Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:.2rem .5rem;border:1px solid var(--border);border-radius:10px}
+.user-row-role.owner{color:var(--gold);border-color:var(--gold)}
+.user-row-actions{display:flex;gap:.4rem}
+.user-row-btn{background:none;border:1px solid var(--border);color:var(--text-secondary);padding:.3rem .6rem;border-radius:var(--radius);cursor:pointer;font-size:.7rem;font-family:'Space Mono',monospace;transition:all .15s}
+.user-row-btn:hover{border-color:var(--text-primary);color:var(--text-primary)}
+.user-row-btn.danger:hover{border-color:var(--accent);color:var(--accent)}
+.audit-entry{padding:.3rem 0;border-bottom:1px solid var(--border)}
+.audit-entry:last-child{border-bottom:none}
+.audit-entry .audit-user{color:var(--gold)}
+.audit-entry .audit-action{color:var(--text-primary)}
+.audit-entry .audit-time{color:var(--text-muted);font-size:.65rem}
 
 .password-wrapper{position:relative}
 .password-wrapper .form-input{padding-right:2.5rem}
