@@ -2063,11 +2063,39 @@ $('#editSaveBtn').addEventListener('click', async () => {
     const data = await res.json();
     if (data.success) {
       notify('Клип обновлён');
+      const editedId = editingClipId;
+      const updatedClip = data.clip;
       closeEditModal();
-      await loadClips();
+
+      // Save scroll position so we don't jump after re-render
+      const savedScroll = window.scrollY;
+
+      // Update the clip locally instead of re-fetching everything (avoids resetting pagination)
+      if (updatedClip) {
+        const idx = allClips.findIndex(c => c.id === editedId);
+        if (idx !== -1) allClips[idx] = updatedClip;
+      } else {
+        // Fallback: refetch in case server didn't return updated clip
+        try { allClips = await (await fetch('/api/clips')).json(); } catch {}
+      }
+
       // Director list may have grown if a new override was set
       try { DIRECTORS = await (await fetch('/api/directors')).json(); } catch {}
+      try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors')).json(); } catch {}
+
+      // Re-render only the current page, without touching pagination state
       if (currentPage === 'animator-profile' && currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
+      else if (currentPage === 'episode-profile' && currentEpisodeProfile) renderEpisodeProfile(currentEpisodeProfile);
+      else if (currentPage === 'browse') {
+        // Re-apply current filter set, but preserve current page number
+        const savedPage = currentPage_clips;
+        applyFilters();
+        currentPage_clips = savedPage;
+        renderClipPage_browse();
+      }
+
+      // Restore scroll position
+      window.scrollTo(0, savedScroll);
     } else {
       notify(data.error || 'Ошибка', true);
     }
