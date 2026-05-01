@@ -978,6 +978,10 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(HIDDEN_ANIMATORS_FILE)) archive.file(HIDDEN_ANIMATORS_FILE, { name: 'hidden_animators.json' });
   // Add comments.json
   if (fs.existsSync(COMMENTS_FILE)) archive.file(COMMENTS_FILE, { name: 'comments.json' });
+  // Add nicknames.json
+  if (fs.existsSync(NICKNAMES_FILE)) archive.file(NICKNAMES_FILE, { name: 'nicknames.json' });
+  // Add views.json
+  if (fs.existsSync(VIEWS_FILE)) archive.file(VIEWS_FILE, { name: 'views.json' });
   // Add banned_users.json
   if (fs.existsSync(BANNED_USERS_FILE)) archive.file(BANNED_USERS_FILE, { name: 'banned_users.json' });
   // Add directors.json

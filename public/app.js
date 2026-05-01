@@ -1438,6 +1438,36 @@ $('#adminLoginModal').addEventListener('click',e=>{if(e.target===$('#adminLoginM
 $('#adminLoginBtn').addEventListener('click',tryLogin);
 $('#adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin()});
 
+// Backup button — downloads a zip with all data
+$('#backupBtn')?.addEventListener('click', async () => {
+  if (!isAdmin || !adminToken) { notify('Войдите как админ', true); return; }
+  const btn = $('#backupBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Готовлю...';
+  try {
+    const r = await fetch('/api/backup', { headers: { 'X-Admin-Token': adminToken } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    // Build filename with current date
+    const d = new Date();
+    const dateStr = d.toISOString().slice(0,10);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `sakugapiece-backup-${dateStr}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    notify('Бэкап скачан');
+  } catch (e) {
+    notify('Не удалось скачать бэкап: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
 async function tryLogin(){
   const pwd=$('#adminPasswordInput').value;
   try{
