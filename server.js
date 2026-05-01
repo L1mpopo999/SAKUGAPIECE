@@ -956,14 +956,48 @@ app.put('/api/clips/:id/comments/:commentId', (req, res) => {
 });
 
 // ===== BACKUP (admin only) =====
+// Helper: recursively get total size of a directory
+function getDirSize(dirPath) {
+  let total = 0;
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const ent of entries) {
+      const full = path.join(dirPath, ent.name);
+      try {
+        if (ent.isDirectory()) total += getDirSize(full);
+        else total += fs.statSync(full).size;
+      } catch {}
+    }
+  } catch {}
+  return total;
+}
+
 app.get('/api/backup', (req, res) => {
   const token = req.query.token || req.headers['x-admin-token'];
   if (!token || !adminTokens.has(token)) return res.status(403).send('Доступ запрещён');
+
+  // Compute estimated total size (raw, before zip compression).
+  // This is what the client uses for the progress bar.
+  const filesToInclude = [
+    DATA_FILE, ANIMATORS_FILE, FILTERS_FILE, EPISODES_FILE, HIDDEN_ANIMATORS_FILE,
+    COMMENTS_FILE, NICKNAMES_FILE, VIEWS_FILE, BANNED_USERS_FILE,
+    DIRECTORS_FILE, EPISODE_DIRECTORS_FILE
+  ];
+  let estimatedSize = 0;
+  for (const f of filesToInclude) {
+    try { if (fs.existsSync(f)) estimatedSize += fs.statSync(f).size; } catch {}
+  }
+  if (fs.existsSync(uploadsDir)) estimatedSize += getDirSize(uploadsDir);
 
   const archiver = require('archiver');
   const archive = archiver('zip', { zlib: { level: 5 } });
 
   res.attachment('sakugapiece-backup.zip');
+  // Custom header so the client can show real progress.
+  // Content-Length isn't usable here because the zip stream length isn't known in advance.
+  res.setHeader('X-Backup-Estimated-Size', String(estimatedSize));
+  // Allow JS to read this header on the client (CORS-style allow-list)
+  res.setHeader('Access-Control-Expose-Headers', 'X-Backup-Estimated-Size');
   archive.pipe(res);
 
   // Add clips.json

@@ -306,7 +306,7 @@ body.admin-mode .admin-edit-btn{display:flex}
 body.admin-mode .admin-only{display:inline-flex !important}
 #adminToggleBtn{font-size:1rem;padding:0}
 body.admin-mode #adminToggleBtn{color:var(--accent)}
-.backup-btn{position:fixed;bottom:1.2rem;right:1.2rem;z-index:50;background:var(--gold);color:#1a1a2e;border:none;border-radius:24px;padding:.6rem 1rem;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.05em;cursor:pointer;box-shadow:0 4px 16px rgba(244,162,38,.35);transition:transform .2s,box-shadow .2s}
+.backup-btn{position:fixed;bottom:1.2rem;right:1.2rem;z-index:50;background:var(--gold);color:#1a1a2e;border:none;border-radius:24px;padding:.6rem 1rem;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:.05em;cursor:pointer;box-shadow:0 4px 16px rgba(244,162,38,.35);transition:transform .2s,box-shadow .2s;min-width:160px;text-align:center;font-variant-numeric:tabular-nums}
 .backup-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(244,162,38,.5)}
 .backup-btn:active{transform:translateY(0)}
 .backup-btn:disabled{opacity:.6;cursor:wait}

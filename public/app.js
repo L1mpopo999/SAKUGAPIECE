@@ -1444,12 +1444,37 @@ $('#backupBtn')?.addEventListener('click', async () => {
   const btn = $('#backupBtn');
   const originalText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = '⏳ Готовлю...';
+
+  // Helper: format bytes as human-readable
+  const fmt = (n) => n >= 1048576 ? (n/1048576).toFixed(1) + ' МБ' : (n/1024).toFixed(0) + ' КБ';
+
   try {
-    const r = await fetch('/api/backup', { headers: { 'X-Admin-Token': adminToken } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const blob = await r.blob();
-    // Build filename with current date
+    const response = await fetch('/api/backup', { headers: { 'X-Admin-Token': adminToken } });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+
+    // Read estimated size from server header (raw bytes before zip compression)
+    const estimated = parseInt(response.headers.get('X-Backup-Estimated-Size') || '0');
+    const reader = response.body.getReader();
+    const chunks = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      // Update button text. If we know estimated size, show percent + MB. Otherwise just MB.
+      if (estimated > 0) {
+        // Cap at 99% until fully done — zip compression can make actual size differ slightly
+        const pct = Math.min(99, Math.floor(received / estimated * 100));
+        btn.textContent = `⏳ ${pct}% · ${fmt(received)}`;
+      } else {
+        btn.textContent = `⏳ ${fmt(received)}`;
+      }
+    }
+
+    btn.textContent = '⏳ Сохраняю...';
+    const blob = new Blob(chunks, { type: 'application/zip' });
     const d = new Date();
     const dateStr = d.toISOString().slice(0,10);
     const a = document.createElement('a');
@@ -1459,7 +1484,7 @@ $('#backupBtn')?.addEventListener('click', async () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
-    notify('Бэкап скачан');
+    notify(`Бэкап скачан · ${fmt(received)}`);
   } catch (e) {
     notify('Не удалось скачать бэкап: ' + e.message, true);
   } finally {
