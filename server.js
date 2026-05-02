@@ -132,15 +132,56 @@ const EPISODE_DIRECTORS_FILE = path.join(dataDir, 'episode_directors.json');
 
 function loadDirectors() {
   if (!fs.existsSync(DIRECTORS_FILE)) { saveDirectors([]); return []; }
-  try { return JSON.parse(fs.readFileSync(DIRECTORS_FILE, 'utf-8')); }
-  catch { return []; }
+  try {
+    const raw = JSON.parse(fs.readFileSync(DIRECTORS_FILE, 'utf-8'));
+    // Migration: split entries that look like "A, B" into separate names. Dedupe.
+    const seen = new Set();
+    const out = [];
+    let migrated = false;
+    for (const entry of raw) {
+      const parts = String(entry).split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length > 1) migrated = true;
+      for (const p of parts) {
+        const k = p.toLowerCase();
+        if (!seen.has(k)) { seen.add(k); out.push(p); }
+      }
+    }
+    if (migrated) {
+      out.sort((a, b) => a.localeCompare(b));
+      try { fs.writeFileSync(DIRECTORS_FILE, JSON.stringify(out, null, 2), 'utf-8'); } catch {}
+    }
+    return out;
+  } catch { return []; }
 }
 function saveDirectors(list) { fs.writeFileSync(DIRECTORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
 
+// Normalize a director value to an array of trimmed names.
+// Accepts: a single string (possibly comma-separated, legacy data), an array, null/undefined.
+function normalizeDirectors(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(s => String(s).trim()).filter(Boolean);
+  return String(value).split(',').map(s => s.trim()).filter(Boolean);
+}
+
 function loadEpisodeDirectors() {
   if (!fs.existsSync(EPISODE_DIRECTORS_FILE)) { saveEpisodeDirectors({}); return {}; }
-  try { return JSON.parse(fs.readFileSync(EPISODE_DIRECTORS_FILE, 'utf-8')); }
-  catch { return {}; }
+  try {
+    const raw = JSON.parse(fs.readFileSync(EPISODE_DIRECTORS_FILE, 'utf-8'));
+    // Migrate legacy strings → arrays. Also dedupe and trim.
+    const out = {};
+    let migrated = false;
+    for (const ep of Object.keys(raw)) {
+      const arr = normalizeDirectors(raw[ep]);
+      if (!arr.length) continue;
+      out[ep] = arr;
+      if (!Array.isArray(raw[ep]) || arr.length !== raw[ep].length) migrated = true;
+    }
+    // Persist migration so we don't redo it on every read
+    if (migrated) {
+      try { fs.writeFileSync(EPISODE_DIRECTORS_FILE, JSON.stringify(out, null, 2), 'utf-8'); } catch {}
+    }
+    return out;
+  } catch { return {}; }
 }
 function saveEpisodeDirectors(map) { fs.writeFileSync(EPISODE_DIRECTORS_FILE, JSON.stringify(map, null, 2), 'utf-8'); }
 
@@ -892,11 +933,17 @@ app.delete('/api/directors', (req, res) => {
   let list = loadDirectors();
   list = list.filter(d => d.toLowerCase() !== name.toLowerCase());
   saveDirectors(list);
-  // Remove this director from all episode assignments
+  // Remove this director from all episode assignments (now arrays)
   const map = loadEpisodeDirectors();
   let cleared = 0;
   for (const ep of Object.keys(map)) {
-    if (map[ep] && map[ep].toLowerCase() === name.toLowerCase()) { delete map[ep]; cleared++; }
+    const before = map[ep] || [];
+    const after = before.filter(d => d.toLowerCase() !== name.toLowerCase());
+    if (after.length !== before.length) {
+      cleared++;
+      if (after.length === 0) delete map[ep];
+      else map[ep] = after;
+    }
   }
   if (cleared) saveEpisodeDirectors(map);
   // Remove from any clip overrides
@@ -923,11 +970,27 @@ app.put('/api/directors/rename', (req, res) => {
   const idx = list.findIndex(d => d.toLowerCase() === oldName.toLowerCase());
   if (idx !== -1) list[idx] = trimmed;
   saveDirectors(list);
-  // Rename in episode assignments
+  // Rename in episode assignments (arrays)
   const map = loadEpisodeDirectors();
   let epChanged = 0;
   for (const ep of Object.keys(map)) {
-    if (map[ep] && map[ep].toLowerCase() === oldName.toLowerCase()) { map[ep] = trimmed; epChanged++; }
+    const arr = map[ep] || [];
+    let changed = false;
+    const newArr = arr.map(d => {
+      if (d.toLowerCase() === oldName.toLowerCase()) { changed = true; return trimmed; }
+      return d;
+    });
+    if (changed) {
+      // Dedupe in case the renamed director was already in the list
+      const seen = new Set();
+      map[ep] = newArr.filter(d => {
+        const k = d.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      epChanged++;
+    }
   }
   if (epChanged) saveEpisodeDirectors(map);
   // Rename in clip overrides
@@ -942,27 +1005,34 @@ app.put('/api/directors/rename', (req, res) => {
   res.json({ success: true, epChanged, clipsChanged });
 });
 
-// Assign director to an episode (admin). null/empty value clears it.
+// Assign director(s) to an episode (admin). Accepts string, array, or null/empty to clear.
 app.put('/api/episode-directors/:episode', (req, res) => {
   if (!checkAdmin(req, res)) return;
   const ep = req.params.episode;
-  const { director } = req.body;
+  const { director, directors } = req.body || {};
   const map = loadEpisodeDirectors();
-  if (!director || !String(director).trim()) {
+  // Either `directors` (preferred) or legacy `director`
+  const names = normalizeDirectors(directors !== undefined ? directors : director);
+  if (!names.length) {
     delete map[ep];
   } else {
-    const name = String(director).trim();
-    // Auto-add to directors list if not present
+    // Auto-add any new names to the global directors list
     const list = loadDirectors();
-    if (!list.find(d => d.toLowerCase() === name.toLowerCase())) {
-      list.push(name);
+    let listChanged = false;
+    for (const name of names) {
+      if (!list.find(d => d.toLowerCase() === name.toLowerCase())) {
+        list.push(name);
+        listChanged = true;
+      }
+    }
+    if (listChanged) {
       list.sort((a, b) => a.localeCompare(b));
       saveDirectors(list);
     }
-    map[ep] = name;
+    map[ep] = names;
   }
   saveEpisodeDirectors(map);
-  res.json({ success: true, episode: ep, director: map[ep] || null });
+  res.json({ success: true, episode: ep, directors: map[ep] || [] });
 });
 
 

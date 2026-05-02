@@ -140,6 +140,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .episode-director-edit:hover{background:rgba(244,162,38,.1)}
 .episode-director-clear{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:0 .3rem;line-height:1}
 .episode-director-clear:hover{color:var(--accent)}
+/* Director chip — one per assigned director on the episode */
+.episode-director-chip{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .55rem;background:rgba(244,162,38,.08);border:1px solid rgba(244,162,38,.3);border-radius:var(--radius);font-family:'Noto Sans',sans-serif}
+.episode-director-chip .episode-director-name{font-size:.9rem}
+.episode-director-chip-remove{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;line-height:1;padding:0 .15rem}
+.episode-director-chip-remove:hover{color:var(--accent)}
+/* Inline add-director form below the chips */
+.episode-director-add-wrap{position:relative;display:inline-flex;align-items:center}
+.episode-director-add-form{position:absolute;top:calc(100% + .3rem);left:0;width:260px;z-index:5;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.4rem}
+.episode-director-add-form .form-input{width:100%;font-size:.85rem}
+.episode-director-add-form .animator-dropdown{position:relative;top:.3rem;width:100%}
 
 /* About */
 .about-content{max-width:720px;margin:0 auto;padding:0 1rem 3rem;position:relative;z-index:1}

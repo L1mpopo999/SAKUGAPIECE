@@ -198,16 +198,24 @@ async function loadAnimatorsAndFilters() {
   try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors')).json(); } catch { EPISODE_DIRECTORS = {}; }
 }
 
-// Returns the effective director for a clip: override > episode director > null
-function getClipDirector(clip) {
-  if (!clip) return null;
-  if (clip.directorOverride) return clip.directorOverride;
-  const ep = (clip.episode || '').trim();
-  return EPISODE_DIRECTORS[ep] || null;
+// Helper: normalize director value (legacy string or array) to a clean string array.
+function _toDirectorArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(s => String(s).trim()).filter(Boolean);
+  return String(value).split(',').map(s => s.trim()).filter(Boolean);
 }
-// Director for an episode (from the episode-directors map only)
+
+// Returns the effective director(s) for a clip as an array.
+// Priority: clip-level override > episode-level directors > [].
+function getClipDirector(clip) {
+  if (!clip) return [];
+  if (clip.directorOverride) return _toDirectorArray(clip.directorOverride);
+  const ep = (clip.episode || '').trim();
+  return _toDirectorArray(EPISODE_DIRECTORS[ep]);
+}
+// Returns directors of an episode as an array.
 function getEpisodeDirector(ep) {
-  return EPISODE_DIRECTORS[String(ep).trim()] || null;
+  return _toDirectorArray(EPISODE_DIRECTORS[String(ep).trim()]);
 }
 
 // ===== STATE =====
@@ -835,9 +843,9 @@ function renderEpisodeGrid() {
   // Filter by arc
   if (episodeArcFilter !== 'all') list = list.filter(e => e.arc === episodeArcFilter);
 
-  // Filter by director
+  // Filter by director — episode passes if it has the selected director among its directors
   if (episodeDirectorFilter !== 'all') {
-    list = list.filter(e => e.director && e.director.toLowerCase() === episodeDirectorFilter.toLowerCase());
+    list = list.filter(e => (e.director || []).some(d => d.toLowerCase() === episodeDirectorFilter.toLowerCase()));
   }
 
   // Sort
@@ -867,12 +875,14 @@ function renderEpisodeGrid() {
 
   grid.innerHTML = adminAddHtml + list.map((e, i) => {
     const hiddenLabel = isHidden(e.episode) ? ` <span style="font-size:.6rem;color:var(--text-muted)">${t('hidden_label')}</span>` : '';
-    // Если есть режиссёр — выводим "ED: Имя" как заголовок и арку/клипы как подзаголовок.
-    // Если нет — выводим только арку и количество клипов.
-    const mainLine = e.director
-      ? `ED: ${esc(e.director)}${hiddenLabel}`
+    // If episode has director(s) — show "ED: Name1 / Name2" as the main line, arc/clips below.
+    // If not — just arc and clip count.
+    const dirArr = e.director || [];
+    const dirText = dirArr.join(' / ');
+    const mainLine = dirArr.length
+      ? `ED: ${esc(dirText)}${hiddenLabel}`
       : `${e.arc} · ${e.count} ${pluralClips(e.count)}${hiddenLabel}`;
-    const subLine = e.director
+    const subLine = dirArr.length
       ? `${e.arc} · ${e.count} ${pluralClips(e.count)}`
       : '';
     return `<div class="animator-card episode-card${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
@@ -960,15 +970,25 @@ function refreshEpisodeDirectorDropdown() {
   const toggle = $('#episodeDirectorToggle');
   if (!dd || !toggle) return;
   // Build list: "Все" + only directors that have at least one assigned episode.
-  // Count episodes per director, sort by count desc, then alphabetically.
+  // Each episode now has an array of directors; count each director separately.
+  // Total = number of episodes that have at least one director (not sum across).
   const counts = new Map();
-  Object.values(EPISODE_DIRECTORS).forEach(d => {
-    if (d) counts.set(d, (counts.get(d) || 0) + 1);
+  let totalAssigned = 0;
+  Object.values(EPISODE_DIRECTORS).forEach(value => {
+    const arr = _toDirectorArray(value);
+    if (!arr.length) return;
+    totalAssigned++;
+    for (const d of arr) {
+      // Use a case-insensitive key for counting, but display the original capitalization
+      const key = d.toLowerCase();
+      const existing = counts.get(key);
+      if (existing) existing.count++;
+      else counts.set(key, { name: d, count: 1 });
+    }
   });
-  const usedDirectors = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([name, n]) => ({ key: name, label: name, count: n }));
-  const totalAssigned = [...counts.values()].reduce((s, n) => s + n, 0);
+  const usedDirectors = [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .map(({ name, count }) => ({ key: name, label: name, count }));
   const items = [{ key:'all', label: t('episodes_director_all'), count: totalAssigned }, ...usedDirectors];
   dd.innerHTML = items.map(it =>
     `<button class="filter-chip director-chip${episodeDirectorFilter === it.key ? ' active' : ''}" data-episode-director="${esc(it.key)}">${esc(it.label)}<span class="director-chip-count">${it.count}</span></button>`
@@ -1074,55 +1094,130 @@ function renderEpisodeProfile(episode) {
   }
 }
 
-// Renders the director block on the episode profile page
+// Renders the director block on the episode profile page.
+// Episodes can have multiple directors (e.g. "Nanami Michibata" + "Kouhei Kureta").
+// Each director is shown as a chip with × to remove; admins can add more via an autocomplete input.
 function renderEpisodeDirectorBlock(episode) {
   const block = $('#episodeDirectorBlock');
   if (!block) return;
-  const dir = getEpisodeDirector(episode);
-  if (dir) {
-    block.innerHTML = `
-      <span class="episode-director-label">ED:</span>
-      <span class="episode-director-name">${esc(dir)}</span>
-      ${isAdmin ? `
-        <button class="episode-director-edit" data-action="edit-director">Изменить</button>
-        <button class="episode-director-clear" data-action="clear-director" title="Убрать режиссёра">×</button>
-      ` : ''}
-    `;
+  const dirs = getEpisodeDirector(episode); // always an array
+
+  let html = '';
+  if (dirs.length) {
+    html += `<span class="episode-director-label">ED:</span>`;
+    for (const name of dirs) {
+      html += `<span class="episode-director-chip">
+        <span class="episode-director-name">${esc(name)}</span>
+        ${isAdmin ? `<button class="episode-director-chip-remove" data-remove-director="${esc(name)}" title="Убрать">×</button>` : ''}
+      </span>`;
+    }
   } else if (isAdmin) {
-    block.innerHTML = `<button class="episode-director-edit" data-action="edit-director">+ Указать режиссёра</button>`;
-  } else {
-    block.innerHTML = '';
+    html += `<span class="episode-director-label">ED:</span>`;
   }
 
-  // Wire up admin actions
-  block.querySelector('[data-action="edit-director"]')?.addEventListener('click', async () => {
-    const current = getEpisodeDirector(episode) || '';
-    const name = prompt(`Режиссёр серии ${episode}:`, current);
-    if (name === null) return; // cancelled
-    const trimmed = name.trim();
-    await setEpisodeDirector(episode, trimmed);
+  if (isAdmin) {
+    html += `<div class="episode-director-add-wrap">
+      <button class="episode-director-edit" data-action="open-add-director">${dirs.length ? '+ Добавить режиссёра' : '+ Указать режиссёра'}</button>
+      <div class="episode-director-add-form" id="episodeDirectorAddForm" style="display:none">
+        <input type="text" class="form-input" id="episodeDirectorAddInput" placeholder="Имя режиссёра..." autocomplete="off">
+        <div class="animator-dropdown" id="episodeDirectorAddDropdown"></div>
+      </div>
+    </div>`;
+  }
+
+  block.innerHTML = html;
+
+  // Remove chip handlers
+  block.querySelectorAll('[data-remove-director]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const name = btn.dataset.removeDirector;
+      const next = dirs.filter(d => d.toLowerCase() !== name.toLowerCase());
+      await setEpisodeDirectors(episode, next);
+    });
   });
-  block.querySelector('[data-action="clear-director"]')?.addEventListener('click', async () => {
-    if (!confirm(`Убрать режиссёра серии ${episode}?`)) return;
-    await setEpisodeDirector(episode, '');
+
+  // Open the add-director input
+  block.querySelector('[data-action="open-add-director"]')?.addEventListener('click', () => {
+    const form = block.querySelector('#episodeDirectorAddForm');
+    const input = block.querySelector('#episodeDirectorAddInput');
+    if (!form || !input) return;
+    form.style.display = 'block';
+    input.value = '';
+    input.focus();
   });
+
+  // Wire up autocomplete on the add input (admin only)
+  const input = block.querySelector('#episodeDirectorAddInput');
+  const dropdown = block.querySelector('#episodeDirectorAddDropdown');
+  if (input && dropdown) {
+    const renderSuggestions = () => {
+      const q = input.value.trim().toLowerCase();
+      const already = new Set(dirs.map(d => d.toLowerCase()));
+      // Available = existing directors that aren't already on this episode
+      const available = (DIRECTORS || []).filter(d => !already.has(d.toLowerCase()));
+      const matches = q
+        ? available.map(d => ({ name: d, score: matchScore(d, q) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).map(x => x.name)
+        : available.slice().sort((a, b) => a.localeCompare(b));
+      let items = matches.slice(0, 8).map(name => `<div class="animator-dropdown-item" data-pick="${esc(name)}">${esc(name)}</div>`);
+      if (q && !available.some(d => d.toLowerCase() === q)) {
+        items.push(`<div class="animator-dropdown-item" data-pick="${esc(input.value.trim())}">+ Добавить: «${esc(input.value.trim())}»</div>`);
+      }
+      if (!items.length) {
+        dropdown.classList.remove('visible');
+        return;
+      }
+      dropdown.innerHTML = items.join('');
+      dropdown.classList.add('visible');
+      dropdown.querySelectorAll('[data-pick]').forEach(el => el.addEventListener('click', async () => {
+        const picked = el.dataset.pick.trim();
+        if (!picked) return;
+        if (dirs.some(d => d.toLowerCase() === picked.toLowerCase())) {
+          dropdown.classList.remove('visible');
+          return;
+        }
+        await setEpisodeDirectors(episode, [...dirs, picked]);
+      }));
+    };
+    input.addEventListener('input', renderSuggestions);
+    input.addEventListener('focus', renderSuggestions);
+    input.addEventListener('keydown', async e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const v = input.value.trim();
+        if (!v) return;
+        if (dirs.some(d => d.toLowerCase() === v.toLowerCase())) return;
+        await setEpisodeDirectors(episode, [...dirs, v]);
+      } else if (e.key === 'Escape') {
+        dropdown.classList.remove('visible');
+        block.querySelector('#episodeDirectorAddForm').style.display = 'none';
+      }
+    });
+  }
 }
 
-async function setEpisodeDirector(episode, director) {
+// Save the full director array for an episode (replaces previous list).
+async function setEpisodeDirectors(episode, directors) {
   try {
     const res = await fetch(`/api/episode-directors/${encodeURIComponent(episode)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
-      body: JSON.stringify({ director })
+      body: JSON.stringify({ directors })
     });
     const data = await res.json();
     if (!data.success) { notify(data.error || 'Не удалось сохранить', true); return; }
-    // Refresh in-memory data
+    // Refresh in-memory data so other UI parts (filter dropdown, episode grid) update too
     EPISODE_DIRECTORS = await (await fetch('/api/episode-directors')).json();
     DIRECTORS = await (await fetch('/api/directors')).json();
     renderEpisodeDirectorBlock(episode);
-    notify(director ? `Режиссёр серии ${episode}: ${director}` : `Режиссёр серии ${episode} убран`);
+    if (!directors.length) notify(`Режиссёры серии ${episode} убраны`);
+    else notify(`Серия ${episode}: ${directors.join(' / ')}`);
   } catch { notify('Ошибка сети', true); }
+}
+
+// Backwards-compatible single-director helper (still used elsewhere — converts to array).
+async function setEpisodeDirector(episode, director) {
+  const arr = director ? [String(director).trim()].filter(Boolean) : [];
+  return setEpisodeDirectors(episode, arr);
 }
 
 $('#backToEpisodesBtn').addEventListener('click', () => navigateTo('episodes'));
