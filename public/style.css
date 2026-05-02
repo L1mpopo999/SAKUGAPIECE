@@ -126,6 +126,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Animator Profile */
 .animator-profile-header{padding:1.5rem 1rem .8rem;max-width:1440px;margin:0 auto;position:relative;z-index:1}
+/* On episode profile, raise the header above the clip grid so the add-director popup
+   isn't hidden behind clip cards. */
+.episode-profile-header{z-index:10}
 .back-btn{display:inline-flex;align-items:center;gap:.3rem;background:none;border:none;color:var(--text-secondary);font-family:'Space Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:color .2s;margin-bottom:.8rem}
 .back-btn:hover{color:var(--text-primary)}
 .animator-profile-name{font-family:'Oswald',sans-serif;font-size:clamp(1.8rem,4vw,3.5rem);font-weight:600;letter-spacing:.04em;color:var(--gold);line-height:1.1;margin-bottom:.2rem;text-transform:uppercase}
@@ -147,9 +150,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .episode-director-chip-remove:hover{color:var(--accent)}
 /* Inline add-director form below the chips */
 .episode-director-add-wrap{position:relative;display:inline-flex;align-items:center}
-.episode-director-add-form{position:absolute;top:calc(100% + .3rem);left:0;width:260px;z-index:5;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.4rem}
+.episode-director-add-form{position:absolute;top:calc(100% + .3rem);left:0;width:280px;z-index:50;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.4rem;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .episode-director-add-form .form-input{width:100%;font-size:.85rem}
-.episode-director-add-form .animator-dropdown{position:relative;top:.3rem;width:100%}
+.episode-director-add-form .animator-dropdown{position:relative;top:.3rem;width:100%;z-index:51;max-height:240px;overflow-y:auto}
 
 /* About */
 .about-content{max-width:720px;margin:0 auto;padding:0 1rem 3rem;position:relative;z-index:1}
