@@ -1015,6 +1015,23 @@ document.addEventListener('click', (e) => {
 });
 
 // ===== EPISODE PROFILE =====
+// Returns adjacent episode numbers (prev/next) sorted as integers.
+// Hidden episodes are skipped for non-admins.
+function getAdjacentEpisodes(currentEp) {
+  const all = getEpisodeList()
+    .filter(ep => isAdmin || !EPISODES_DATA.hidden.includes(ep))
+    .map(ep => ({ ep, n: parseInt(ep) || 0 }))
+    .filter(x => x.n > 0)
+    .sort((a, b) => a.n - b.n);
+  const cur = parseInt(currentEp) || 0;
+  const idx = all.findIndex(x => x.n === cur);
+  if (idx === -1) return { prev: null, next: null };
+  return {
+    prev: idx > 0 ? all[idx - 1].ep : null,
+    next: idx < all.length - 1 ? all[idx + 1].ep : null
+  };
+}
+
 function renderEpisodeProfile(episode) {
   $('#episodeProfileName').textContent = `Серия ${episode}`;
   const clips = allClips.filter(c => c.episode.trim() === episode);
@@ -1023,6 +1040,19 @@ function renderEpisodeProfile(episode) {
   let stats = `${arc} · ${clips.length} ${pluralClips(clips.length)}`;
   if (animators.length) stats += ` · ${animators.length} ${pluralAnimators(animators.length)}`;
   $('#episodeProfileStats').textContent = stats;
+
+  // Render prev/next arrows
+  const { prev, next } = getAdjacentEpisodes(episode);
+  const navEl = $('#episodeProfileNav');
+  if (navEl) {
+    navEl.innerHTML = `
+      ${prev ? `<button class="episode-nav-btn" data-go="${esc(prev)}" title="${LANG==='en'?'Previous episode':'Предыдущая серия'}: ${esc(prev)}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg><span>${esc(prev)}</span></button>` : `<span class="episode-nav-stub"></span>`}
+      ${next ? `<button class="episode-nav-btn episode-nav-next" data-go="${esc(next)}" title="${LANG==='en'?'Next episode':'Следующая серия'}: ${esc(next)}"><span>${esc(next)}</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button>` : `<span class="episode-nav-stub"></span>`}
+    `;
+    navEl.querySelectorAll('[data-go]').forEach(btn => {
+      btn.addEventListener('click', () => navigateTo('episode-profile', btn.dataset.go));
+    });
+  }
 
   // Render director block
   renderEpisodeDirectorBlock(episode);
@@ -1959,6 +1989,24 @@ function openEditModal(id) {
   $('#editTimecodesInput').value = clip.timecodes || '';
   $('#editClipOrderInput').value = clip.clipOrder || 0;
   $('#editDirectorOverrideInput').value = clip.directorOverride || '';
+  // Big video preview at the top of the modal (read-only — only for watching while editing)
+  const cv = $('#editClipVideo'), cvWrap = $('#editVideoPreviewWrap');
+  if (clip.videoUrl) {
+    cv.src = clip.videoUrl;
+    cvWrap.style.display = '';
+  } else {
+    cv.removeAttribute('src');
+    cvWrap.style.display = 'none';
+  }
+  // Photos preview (if the clip has images)
+  const pp = $('#editPhotosPreview'), ppWrap = $('#editPhotosPreviewWrap');
+  if (clip.images && clip.images.length) {
+    pp.innerHTML = clip.images.map(img => `<img src="${esc(img.url)}" alt="">`).join('');
+    ppWrap.style.display = '';
+  } else {
+    pp.innerHTML = '';
+    ppWrap.style.display = 'none';
+  }
   // Video preview
   const vp = $('#editVideoPreview');
   if (clip.videoUrl) { vp.src = clip.videoUrl; vp.style.display = 'block'; }
@@ -1977,6 +2025,9 @@ function closeEditModal() {
   $('#editModal').classList.remove('visible');
   document.body.style.overflow = '';
   editingClipId = null;
+  // Stop video playback so it doesn't keep playing in the background
+  const cv = $('#editClipVideo');
+  if (cv) { try { cv.pause(); } catch {} cv.removeAttribute('src'); cv.load(); }
 }
 
 $('#closeEditBtn').addEventListener('click', closeEditModal);

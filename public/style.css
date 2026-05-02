@@ -327,6 +327,20 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .user-row-btn.danger:hover{border-color:var(--accent);color:var(--accent)}
 .user-row-btn.can-backup-on{border-color:var(--gold);color:var(--gold);background:rgba(244,162,38,.1)}
 .user-row-btn.can-backup-on:hover{border-color:var(--gold);color:var(--gold);background:rgba(244,162,38,.2)}
+
+/* Video preview inside the edit-clip modal */
+.edit-video-player{width:100%;max-height:400px;background:#000;border-radius:var(--radius-lg);display:block}
+.edit-photos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.5rem}
+.edit-photos-grid img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border)}
+
+/* Episode profile: prev/next navigation arrows next to the back button */
+.episode-profile-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:.5rem}
+.episode-profile-nav{display:flex;align-items:center;gap:.6rem}
+.episode-nav-btn{display:inline-flex;align-items:center;gap:.4rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);padding:.5rem .9rem;border-radius:var(--radius-lg);font-family:'Manrope',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;transition:all .2s}
+.episode-nav-btn:hover{border-color:var(--gold);color:var(--gold);transform:translateY(-1px)}
+.episode-nav-btn svg{flex-shrink:0;color:var(--text-muted)}
+.episode-nav-btn:hover svg{color:var(--gold)}
+.episode-nav-stub{width:1px;height:1px}
 .audit-entry{padding:.3rem 0;border-bottom:1px solid var(--border)}
 .audit-entry:last-child{border-bottom:none}
 .audit-entry .audit-user{color:var(--gold)}
