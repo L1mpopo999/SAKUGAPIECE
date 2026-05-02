@@ -1297,8 +1297,11 @@ function parseTimecodes(str) {
 
     const mins = parseInt(timeMatch[1]);
     const secs = parseInt(timeMatch[2]);
-    const frac = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
-    const totalSeconds = mins * 60 + secs;
+    // The fractional part can be 1-3 digits, interpret as decimal fraction of a second.
+    // e.g. "0:06.4" → 6.4 seconds; "0:06.42" → 6.42 seconds; "0:06.421" → 6.421 seconds.
+    const fracStr = timeMatch[3] || '';
+    const fracSeconds = fracStr ? parseInt(fracStr) / Math.pow(10, fracStr.length) : 0;
+    const totalSeconds = mins * 60 + secs + fracSeconds;
 
     // Extract the name — everything after the timecode and separators
     // Remove the start timecode, optional end timecode, and separators
@@ -1368,7 +1371,7 @@ function openPlayer(id) {
     ).join('');
     tcList.querySelectorAll('.timecode-item').forEach(el => {
       el.addEventListener('click', () => {
-        $('#playerVideo').currentTime = parseInt(el.dataset.time);
+        $('#playerVideo').currentTime = parseFloat(el.dataset.time);
         $('#playerVideo').play();
       });
     });
@@ -1394,7 +1397,7 @@ function openPlayer(id) {
         bar.querySelectorAll('.timecode-marker').forEach(m => {
           m.addEventListener('click', e => {
             e.stopPropagation();
-            video.currentTime = parseInt(m.dataset.time);
+            video.currentTime = parseFloat(m.dataset.time);
             video.play();
           });
         });
@@ -2514,7 +2517,7 @@ function renderClipPage(clip) {
     tcContainer.querySelectorAll('.timecode-item').forEach(el => {
       el.addEventListener('click', () => {
         const video = page.querySelector('#clipPageVideo');
-        if (video) { video.currentTime = parseInt(el.dataset.time); video.play(); }
+        if (video) { video.currentTime = parseFloat(el.dataset.time); video.play(); }
       });
     });
 
@@ -2529,7 +2532,7 @@ function renderClipPage(clip) {
             return `<div class="timecode-marker" style="left:${pct}%" data-time="${tc.time}"><div class="timecode-marker-tooltip">${tc.label} — ${esc(tc.name)}</div></div>`;
           }).join('');
           bar.querySelectorAll('.timecode-marker').forEach(m => {
-            m.addEventListener('click', () => { video.currentTime = parseInt(m.dataset.time); video.play(); });
+            m.addEventListener('click', () => { video.currentTime = parseFloat(m.dataset.time); video.play(); });
           });
         }
       });
