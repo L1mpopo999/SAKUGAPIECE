@@ -54,6 +54,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .filter-tags-toggle:hover{background:rgba(244,162,38,.1)}
 .filter-tags-dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.8rem;margin-top:.3rem;flex-wrap:wrap;gap:.4rem;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 .filter-tags-dropdown.visible{display:flex}
+/* Director dropdown: search input takes full width on top, chips wrap below */
+.director-dropdown-search{flex:1 0 100%;margin-bottom:.5rem}
+.director-dropdown-search input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .7rem;color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.75rem;outline:none;transition:border-color .15s}
+.director-dropdown-search input:focus{border-color:var(--gold)}
+.director-dropdown-search input::placeholder{color:var(--text-muted)}
+.director-dropdown-chips{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:.4rem}
+.director-dropdown-empty{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--text-muted);padding:.4rem}
 /* Director chips inside the episodes filter dropdown: slightly brighter, with counter */
 .director-chip{color:var(--text-primary);display:inline-flex;align-items:center;gap:.45rem;padding-right:.65rem}
 .director-chip:hover{color:var(--text-primary);border-color:var(--text-primary)}

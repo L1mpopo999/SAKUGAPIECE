@@ -961,39 +961,71 @@ document.querySelectorAll('[data-episode-arc]').forEach(btn => {
     btn.classList.add('active');
     episodeArcFilter = btn.dataset.episodeArc;
     renderEpisodeGrid();
+    // Director counts depend on selected arc — refresh the dropdown so users
+    // see the right per-arc counts the next time they open it.
+    refreshEpisodeDirectorDropdown();
   });
 });
 
 // Director dropdown filter for episodes page
+// State for the director-dropdown search box. Kept outside so it survives re-renders.
+let episodeDirectorSearch = '';
+
 function refreshEpisodeDirectorDropdown() {
   const dd = $('#episodeDirectorDropdown');
   const toggle = $('#episodeDirectorToggle');
   if (!dd || !toggle) return;
-  // Build list: "Все" + only directors that have at least one assigned episode.
-  // Each episode now has an array of directors; count each director separately.
-  // Total = number of episodes that have at least one director (not sum across).
+
+  // Build counts.
+  // Counts respect the currently selected arc: when an arc is selected,
+  // a director's count = number of THAT-arc episodes they directed.
+  // This way "Elbaf + Nanami Michibata" shows how many Elbaf episodes Nanami directed.
+  const arcFilter = episodeArcFilter; // 'all' or arc name
   const counts = new Map();
   let totalAssigned = 0;
-  Object.values(EPISODE_DIRECTORS).forEach(value => {
-    const arr = _toDirectorArray(value);
-    if (!arr.length) return;
+  for (const ep of Object.keys(EPISODE_DIRECTORS)) {
+    const arr = _toDirectorArray(EPISODE_DIRECTORS[ep]);
+    if (!arr.length) continue;
+    if (arcFilter !== 'all') {
+      const epArc = getEpisodeArc(parseInt(ep) || 0);
+      if (epArc !== arcFilter) continue;
+    }
     totalAssigned++;
     for (const d of arr) {
-      // Use a case-insensitive key for counting, but display the original capitalization
       const key = d.toLowerCase();
       const existing = counts.get(key);
       if (existing) existing.count++;
       else counts.set(key, { name: d, count: 1 });
     }
-  });
-  const usedDirectors = [...counts.values()]
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-    .map(({ name, count }) => ({ key: name, label: name, count }));
-  const items = [{ key:'all', label: t('episodes_director_all'), count: totalAssigned }, ...usedDirectors];
-  dd.innerHTML = items.map(it =>
-    `<button class="filter-chip director-chip${episodeDirectorFilter === it.key ? ' active' : ''}" data-episode-director="${esc(it.key)}">${esc(it.label)}<span class="director-chip-count">${it.count}</span></button>`
+  }
+  const allDirectors = [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+  // Apply text search (case-insensitive substring)
+  const q = (episodeDirectorSearch || '').trim().toLowerCase();
+  const filtered = q ? allDirectors.filter(d => d.name.toLowerCase().includes(q)) : allDirectors;
+
+  const allLabel = t('episodes_director_all');
+  // We render: search input + "All" chip + filtered director chips.
+  // Search input only shown if there are enough directors to make searching useful.
+  const showSearch = allDirectors.length > 6;
+  const searchHtml = showSearch
+    ? `<div class="director-dropdown-search">
+         <input type="text" id="episodeDirectorSearchInput" placeholder="${LANG === 'en' ? 'Search director...' : 'Поиск режиссёра...'}" value="${esc(episodeDirectorSearch)}" autocomplete="off">
+       </div>`
+    : '';
+
+  const allChip = `<button class="filter-chip director-chip${episodeDirectorFilter === 'all' ? ' active' : ''}" data-episode-director="all">${esc(allLabel)}<span class="director-chip-count">${totalAssigned}</span></button>`;
+  const directorChips = filtered.map(d =>
+    `<button class="filter-chip director-chip${episodeDirectorFilter === d.name ? ' active' : ''}" data-episode-director="${esc(d.name)}">${esc(d.name)}<span class="director-chip-count">${d.count}</span></button>`
   ).join('');
-  // Update toggle button state
+  const emptyHint = (q && !filtered.length)
+    ? `<span class="director-dropdown-empty">${LANG === 'en' ? 'Nothing found' : 'Ничего не найдено'}</span>`
+    : '';
+
+  dd.innerHTML = `${searchHtml}<div class="director-dropdown-chips">${allChip}${directorChips}${emptyHint}</div>`;
+
+  // Update toggle button label
   if (episodeDirectorFilter !== 'all') {
     toggle.textContent = episodeDirectorFilter + ' ✕';
     toggle.classList.add('active');
@@ -1001,15 +1033,41 @@ function refreshEpisodeDirectorDropdown() {
     toggle.textContent = t('episodes_director_filter');
     toggle.classList.remove('active');
   }
-  // Wire up clicks
+
+  // Wire up chip clicks
   dd.querySelectorAll('[data-episode-director]').forEach(b => {
     b.addEventListener('click', () => {
       episodeDirectorFilter = b.dataset.episodeDirector;
+      episodeDirectorSearch = '';
       dd.classList.remove('visible');
       renderEpisodeGrid();
       refreshEpisodeDirectorDropdown();
     });
   });
+
+  // Wire up the search input. We don't re-render on every keystroke from outside
+  // so we manage focus carefully here.
+  const searchInput = dd.querySelector('#episodeDirectorSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      episodeDirectorSearch = searchInput.value;
+      // Re-render only the chips area (keep input focused with its caret)
+      const caret = searchInput.selectionStart;
+      refreshEpisodeDirectorDropdown();
+      const newInput = $('#episodeDirectorSearchInput');
+      if (newInput) {
+        newInput.focus();
+        try { newInput.setSelectionRange(caret, caret); } catch {}
+      }
+    });
+    searchInput.addEventListener('click', e => e.stopPropagation()); // don't close dropdown
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        episodeDirectorSearch = '';
+        refreshEpisodeDirectorDropdown();
+      }
+    });
+  }
 }
 
 $('#episodeDirectorToggle')?.addEventListener('click', (e) => {
