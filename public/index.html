@@ -373,8 +373,12 @@
       <input class="form-input" id="editTitleEnInput" type="text" placeholder="English title">
     </div>
     <div class="form-group">
-      <label class="form-label">Аниматор(ы) — через запятую</label>
-      <input class="form-input" id="editAnimatorInput" type="text">
+      <label class="form-label">Аниматор(ы)</label>
+      <div class="animator-select-wrapper">
+        <div class="animator-chips" id="editAnimatorChips"></div>
+        <input class="form-input" id="editAnimatorInput" type="text" placeholder="Начните вводить имя..." autocomplete="off">
+        <div class="animator-dropdown" id="editAnimatorDropdown"></div>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group" style="flex:1;">

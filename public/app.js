@@ -220,6 +220,7 @@ let selectedFile = null;
 let selectedImages = [];
 let selectedThumbnail = null;
 let selectedAnimators = [];
+let editSelectedAnimators = [];
 let currentPage = 'browse';
 let currentAnimatorProfile = null;
 let currentEpisodeProfile = null;
@@ -1128,6 +1129,53 @@ function renderAnimatorChips() {
   c.querySelectorAll('.animator-chip-remove').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();selectedAnimators=selectedAnimators.filter(a=>a!==b.dataset.name);renderAnimatorChips()}));
 }
 
+// === Animator selector for the edit-clip modal (mirrors the upload-form selector) ===
+function renderEditAnimatorChips() {
+  const c = $('#editAnimatorChips');
+  if (!c) return;
+  c.innerHTML = editSelectedAnimators.map(a => `<span class="animator-chip">${esc(a)}<button class="animator-chip-remove" data-name="${esc(a)}">&times;</button></span>`).join('');
+  c.querySelectorAll('.animator-chip-remove').forEach(b => b.addEventListener('click', e => {
+    e.preventDefault();
+    editSelectedAnimators = editSelectedAnimators.filter(a => a !== b.dataset.name);
+    renderEditAnimatorChips();
+  }));
+}
+
+const editAnimInput = $('#editAnimatorInput'), editAnimDropdown = $('#editAnimatorDropdown');
+if (editAnimInput && editAnimDropdown) {
+  editAnimInput.addEventListener('input', () => {
+    const q = editAnimInput.value.toLowerCase().trim();
+    if (!q) { editAnimDropdown.classList.remove('visible'); return; }
+    const matches = ANIMATORS.map(a => ({ name: a, score: matchScore(a, q) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).map(x => x.name);
+    if (!matches.length) {
+      editAnimDropdown.innerHTML = `<div class="animator-dropdown-item" data-name="${esc(editAnimInput.value.trim())}">Добавить: «${esc(editAnimInput.value.trim())}»</div>`;
+    } else {
+      editAnimDropdown.innerHTML = matches.slice(0, 8).map(a => {
+        const sel = editSelectedAnimators.includes(a);
+        return `<div class="animator-dropdown-item${sel ? ' selected' : ''}" data-name="${esc(a)}">${esc(a)}${sel ? ' ✓' : ''}</div>`;
+      }).join('');
+    }
+    editAnimDropdown.querySelectorAll('.animator-dropdown-item:not(.selected)').forEach(el => el.addEventListener('click', () => {
+      if (!editSelectedAnimators.includes(el.dataset.name)) editSelectedAnimators.push(el.dataset.name);
+      renderEditAnimatorChips();
+      editAnimInput.value = '';
+      editAnimDropdown.classList.remove('visible');
+      editAnimInput.focus();
+    }));
+    editAnimDropdown.classList.add('visible');
+  });
+  editAnimInput.addEventListener('focus', () => { if (editAnimInput.value.trim()) editAnimInput.dispatchEvent(new Event('input')); });
+}
+// Close dropdown when clicking outside its wrapper. Same logic as the upload-form one,
+// but scoped to the edit modal so the two don't fight.
+document.addEventListener('click', e => {
+  const dd = $('#editAnimatorDropdown');
+  if (!dd) return;
+  if (!e.target.closest('#editAnimatorDropdown') && !e.target.closest('#editAnimatorInput') && !e.target.closest('#editAnimatorChips')) {
+    dd.classList.remove('visible');
+  }
+});
+
 // ===== TAG SELECTOR =====
 let selectedTags = [];
 const tagInput=$('#tagsInput'), tagDropdown=$('#tagDropdown');
@@ -1899,7 +1947,9 @@ function openEditModal(id) {
   editingClipId = id;
   $('#editTitleInput').value = clip.title;
   if ($('#editTitleEnInput')) $('#editTitleEnInput').value = clip.titleEn || '';
-  $('#editAnimatorInput').value = clip.animators.join(', ');
+  $('#editAnimatorInput').value = '';
+  editSelectedAnimators = [...(clip.animators || [])];
+  renderEditAnimatorChips();
   $('#editEpisodeInput').value = clip.episode;
   $('#editArcSelect').value = clip.arc;
   editSelectedTags = [...clip.tags];
@@ -2072,10 +2122,17 @@ function renderEditImagesGrid() {
 
 $('#editSaveBtn').addEventListener('click', async () => {
   if (!editingClipId) return;
+  // If user typed something in the input but didn't pick a suggestion or press add — accept it as a final animator
+  const pendingTyped = ($('#editAnimatorInput')?.value || '').trim();
+  if (pendingTyped && !editSelectedAnimators.includes(pendingTyped)) {
+    editSelectedAnimators.push(pendingTyped);
+    $('#editAnimatorInput').value = '';
+    renderEditAnimatorChips();
+  }
   const body = {
     title: $('#editTitleInput').value.trim(),
     titleEn: $('#editTitleEnInput')?.value.trim() || '',
-    animators: $('#editAnimatorInput').value.trim(),
+    animators: editSelectedAnimators.join(', '),
     episode: $('#editEpisodeInput').value.trim(),
     arc: $('#editArcSelect').value,
     tags: editSelectedTags.join(','),
