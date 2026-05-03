@@ -20,6 +20,7 @@ const I18N = {
   filter_all: { ru: 'ВСЕ', en: 'ALL' },
   filter_video: { ru: 'ВИДЕО', en: 'VIDEO' },
   filter_photo: { ru: 'ФОТО', en: 'PHOTO' },
+  filter_photo_arts: { ru: 'Фото / Арты', en: 'Photos / Arts' },
   filter_sections: { ru: 'РАЗДЕЛЫ ▾', en: 'CATEGORIES ▾' },
   filter_views: { ru: 'ПРОСМОТРЫ', en: 'VIEWS' },
 
@@ -1111,7 +1112,7 @@ function getAdjacentEpisodes(currentEp) {
 }
 
 function renderEpisodeProfile(episode) {
-  $('#episodeProfileName').textContent = `Серия ${episode}`;
+  $('#episodeProfileName').textContent = `${LANG === 'en' ? 'EPISODE' : 'СЕРИЯ'} ${episode}`;
   const clips = allClips.filter(c => c.episode.trim() === episode);
   const arc = getEpisodeArc(parseInt(episode) || 0);
   const animators = [...new Set(clips.flatMap(c => c.animators))];
