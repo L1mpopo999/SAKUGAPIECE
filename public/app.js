@@ -271,7 +271,22 @@ function matchScore(str, q){
 }
 
 // ===== PAGE NAVIGATION =====
+// Stop all playing media on the page. Called whenever we navigate away,
+// so videos in old views (e.g. the clip page) don't keep playing in the background.
+function stopAllMedia() {
+  document.querySelectorAll('video, audio').forEach(el => {
+    try {
+      el.pause();
+      // Also nuke the src so the browser releases the network/decoder resources.
+      // Re-rendering the page will re-set src as needed.
+      el.removeAttribute('src');
+      el.load();
+    } catch {}
+  });
+}
+
 function navigateTo(page, data) {
+  stopAllMedia();
   currentPage = page;
   $$('.page').forEach(p => p.classList.remove('active'));
   $$('.nav-link').forEach(l => l.classList.remove('active'));
@@ -328,6 +343,7 @@ window.addEventListener('popstate', () => {
 
 // Same as navigateTo but without pushState (to avoid infinite loop)
 function navigateToSilent(page, data) {
+  stopAllMedia();
   currentPage = page;
   $$('.page').forEach(p => p.classList.remove('active'));
   $$('.nav-link').forEach(l => l.classList.remove('active'));
