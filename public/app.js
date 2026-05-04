@@ -273,16 +273,21 @@ function matchScore(str, q){
 // ===== PAGE NAVIGATION =====
 // Stop all playing media on the page. Called whenever we navigate away,
 // so videos in old views (e.g. the clip page) don't keep playing in the background.
+// Also fully removes the dynamically-created clip-page div, because its <video>
+// has <source> children that survive removeAttribute('src') + load() and would
+// auto-play again.
 function stopAllMedia() {
   document.querySelectorAll('video, audio').forEach(el => {
     try {
       el.pause();
-      // Also nuke the src so the browser releases the network/decoder resources.
-      // Re-rendering the page will re-set src as needed.
       el.removeAttribute('src');
+      // Also clear any <source> children, otherwise load() would re-arm autoplay
+      el.querySelectorAll('source').forEach(s => s.removeAttribute('src'));
       el.load();
     } catch {}
   });
+  // Drop the dynamically-created clip page entirely if it exists
+  document.querySelectorAll('.page.clip-page').forEach(el => el.remove());
 }
 
 function navigateTo(page, data) {
@@ -307,8 +312,17 @@ function navigateTo(page, data) {
   }
   if (page === 'animators') renderAnimatorGrid();
   if (page === 'episodes') renderEpisodeGrid();
-  // Update URL hash
-  if (page === 'browse') window.history.pushState({page}, '', '#');
+  // Update URL hash. Special case: if we're on a /clip/... pathname (the standalone
+  // clip page) and we navigate elsewhere, we must change the pathname too — otherwise
+  // the user stays on /clip/123#animators and reloading would bring back the clip.
+  const onClipPath = /^\/clip\/\d+/.test(window.location.pathname);
+  if (onClipPath) {
+    let target = '/';
+    if (page === 'animator-profile' && data) target = '/#animator/' + encodeURIComponent(data);
+    else if (page === 'episode-profile' && data) target = '/#episode/' + encodeURIComponent(data);
+    else if (page !== 'browse') target = '/#' + page;
+    window.history.pushState({page, data}, '', target);
+  } else if (page === 'browse') window.history.pushState({page}, '', '#');
   else if (page === 'animator-profile' && data) window.history.pushState({page, data}, '', '#animator/' + encodeURIComponent(data));
   else if (page === 'episode-profile' && data) window.history.pushState({page, data}, '', '#episode/' + encodeURIComponent(data));
   else window.history.pushState({page}, '', '#' + page);
@@ -2707,6 +2721,10 @@ function openFilterManager() {
 function renderClipPage(clip) {
   // Hide all pages and header nav
   $$('.page').forEach(p => p.classList.remove('active'));
+
+  // Drop any existing clip-page (e.g. from a previous render or language switch)
+  // so we don't end up with two of them in the DOM, both potentially with playing video.
+  document.querySelectorAll('.page.clip-page').forEach(el => el.remove());
 
   // Create clip page
   const page = document.createElement('div');
