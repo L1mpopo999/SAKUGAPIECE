@@ -107,6 +107,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-hd-badge{position:absolute;top:8px;right:8px;background:var(--gold);color:#000;font-family:'Bebas Neue',sans-serif;font-size:.7rem;letter-spacing:.1em;padding:.1rem .45rem;border-radius:3px;box-shadow:0 0 10px var(--gold-glow)}
 .clip-type-badge{position:absolute;top:8px;left:40px;background:rgba(0,0,0,.7);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.6rem;padding:.1rem .4rem;border-radius:3px}
 .clip-img-count{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.8);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.7rem;padding:.15rem .45rem;border-radius:3px}
+/* Like badge — appears on the bottom-right of the clip thumb when the clip
+   has likes. Designed to pop: red gradient + heart, glow ring on hover. */
+.clip-like-badge{position:absolute;bottom:8px;right:8px;background:linear-gradient(135deg,#ff4458,#e63946);color:#fff;font-family:'Space Mono',monospace;font-weight:700;font-size:.78rem;padding:.22rem .55rem;border-radius:14px;display:inline-flex;align-items:center;gap:.3rem;box-shadow:0 2px 10px rgba(230,57,70,.5);letter-spacing:.02em;backdrop-filter:blur(4px);z-index:2}
+.clip-like-badge-heart{font-size:.85rem;line-height:1;animation:heartBeat 1.6s ease-in-out infinite}
+.clip-card:hover .clip-like-badge{box-shadow:0 4px 16px rgba(230,57,70,.7)}
+@keyframes heartBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 .clip-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);opacity:0;transition:opacity .25s}
 .clip-card:hover .clip-play-overlay{opacity:1}
 .clip-hover-dim{position:absolute;inset:0;background:rgba(0,0,0,0);transition:background .25s;pointer-events:none}
@@ -126,6 +132,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-tag.category{background:var(--tag-bg);color:var(--tag-text);cursor:pointer}
 .clip-tag.category:hover{background:rgba(255,255,255,.12)}
 .clip-views{font-size:.7rem;opacity:.7}
+/* Like count in clip card meta — punchier than views/comments. Solid color, slight bold,
+   pops against muted siblings. Hidden when zero (markup-side). */
+.clip-likes{
+  font-size:.72rem;color:var(--accent);font-weight:700;
+  display:inline-flex;align-items:center;gap:.25rem;letter-spacing:.02em;
+  /* Subtle pill background so the like count pops against the muted meta line */
+  background:rgba(230,57,70,.12);
+  border:1px solid rgba(230,57,70,.35);
+  padding:.1rem .45rem .12rem;
+  border-radius:10px;line-height:1.1;
+}
+.clip-likes::first-letter{font-size:.95rem}
 .clip-tags-more{background:rgba(255,255,255,.08);color:var(--text-muted);cursor:pointer;font-size:.65rem;padding:.15rem .5rem;border-radius:3px;font-family:'Space Mono',monospace;transition:background .2s}
 .clip-tags-more:hover{background:rgba(255,255,255,.15);color:var(--text-primary)}
 
@@ -414,23 +432,53 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .player-frame-controls .frame-fps-select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.7rem;padding:.2rem .4rem;border-radius:var(--radius);cursor:pointer}
 
 /* Filter description — appears under the filter bar when a category is selected.
-   Designed to feel like a curator's note: gold left bar, slight tinted background,
-   bigger comfortable font. Stands out against the plain card grid below. */
-.filter-description{max-width:1440px;margin:0 auto 1rem;padding:0 1rem}
+   Designed as a curator's note: clean card with subtle gold-tinted background,
+   distinct from clip cards below, no overdone borders. */
+/* Section header — appears under filters when a category is selected.
+   Looks like a proper editorial section header: big section title in gold,
+   description text on the right. Strong gold-red gradient and solid border to
+   really stand out from the grid of clip cards below. */
+.filter-description{max-width:1440px;margin:.8rem auto 1.4rem;padding:0 1rem}
 .filter-description:empty{display:none}
 .filter-description > .filter-desc-card{
-  display:flex;align-items:flex-start;gap:.85rem;
-  padding:.9rem 1.1rem;
-  background:linear-gradient(135deg,rgba(244,162,38,.07),rgba(230,57,70,.04));
-  border-left:3px solid var(--gold);
-  border-radius:0 var(--radius) var(--radius) 0;
+  display:flex;align-items:stretch;gap:1.4rem;
+  padding:1.3rem 1.6rem;
+  background:linear-gradient(135deg,rgba(244,162,38,.18) 0%,rgba(230,57,70,.10) 50%,rgba(230,57,70,.04) 100%);
+  border:1px solid rgba(244,162,38,.4);
+  border-left:5px solid var(--gold);
+  border-radius:var(--radius-lg);
   position:relative;
+  box-shadow:0 4px 18px rgba(244,162,38,.08);
 }
-.filter-desc-icon{flex-shrink:0;font-size:1.1rem;line-height:1.5;color:var(--gold);opacity:.85}
-.filter-desc-text{font-size:.95rem;color:var(--text-primary);line-height:1.55;font-family:'Noto Sans',sans-serif;flex:1;font-weight:500}
-.filter-desc-edit,.filter-desc-add{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:.7rem;font-family:'Space Mono',monospace;padding:.3rem .55rem;border-radius:var(--radius);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;transition:all .15s}
-.filter-desc-edit:hover,.filter-desc-add:hover{border-color:var(--gold);color:var(--gold)}
-.filter-desc-add{display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;background:transparent;border-style:dashed}
+.filter-desc-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;color:var(--gold);
+  letter-spacing:.05em;line-height:1;
+  flex-shrink:0;text-transform:uppercase;
+  border-right:2px solid rgba(244,162,38,.35);padding-right:1.4rem;
+  display:flex;align-items:center;
+  text-shadow:0 0 18px rgba(244,162,38,.4);
+}
+.filter-desc-text{
+  flex:1;min-width:0;
+  font-size:1rem;color:var(--text-primary);line-height:1.6;
+  font-family:'Noto Sans',sans-serif;font-weight:500;
+  display:flex;align-items:center;
+}
+.filter-desc-edit,.filter-desc-add{
+  background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;
+  font-size:.65rem;font-family:'Space Mono',monospace;padding:.3rem .65rem;
+  border-radius:var(--radius);text-transform:uppercase;letter-spacing:.06em;
+  flex-shrink:0;transition:all .15s;align-self:center;
+}
+.filter-desc-edit:hover,.filter-desc-add:hover{border-color:var(--gold);color:var(--gold);background:rgba(244,162,38,.12)}
+.filter-desc-add{display:inline-flex;align-items:center;gap:.3rem;border-style:dashed}
+
+@media(max-width:640px){
+  .filter-description > .filter-desc-card{flex-direction:column;align-items:flex-start;gap:.7rem;padding:1rem 1.1rem;gap:.7rem}
+  .filter-desc-name{border-right:none;border-bottom:2px solid rgba(244,162,38,.3);padding-right:0;padding-bottom:.6rem;font-size:1.5rem;width:100%}
+  .filter-desc-text{font-size:.9rem}
+}
 
 /* Comments */
 .player-comments{margin-top:1.2rem;border-top:1px solid var(--border);padding-top:.8rem}

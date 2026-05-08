@@ -520,6 +520,7 @@ function renderClipCard(clip, i) {
       ${thumbContent}
       ${clip.duration ? `<span class="clip-duration">${clip.duration}</span>` : ''}
       ${badge ? `<span class="clip-hd-badge">${badge}</span>` : ''}
+      ${likeCounts[clip.id] ? `<span class="clip-like-badge"><span class="clip-like-badge-heart">♥</span> ${likeCounts[clip.id]}</span>` : ''}
       ${imgCount}
       ${hasVideo
         ? `<div class="clip-play-overlay"><div class="play-btn"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21"/></svg></div></div>`
@@ -527,7 +528,7 @@ function renderClipCard(clip, i) {
     </div>
     <div class="clip-info">
       <div class="clip-title">${esc(clipTitle(clip))}</div>
-      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}${likeCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">❤ ${likeCounts[clip.id]}</span>` : ''}</div>
+      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
         ${clip.tags.slice(0,2).map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
@@ -733,12 +734,19 @@ function applyFilters() {
   const descEl = $('#filterDescription');
   if (descEl) {
     const filter = FILTERS.find(f => f.id === currentTagFilter);
-    if (filter && filter.description) {
-      // Wrap in a styled card with a left accent bar and a small icon for visual punch.
-      // The text honors line breaks from the admin's input.
-      const text = esc(filter.description).replace(/\n/g, '<br>');
+    // Pick the right description for current language; fall back to RU if EN missing.
+    const localizedDesc = filter
+      ? ((LANG === 'en' && filter.descriptionEn && filter.descriptionEn.trim())
+          ? filter.descriptionEn
+          : (filter.description || ''))
+      : '';
+    if (filter && localizedDesc) {
+      const text = esc(localizedDesc).replace(/\n/g, '<br>');
+      // Show the section's localized name as a big left-aligned title, with
+      // the description on the right. Looks like a proper section header.
+      const sectionName = esc(filterLabel(filter));
       descEl.innerHTML = `<div class="filter-desc-card">
-        <span class="filter-desc-icon">✎</span>
+        <div class="filter-desc-name">${sectionName}</div>
         <div class="filter-desc-text">${text}</div>
         ${isAdmin ? `<button class="filter-desc-edit" id="editFilterDescBtn" title="Редактировать">${LANG === 'en' ? 'Edit' : 'Изменить'}</button>` : ''}
       </div>`;
@@ -760,19 +768,60 @@ function applyFilters() {
 
 async function editFilterDescription(filterId) {
   const filter = FILTERS.find(f => f.id === filterId);
-  const current = filter?.description || '';
-  const desc = prompt('Описание для тега:', current);
-  if (desc === null) return;
-  try {
-    const res = await fetch(`/api/filters/${filterId}/description`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
-      body: JSON.stringify({ description: desc.trim() })
-    });
-    const data = await res.json();
-    if (data.success) { await loadAnimatorsAndFilters(); applyFilters(); notify('Описание обновлено'); }
-    else notify(data.error, true);
-  } catch { notify('Ошибка сети', true); }
+  const currentRu = filter?.description || '';
+  const currentEn = filter?.descriptionEn || '';
+
+  // Show a real modal with two textareas instead of stacked prompt() dialogs.
+  // Lets admin write multi-line descriptions and see both languages side by side.
+  let modal = document.getElementById('filterDescModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'filterDescModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:560px">
+        <button class="modal-close" id="filterDescClose">&times;</button>
+        <h2 class="modal-title">Описание раздела</h2>
+        <div class="form-group">
+          <label class="form-label">Описание (RU)</label>
+          <textarea class="form-textarea" id="filterDescRu" rows="3" placeholder="Например: Все сцены с раскадровкой Кацуми Ишизуки"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description (EN)</label>
+          <textarea class="form-textarea" id="filterDescEn" rows="3" placeholder="e.g. All scenes storyboarded by Katsumi Ishizuka"></textarea>
+        </div>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+          <button class="btn-cancel" id="filterDescCancel">Отмена</button>
+          <button class="btn-submit" id="filterDescSave">Сохранить</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  const ruInput = modal.querySelector('#filterDescRu');
+  const enInput = modal.querySelector('#filterDescEn');
+  ruInput.value = currentRu;
+  enInput.value = currentEn;
+  modal.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => ruInput.focus(), 50);
+
+  const close = () => { modal.classList.remove('visible'); document.body.style.overflow = ''; };
+  modal.querySelector('#filterDescClose').onclick = close;
+  modal.querySelector('#filterDescCancel').onclick = close;
+  modal.onclick = e => { if (e.target === modal) close(); };
+  modal.querySelector('#filterDescSave').onclick = async () => {
+    try {
+      const res = await fetch(`/api/filters/${filterId}/description`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+        body: JSON.stringify({ description: ruInput.value.trim(), descriptionEn: enInput.value.trim() })
+      });
+      const data = await res.json();
+      if (data.success) { await loadAnimatorsAndFilters(); applyFilters(); notify('Описание обновлено'); close(); }
+      else notify(data.error, true);
+    } catch { notify('Ошибка сети', true); }
+  };
 }
 // Filter chips are rendered dynamically in renderFilterChips()
 
