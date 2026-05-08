@@ -519,11 +519,10 @@ html[lang="ru"] .filter-desc-name{transform:translateY(3px)}
 @media(max-width:1280px){
   .header-socials{display:none}
 }
-/* When admin is logged in there are 3 extra buttons (+UPLOAD, lock, plus
-   admin-only icons). Hide socials at a wider breakpoint to leave room. */
-@media(max-width:1500px){
-  body.admin-mode .header-socials{display:none}
-}
+/* Always hide socials when admin is logged in — there are too many extra
+   buttons (+UPLOAD, lock, random, theme) for the centered socials to fit
+   without colliding into the nav, regardless of screen width. */
+body.admin-mode .header-socials{display:none}
 
 @media(max-width:768px){
   .header{padding:0 1rem}
