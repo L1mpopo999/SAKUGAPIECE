@@ -1,4 +1,23 @@
-:root{--bg-primary:#0a0a0f;--bg-secondary:#12121c;--bg-card:#1a1a2e;--bg-card-hover:#222240;--accent:#e63946;--accent-glow:rgba(230,57,70,.35);--gold:#f4a226;--gold-glow:rgba(244,162,38,.3);--text-primary:#f0ece2;--text-secondary:#8a8a9a;--text-muted:#55556a;--border:#2a2a3e;--border-light:#3a3a52;--tag-bg:rgba(230,57,70,.15);--tag-text:#ff6b7a;--tag-animator-bg:rgba(244,162,38,.12);--tag-animator-text:#f4a226;--radius:6px;--radius-lg:12px;--shadow:0 4px 24px rgba(0,0,0,.5)}
+:root{--bg-primary:#0a0a0f;--bg-secondary:#12121c;--bg-card:#1a1a2e;--bg-card-hover:#222240;--accent:#e63946;--accent-glow:rgba(230,57,70,.35);--gold:#f4a226;--gold-glow:rgba(244,162,38,.3);--text-primary:#f0ece2;--text-secondary:#8a8a9a;--text-muted:#55556a;--border:#2a2a3e;--border-light:#3a3a52;--tag-bg:rgba(230,57,70,.15);--tag-text:#ff6b7a;--tag-animator-bg:rgba(244,162,38,.12);--tag-animator-text:#f4a226;--radius:6px;--radius-lg:12px;--shadow:0 4px 24px rgba(0,0,0,.5);--header-bg:rgba(10,10,15,.92)}
+
+/* Light theme: cleaner pastels, dark text on light surfaces. Same accent colors so brand stays consistent. */
+:root[data-theme="light"]{
+  --bg-primary:#f5f3ee;
+  --bg-secondary:#ebe8e0;
+  --bg-card:#ffffff;
+  --bg-card-hover:#f9f7f1;
+  --text-primary:#1a1a1f;
+  --text-secondary:#5a5a6a;
+  --text-muted:#9b9bab;
+  --border:#dad6cc;
+  --border-light:#c5c1b6;
+  --tag-bg:rgba(230,57,70,.12);
+  --tag-text:#c1303d;
+  --tag-animator-bg:rgba(244,162,38,.18);
+  --tag-animator-text:#a87015;
+  --shadow:0 4px 16px rgba(0,0,0,.08);
+  --header-bg:rgba(245,243,238,.92);
+}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg-primary);color:var(--text-primary);font-family:'Noto Sans',sans-serif;min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(230,57,70,.06) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 90%,rgba(244,162,38,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
@@ -7,7 +26,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .page{display:none;position:relative;z-index:1}.page.active{display:block}
 
 /* Header */
-.header{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 2rem}
+.header{position:sticky;top:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 2rem}
 .header-inner{max-width:1440px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:.5rem;position:relative}
 .header-socials{display:flex;align-items:center;gap:.6rem;position:absolute;left:50%;transform:translateX(-50%)}
 .header-socials-name{font-family:'Noto Sans',sans-serif;font-size:.7rem;font-weight:400;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase}
@@ -458,3 +477,31 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
   .nav-links{gap:.5rem}
   .image-viewer-nav{width:36px;height:36px;font-size:1.5rem}
 }
+
+/* === Clip page actions: like / share / download === */
+.clip-page-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 1.2rem}
+.clip-action-btn{display:inline-flex;align-items:center;gap:.45rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:.5rem .9rem;border-radius:var(--radius);font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;text-decoration:none;transition:all .15s}
+.clip-action-btn:hover{border-color:var(--gold);color:var(--text-primary);transform:translateY(-1px)}
+.clip-action-btn.liked{border-color:var(--accent);color:var(--accent);background:rgba(230,57,70,.08)}
+.clip-action-btn .like-heart{font-size:1rem;transition:transform .2s}
+.clip-action-btn.liked .like-heart{transform:scale(1.15)}
+.clip-action-btn .like-count{font-weight:700}
+
+/* Theme/random toggle buttons in the header — small icon-only buttons */
+.nav-icon-btn{font-size:1rem;padding:.25rem .55rem !important;border:1px solid var(--border);border-radius:14px;min-width:36px;text-align:center}
+.nav-icon-btn:hover{border-color:var(--gold);color:var(--text-primary)}
+
+/* === URL upload tab in upload form === */
+.upload-source-tabs{display:flex;gap:.5rem;margin-bottom:.8rem}
+.upload-source-tab{flex:1;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:.55rem 1rem;border-radius:var(--radius);font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;transition:all .15s}
+.upload-source-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(244,162,38,.08)}
+.url-fetch-status{margin-top:.5rem;font-size:.75rem;color:var(--text-secondary);font-family:'Space Mono',monospace}
+.url-fetch-status.error{color:var(--accent)}
+.url-fetch-status.success{color:#4ade80}
+
+/* In light theme: small adjustments to keep video badges/overlays readable */
+:root[data-theme="light"] .clip-thumb{background:#000}
+:root[data-theme="light"] .play-btn{background:rgba(255,255,255,.92);color:#1a1a1f}
+:root[data-theme="light"] .player-modal,
+:root[data-theme="light"] .image-viewer{background:rgba(20,20,30,.92)}
+:root[data-theme="light"] body::before{background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(230,57,70,.04) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 90%,rgba(244,162,38,.04) 0%,transparent 60%)}

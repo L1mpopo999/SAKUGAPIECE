@@ -40,6 +40,8 @@
       <button class="nav-link" data-page="animators" data-i18n="nav_animators">Аниматоры</button>
       <button class="nav-link" data-page="about" data-i18n="nav_about">О сайте</button>
       <button class="btn-upload admin-only" id="openUploadBtn" data-i18n="nav_upload">+ Загрузить</button>
+      <button class="nav-link nav-icon-btn" id="randomClipBtn" title="Random clip">🎲</button>
+      <button class="nav-link nav-icon-btn" id="themeToggleBtn" title="Toggle theme">🌙</button>
       <button class="nav-link nav-lang-btn" id="langToggleBtn" title="Switch language">EN</button>
       <button class="nav-link" id="adminToggleBtn" title="Админ">🔒</button>
     </nav>
@@ -192,19 +194,33 @@
 
       <div class="form-group">
         <label class="form-label">Видеофайл (необязательно если есть фото)</label>
-        <div class="drop-zone" id="dropZone">
-          <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div class="drop-zone-text">Перетащите видео или нажмите</div>
-          <div class="drop-zone-hint">MP4, WebM, MOV — до 200 МБ</div>
+        <!-- Two ways to provide video: upload from disk OR fetch from URL -->
+        <div class="upload-source-tabs">
+          <button type="button" class="upload-source-tab active" data-source-tab="file">📁 Файл</button>
+          <button type="button" class="upload-source-tab" data-source-tab="url">🔗 По ссылке</button>
         </div>
-        <div class="file-info" id="fileInfo">
-          <span class="file-info-name" id="fileName"></span>
-          <span class="file-info-size" id="fileSize"></span>
-          <button type="button" class="file-info-remove" id="removeFileBtn">&times;</button>
+
+        <div class="upload-source-pane" data-source-pane="file">
+          <div class="drop-zone" id="dropZone">
+            <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="drop-zone-text">Перетащите видео или нажмите</div>
+            <div class="drop-zone-hint">MP4, WebM, MOV — до 200 МБ</div>
+          </div>
+          <div class="file-info" id="fileInfo">
+            <span class="file-info-name" id="fileName"></span>
+            <span class="file-info-size" id="fileSize"></span>
+            <button type="button" class="file-info-remove" id="removeFileBtn">&times;</button>
+          </div>
+          <input type="file" id="fileInput" name="video" accept="video/*" hidden>
+          <div class="upload-video-preview" id="uploadVideoPreview" style="display:none;">
+            <video class="upload-preview-player" id="uploadPreviewPlayer" controls muted></video>
+          </div>
         </div>
-        <input type="file" id="fileInput" name="video" accept="video/*" hidden>
-        <div class="upload-video-preview" id="uploadVideoPreview" style="display:none;">
-          <video class="upload-preview-player" id="uploadPreviewPlayer" controls muted></video>
+
+        <div class="upload-source-pane" data-source-pane="url" style="display:none">
+          <input class="form-input" id="videoUrlInput" type="url" placeholder="https://example.com/video.mp4" autocomplete="off">
+          <button type="button" class="btn-submit" id="fetchVideoUrlBtn" style="margin-top:.5rem">Скачать с этого URL</button>
+          <div class="url-fetch-status" id="urlFetchStatus"></div>
         </div>
       </div>
 

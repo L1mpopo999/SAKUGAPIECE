@@ -266,6 +266,10 @@ let viewerIndex = 0;
 
 let adminToken = null;
 let commentCounts = {};
+// Likes: counts by clipId, plus the set of clipIds the current user has liked.
+// Persisted server-side; we just cache it client-side for instant UI feedback.
+let likeCounts = {};
+let likedByMe = new Set();
 
 // ===== HELPERS =====
 const $ = s => document.querySelector(s);
@@ -414,7 +418,57 @@ $('#backToAnimatorsBtn').addEventListener('click', () => navigateTo('animators')
 async function loadClips() {
   try { allClips = await (await fetch('/api/clips')).json(); } catch { allClips = []; }
   try { commentCounts = await (await fetch('/api/comments/counts')).json(); } catch { commentCounts = {}; }
+  try { likeCounts = await (await fetch('/api/likes/counts')).json(); } catch { likeCounts = {}; }
+  // Restore "what I've liked" set from localStorage (server tracks per-token authoritatively;
+  // local cache makes the heart show as filled on re-visit without an extra API roundtrip)
+  try { likedByMe = new Set(JSON.parse(localStorage.getItem('sp_liked') || '[]')); } catch { likedByMe = new Set(); }
   applyFilters();
+}
+
+// Toggle a like on the server. Optimistically updates local state and re-renders
+// any visible card/page so the heart fills instantly.
+async function toggleLike(clipId) {
+  const id = String(clipId);
+  const userToken = getUserToken();
+  // Optimistic update
+  const wasLiked = likedByMe.has(id);
+  if (wasLiked) {
+    likedByMe.delete(id);
+    likeCounts[id] = Math.max(0, (likeCounts[id] || 1) - 1);
+  } else {
+    likedByMe.add(id);
+    likeCounts[id] = (likeCounts[id] || 0) + 1;
+  }
+  // Reflect in DOM right away
+  document.querySelectorAll(`[data-like-clip="${id}"]`).forEach(btn => {
+    btn.classList.toggle('liked', !wasLiked);
+    const countEl = btn.querySelector('.like-count');
+    if (countEl) countEl.textContent = likeCounts[id] || 0;
+  });
+  try {
+    const r = await fetch(`/api/clips/${id}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userToken })
+    });
+    const d = await r.json();
+    // Server-authoritative: sync our state to whatever it returns
+    if (d && typeof d.count === 'number') {
+      likeCounts[id] = d.count;
+      if (d.liked) likedByMe.add(id); else likedByMe.delete(id);
+      document.querySelectorAll(`[data-like-clip="${id}"]`).forEach(btn => {
+        btn.classList.toggle('liked', !!d.liked);
+        const countEl = btn.querySelector('.like-count');
+        if (countEl) countEl.textContent = d.count;
+      });
+      try { localStorage.setItem('sp_liked', JSON.stringify([...likedByMe])); } catch {}
+    }
+  } catch {
+    // Roll back optimistic update on failure
+    if (wasLiked) { likedByMe.add(id); likeCounts[id] = (likeCounts[id] || 0) + 1; }
+    else { likedByMe.delete(id); likeCounts[id] = Math.max(0, (likeCounts[id] || 1) - 1); }
+    notify(LANG === 'en' ? 'Failed to like' : 'Не удалось поставить лайк', true);
+  }
 }
 
 // ===== CLIP CARD =====
@@ -454,7 +508,7 @@ function renderClipCard(clip, i) {
     </div>
     <div class="clip-info">
       <div class="clip-title">${esc(clipTitle(clip))}</div>
-      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}</div>
+      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views">👁 ${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">💬 ${commentCounts[clip.id]}</span>` : ''}${likeCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views">❤ ${likeCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
         ${clip.tags.slice(0,2).map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
@@ -648,6 +702,8 @@ function applyFilters() {
   // Sort
   if (currentSort === 'views') {
     clips = [...clips].sort((a, b) => (b.views || 0) - (a.views || 0));
+  } else if (currentSort === 'likes') {
+    clips = [...clips].sort((a, b) => (likeCounts[b.id] || 0) - (likeCounts[a.id] || 0));
   }
   
   // Show filter description
@@ -783,7 +839,12 @@ function renderAnimatorGrid() {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const name = btn.dataset.delName;
-      if (!confirm(`Удалить аниматора «${name}» навсегда?`)) return;
+      // Show how many clips reference this animator so admin doesn't delete by accident
+      const clipCount = allClips.filter(c => c.animators.some(a => a.toLowerCase() === name.toLowerCase())).length;
+      const msg = clipCount > 0
+        ? `Удалить аниматора «${name}» из списка?\n\nОн упомянут в ${clipCount} ${pluralClips(clipCount)}. Его имя в этих клипах останется, но из общего списка он пропадёт. Это можно поправить вручную.`
+        : `Удалить аниматора «${name}»?\nКлипов с ним нет, удаление безопасно.`;
+      if (!confirm(msg)) return;
       await fetch('/api/animators', { method:'DELETE', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({name}) });
       await loadAnimatorsAndFilters();
       renderAnimatorGrid();
@@ -810,11 +871,30 @@ function renderAnimatorGrid() {
   });
 }
 
-async function addAnimator(name) {
-  const res = await fetch('/api/animators', { method:'POST', headers:{'Content-Type':'application/json','X-Admin-Token':adminToken}, body:JSON.stringify({name}) });
+async function addAnimator(name, force) {
+  const res = await fetch('/api/animators', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ name, force: !!force })
+  });
   const data = await res.json();
-  if (data.success) { await loadAnimatorsAndFilters(); renderAnimatorGrid(); notify(`«${name}» добавлен`); }
-  else notify(data.error, true);
+  if (data.success) {
+    await loadAnimatorsAndFilters();
+    renderAnimatorGrid();
+    notify(`«${name}» добавлен`);
+    return;
+  }
+  // Special case: server detected a visually-similar existing animator (e.g. mixed
+  // Cyrillic/Latin lookalikes). Ask the admin if it's really a different person.
+  if (data.error === 'duplicate_lookalike') {
+    const msg = `Похоже, что «${name}» — это тот же аниматор что и существующий «${data.lookalike}» (возможно скрытые буквы из разных алфавитов).\n\nПродолжить и создать всё равно как отдельного?`;
+    if (confirm(msg)) {
+      // Retry with force=true
+      return addAnimator(name, true);
+    }
+    return;
+  }
+  notify(data.error || 'Ошибка', true);
 }
 $('#animatorSearchInput')?.addEventListener('input', renderAnimatorGrid);
 
@@ -1480,6 +1560,62 @@ function removeVideoFile(){
   selectedFile=null;fileInput.value='';$('#fileInfo').classList.remove('visible');
 }
 
+// === Upload source tabs: file vs URL ===
+// State for the URL-based path. When the admin successfully fetches a remote
+// video, we get back a server-side filename which we'll send as `preloadedVideo`
+// instead of attaching a multipart File.
+let preloadedVideoFilename = null;
+
+document.querySelectorAll('.upload-source-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const which = tab.dataset.sourceTab;
+    document.querySelectorAll('.upload-source-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.upload-source-pane').forEach(p => {
+      p.style.display = (p.dataset.sourcePane === which) ? '' : 'none';
+    });
+    // Reset the other path's state when switching tabs
+    if (which === 'url') {
+      removeVideoFile();
+    } else {
+      preloadedVideoFilename = null;
+      $('#urlFetchStatus').textContent = '';
+      $('#urlFetchStatus').classList.remove('error', 'success');
+      $('#videoUrlInput').value = '';
+    }
+  });
+});
+
+$('#fetchVideoUrlBtn')?.addEventListener('click', async () => {
+  const url = $('#videoUrlInput').value.trim();
+  const status = $('#urlFetchStatus');
+  if (!url) { status.textContent = 'Введите URL'; status.className = 'url-fetch-status error'; return; }
+  status.textContent = 'Скачиваем... это может занять до минуты';
+  status.className = 'url-fetch-status';
+  $('#fetchVideoUrlBtn').disabled = true;
+  try {
+    const r = await fetch('/api/clips/from-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ url })
+    });
+    const d = await r.json();
+    if (d.success) {
+      preloadedVideoFilename = d.filename;
+      const sizeMb = (d.size / 1024 / 1024).toFixed(1);
+      status.textContent = `✓ Файл скачан (${sizeMb} МБ). Заполните остальные поля и нажмите "Загрузить".`;
+      status.className = 'url-fetch-status success';
+    } else {
+      status.textContent = '✕ ' + (d.error || 'Не удалось скачать');
+      status.className = 'url-fetch-status error';
+    }
+  } catch (err) {
+    status.textContent = '✕ Ошибка сети';
+    status.className = 'url-fetch-status error';
+  } finally {
+    $('#fetchVideoUrlBtn').disabled = false;
+  }
+});
+
 // ===== FILE HANDLING — IMAGES =====
 const imageDropZone=$('#imageDropZone'), imageInput=$('#imageInput');
 imageDropZone.addEventListener('click',()=>imageInput.click());
@@ -1540,13 +1676,14 @@ function formatBytes(b){if(b<1024)return b+' Б';if(b<1048576)return(b/1024).toF
 $('#uploadForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const title=$('#clipTitleInput').value.trim(), titleEn=$('#clipTitleEnInput')?.value.trim()||'', episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=selectedTags.join(','), notes=$('#notesInput').value.trim();
-  if(!selectedFile&&!selectedImages.length){notify('Загрузите видео или хотя бы одно фото',true);return}
+  if(!selectedFile&&!selectedImages.length&&!preloadedVideoFilename){notify('Загрузите видео или хотя бы одно фото',true);return}
   if(!title){notify('Введите название',true);return}
   if(!selectedAnimators.length){notify('Выберите аниматора',true);return}
   if(!episode){notify('Введите номер эпизода',true);return}
 
   const fd=new FormData();
   if(selectedFile)fd.append('video',selectedFile);
+  if(preloadedVideoFilename)fd.append('preloadedVideo', preloadedVideoFilename);
   if(selectedThumbnail)fd.append('thumbnail',selectedThumbnail);
   selectedImages.forEach(f=>fd.append('images',f));
   fd.append('title',title);fd.append('titleEn',titleEn);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);
@@ -1563,7 +1700,8 @@ $('#uploadForm').addEventListener('submit',async e=>{
       xhr.onerror=()=>no(new Error('Ошибка сети'));
       xhr.open('POST','/api/clips');xhr.setRequestHeader('X-Admin-Token',adminToken);xhr.send(fd);
     });
-    $('#uploadForm').reset();selectedAnimators=[];selectedTags=[];selectedImages=[];selectedFile=null;selectedThumbnail=null;renderAnimatorChips();renderTagChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');removeThumbnail();
+    $('#uploadForm').reset();selectedAnimators=[];selectedTags=[];selectedImages=[];selectedFile=null;selectedThumbnail=null;preloadedVideoFilename=null;renderAnimatorChips();renderTagChips();renderImagePreviews();$('#fileInfo').classList.remove('visible');removeThumbnail();
+    $('#urlFetchStatus') && ($('#urlFetchStatus').textContent='', $('#urlFetchStatus').className='url-fetch-status');
     const p=$('#uploadPreviewPlayer');if(p.src){p.pause();URL.revokeObjectURL(p.src);p.removeAttribute('src')}$('#uploadVideoPreview').style.display='none';
     closeUploadModal();notify(`«${title}» загружен!`);await loadAnimatorsAndFilters();await loadClips();
     if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile);
@@ -2582,6 +2720,7 @@ function renderFilterChips() {
     ${arcFilters.map(f => `<button class="filter-chip arc-chip${currentArcFilter===f.id?' active':''}" data-arc="${esc(f.id)}">${esc(filterLabel(f))}</button>`).join('')}
     <span class="filter-separator"></span>
     <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 ${LANG==='en'?'Views':'Просмотры'}</button>
+    <button class="filter-chip sort-chip${currentSort==='likes'?' active':''}" data-sort="likes">❤ ${LANG==='en'?'Likes':'Лайки'}</button>
     ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="results-count" id="resultsCount"></span>
     <div class="filter-tags-dropdown" id="filterTagsDropdown">
@@ -2808,6 +2947,25 @@ function renderClipPage(clip) {
           <span class="clip-meta-divider">·</span>
           <span>${esc(clip.arc)}</span>
           ${clip.quality ? `<span class="clip-meta-divider">·</span><span>${clip.quality}</span>` : ''}
+          ${clip.views ? `<span class="clip-meta-divider">·</span><span>👁 ${clip.views}</span>` : ''}
+        </div>
+
+        <div class="clip-page-actions">
+          <button class="clip-action-btn ${likedByMe.has(String(clip.id)) ? 'liked' : ''}" data-like-clip="${clip.id}" title="${LANG === 'en' ? 'Like' : 'Нравится'}">
+            <span class="like-heart">♥</span> <span class="like-count">${likeCounts[clip.id] || 0}</span>
+          </button>
+          <button class="clip-action-btn" data-action="share-copy" title="${LANG === 'en' ? 'Copy link' : 'Скопировать ссылку'}">
+            🔗 <span>${LANG === 'en' ? 'Copy link' : 'Ссылка'}</span>
+          </button>
+          <button class="clip-action-btn" data-action="share-tg" title="${LANG === 'en' ? 'Share on Telegram' : 'В Telegram'}">
+            ✈ <span>Telegram</span>
+          </button>
+          <button class="clip-action-btn" data-action="share-twitter" title="X / Twitter">
+            𝕏 <span>X</span>
+          </button>
+          ${clip.videoUrl ? `<a class="clip-action-btn" href="${esc(clip.videoUrl)}" download title="${LANG === 'en' ? 'Download video' : 'Скачать видео'}">
+            ⬇ <span>${LANG === 'en' ? 'Download' : 'Скачать'}</span>
+          </a>` : ''}
         </div>
 
         <div class="clip-page-tags">
@@ -2824,6 +2982,33 @@ function renderClipPage(clip) {
 
   document.querySelector('.header').after(page);
 
+  // Wire up actions: like / share / download.
+  // The download button is a plain <a download>, so we don't need JS for it.
+  page.querySelector('[data-like-clip]')?.addEventListener('click', () => toggleLike(clip.id));
+  page.querySelector('[data-action="share-copy"]')?.addEventListener('click', async () => {
+    const url = window.location.origin + '/clip/' + clip.id;
+    try {
+      await navigator.clipboard.writeText(url);
+      notify(LANG === 'en' ? 'Link copied' : 'Ссылка скопирована');
+    } catch {
+      // Fallback for old browsers / non-https
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); notify(LANG === 'en' ? 'Link copied' : 'Ссылка скопирована'); }
+      catch { notify(LANG === 'en' ? 'Copy failed' : 'Не удалось скопировать', true); }
+      document.body.removeChild(ta);
+    }
+  });
+  page.querySelector('[data-action="share-tg"]')?.addEventListener('click', () => {
+    const url = window.location.origin + '/clip/' + clip.id;
+    const text = clipTitle(clip);
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  });
+  page.querySelector('[data-action="share-twitter"]')?.addEventListener('click', () => {
+    const url = window.location.origin + '/clip/' + clip.id;
+    const text = clipTitle(clip);
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  });
   // Setup timecodes
   const timecodes = parseTimecodes(clip.timecodes);
   if (timecodes.length) {
@@ -3094,6 +3279,33 @@ applyI18n();
 // Language toggle button
 document.getElementById('langToggleBtn')?.addEventListener('click', () => {
   setLang(LANG === 'ru' ? 'en' : 'ru');
+});
+
+// Random clip button — opens a random clip's page
+document.getElementById('randomClipBtn')?.addEventListener('click', async () => {
+  try {
+    const r = await fetch('/api/clips/random');
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    if (d.id) window.location.href = '/clip/' + d.id;
+  } catch {
+    notify(LANG === 'en' ? 'No clips yet' : 'Клипов нет', true);
+  }
+});
+
+// Theme toggle: light/dark. Persisted in localStorage. Default = dark.
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = theme === 'light' ? '☀' : '🌙';
+}
+const savedTheme = localStorage.getItem('sp_theme') || 'dark';
+applyTheme(savedTheme);
+document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('sp_theme', next);
+  applyTheme(next);
 });
 
 init();
