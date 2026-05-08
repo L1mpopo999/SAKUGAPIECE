@@ -440,11 +440,18 @@ async function toggleLike(clipId) {
     likeCounts[id] = (likeCounts[id] || 0) + 1;
   }
   // Reflect in DOM right away
-  document.querySelectorAll(`[data-like-clip="${id}"]`).forEach(btn => {
-    btn.classList.toggle('liked', !wasLiked);
+  const updateBtn = (btn, liked, count) => {
+    btn.classList.toggle('liked', liked);
     const countEl = btn.querySelector('.like-count');
-    if (countEl) countEl.textContent = likeCounts[id] || 0;
-  });
+    if (countEl) countEl.textContent = count;
+    const labelEl = btn.querySelector('.like-label');
+    if (labelEl) {
+      labelEl.textContent = LANG === 'en'
+        ? (liked ? 'Liked' : 'Like')
+        : (liked ? 'Нравится' : 'Лайк');
+    }
+  };
+  document.querySelectorAll(`[data-like-clip="${id}"]`).forEach(btn => updateBtn(btn, !wasLiked, likeCounts[id] || 0));
   try {
     const r = await fetch(`/api/clips/${id}/like`, {
       method: 'POST',
@@ -456,11 +463,7 @@ async function toggleLike(clipId) {
     if (d && typeof d.count === 'number') {
       likeCounts[id] = d.count;
       if (d.liked) likedByMe.add(id); else likedByMe.delete(id);
-      document.querySelectorAll(`[data-like-clip="${id}"]`).forEach(btn => {
-        btn.classList.toggle('liked', !!d.liked);
-        const countEl = btn.querySelector('.like-count');
-        if (countEl) countEl.textContent = d.count;
-      });
+      document.querySelectorAll(`[data-like-clip="${id}"]`).forEach(btn => updateBtn(btn, !!d.liked, d.count));
       try { localStorage.setItem('sp_liked', JSON.stringify([...likedByMe])); } catch {}
     }
   } catch {
@@ -703,7 +706,11 @@ function applyFilters() {
   if (currentSort === 'views') {
     clips = [...clips].sort((a, b) => (b.views || 0) - (a.views || 0));
   } else if (currentSort === 'likes') {
-    clips = [...clips].sort((a, b) => (likeCounts[b.id] || 0) - (likeCounts[a.id] || 0));
+    // When sorting by likes, hide clips with zero likes — keeps the page focused
+    // on what people actually liked. Once everything has zero likes the user
+    // will just see "no results", which is correct behavior.
+    clips = clips.filter(c => (likeCounts[c.id] || 0) > 0)
+                 .sort((a, b) => (likeCounts[b.id] || 0) - (likeCounts[a.id] || 0));
   }
   
   // Show filter description
@@ -2950,10 +2957,17 @@ function renderClipPage(clip) {
           ${clip.views ? `<span class="clip-meta-divider">·</span><span>👁 ${clip.views}</span>` : ''}
         </div>
 
-        <div class="clip-page-actions">
-          <button class="clip-action-btn ${likedByMe.has(String(clip.id)) ? 'liked' : ''}" data-like-clip="${clip.id}" title="${LANG === 'en' ? 'Like' : 'Нравится'}">
-            <span class="like-heart">♥</span> <span class="like-count">${likeCounts[clip.id] || 0}</span>
+        <!-- Like is the primary action — bigger, separated from secondary actions -->
+        <div class="clip-page-like-row">
+          <button class="clip-like-btn ${likedByMe.has(String(clip.id)) ? 'liked' : ''}" data-like-clip="${clip.id}" title="${LANG === 'en' ? 'Like this clip' : 'Поставить лайк'}">
+            <span class="like-heart">♥</span>
+            <span class="like-count">${likeCounts[clip.id] || 0}</span>
+            <span class="like-label">${LANG === 'en' ? (likedByMe.has(String(clip.id)) ? 'Liked' : 'Like') : (likedByMe.has(String(clip.id)) ? 'Нравится' : 'Лайк')}</span>
           </button>
+        </div>
+
+        <!-- Secondary actions: share / download -->
+        <div class="clip-page-actions">
           <button class="clip-action-btn" data-action="share-copy" title="${LANG === 'en' ? 'Copy link' : 'Скопировать ссылку'}">
             🔗 <span>${LANG === 'en' ? 'Copy link' : 'Ссылка'}</span>
           </button>

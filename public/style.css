@@ -482,10 +482,19 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .clip-page-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 1.2rem}
 .clip-action-btn{display:inline-flex;align-items:center;gap:.45rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:.5rem .9rem;border-radius:var(--radius);font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;text-decoration:none;transition:all .15s}
 .clip-action-btn:hover{border-color:var(--gold);color:var(--text-primary);transform:translateY(-1px)}
-.clip-action-btn.liked{border-color:var(--accent);color:var(--accent);background:rgba(230,57,70,.08)}
-.clip-action-btn .like-heart{font-size:1rem;transition:transform .2s}
-.clip-action-btn.liked .like-heart{transform:scale(1.15)}
-.clip-action-btn .like-count{font-weight:700}
+
+/* Primary like action — bigger, more prominent than the share row */
+.clip-page-like-row{margin:1.2rem 0 .6rem}
+.clip-like-btn{display:inline-flex;align-items:center;gap:.65rem;background:var(--bg-card);border:2px solid var(--border);color:var(--text-primary);padding:.75rem 1.4rem;border-radius:var(--radius-lg);font-family:'Manrope',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;transition:all .2s ease;letter-spacing:.02em}
+.clip-like-btn:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 12px rgba(230,57,70,.2)}
+.clip-like-btn .like-heart{font-size:1.4rem;color:var(--text-muted);transition:all .2s}
+.clip-like-btn .like-count{font-variant-numeric:tabular-nums;color:var(--text-secondary);font-size:.95rem}
+.clip-like-btn .like-label{text-transform:uppercase;font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;color:var(--text-secondary)}
+.clip-like-btn.liked{border-color:var(--accent);background:rgba(230,57,70,.1)}
+.clip-like-btn.liked .like-heart{color:var(--accent);transform:scale(1.15);animation:heartPop .35s ease}
+.clip-like-btn.liked .like-count{color:var(--accent)}
+.clip-like-btn.liked .like-label{color:var(--accent)}
+@keyframes heartPop{0%{transform:scale(1)}50%{transform:scale(1.4)}100%{transform:scale(1.15)}}
 
 /* Theme/random toggle buttons in the header — small icon-only buttons */
 .nav-icon-btn{font-size:1rem;padding:.25rem .55rem !important;border:1px solid var(--border);border-radius:14px;min-width:36px;text-align:center}
