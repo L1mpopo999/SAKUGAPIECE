@@ -357,18 +357,6 @@ app.get(/^\/clip\/(\d+)$/, (req, res, next) => {
       ? SITE_BASE_URL + clip.thumbnailUrl
       : (clip.images && clip.images[0] ? SITE_BASE_URL + clip.images[0].url : SITE_BASE_URL + '/og-default.png');
     const url = SITE_BASE_URL + '/clip/' + id;
-    // If clip has a video, add og:video tags so Telegram (and other unfurlers)
-    // can play it inline as a GIF-like preview right inside the chat. Without
-    // these tags the message would show only a static thumbnail.
-    const videoTags = clip.videoUrl ? `
-    <meta property="og:video" content="${escHtml(SITE_BASE_URL + clip.videoUrl)}">
-    <meta property="og:video:secure_url" content="${escHtml(SITE_BASE_URL + clip.videoUrl)}">
-    <meta property="og:video:type" content="video/mp4">
-    <meta property="og:video:width" content="1280">
-    <meta property="og:video:height" content="720">
-    <meta name="twitter:player" content="${escHtml(SITE_BASE_URL + clip.videoUrl)}">
-    <meta name="twitter:player:width" content="1280">
-    <meta name="twitter:player:height" content="720">` : '';
     const metaBlock = `
     <title>${escHtml(title)} — Sakuga Piece</title>
     <meta name="description" content="${escHtml(desc)}">
@@ -377,8 +365,8 @@ app.get(/^\/clip\/(\d+)$/, (req, res, next) => {
     <meta property="og:description" content="${escHtml(desc)}">
     <meta property="og:image" content="${escHtml(image)}">
     <meta property="og:url" content="${escHtml(url)}">
-    <meta property="og:site_name" content="Sakuga Piece">${videoTags}
-    <meta name="twitter:card" content="${clip.videoUrl ? 'player' : 'summary_large_image'}">
+    <meta property="og:site_name" content="Sakuga Piece">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${escHtml(title)}">
     <meta name="twitter:description" content="${escHtml(desc)}">
     <meta name="twitter:image" content="${escHtml(image)}">
