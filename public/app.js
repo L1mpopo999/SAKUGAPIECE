@@ -227,12 +227,16 @@ let DIRECTORS = [];
 let EPISODE_DIRECTORS = {}; // { "1015": "Megumi Ishitani", ... }
 
 async function loadAnimatorsAndFilters() {
-  try { ANIMATORS = await (await fetch('/api/animators')).json(); } catch { ANIMATORS = []; }
-  try { FILTERS = await (await fetch('/api/filters')).json(); } catch { FILTERS = []; }
-  try { EPISODES_DATA = await (await fetch('/api/episodes')).json(); } catch { EPISODES_DATA = { hidden: [], renamed: {} }; }
-  try { HIDDEN_ANIMATORS = await (await fetch('/api/animators/hidden')).json(); } catch { HIDDEN_ANIMATORS = []; }
-  try { DIRECTORS = await (await fetch('/api/directors')).json(); } catch { DIRECTORS = []; }
-  try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors')).json(); } catch { EPISODE_DIRECTORS = {}; }
+  // Cache-bust to make sure we get fresh data after admin edits.
+  // Without this, the browser may serve a cached /api/filters response and
+  // newly-saved fields (like descriptionEn) won't appear immediately.
+  const bust = '?_=' + Date.now();
+  try { ANIMATORS = await (await fetch('/api/animators' + bust)).json(); } catch { ANIMATORS = []; }
+  try { FILTERS = await (await fetch('/api/filters' + bust)).json(); } catch { FILTERS = []; }
+  try { EPISODES_DATA = await (await fetch('/api/episodes' + bust)).json(); } catch { EPISODES_DATA = { hidden: [], renamed: {} }; }
+  try { HIDDEN_ANIMATORS = await (await fetch('/api/animators/hidden' + bust)).json(); } catch { HIDDEN_ANIMATORS = []; }
+  try { DIRECTORS = await (await fetch('/api/directors' + bust)).json(); } catch { DIRECTORS = []; }
+  try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors' + bust)).json(); } catch { EPISODE_DIRECTORS = {}; }
 }
 
 // Helper: normalize director value (legacy string or array) to a clean string array.
@@ -812,7 +816,12 @@ async function editFilterDescription(filterId) {
   const close = () => { modal.classList.remove('visible'); document.body.style.overflow = ''; };
   modal.querySelector('#filterDescClose').onclick = close;
   modal.querySelector('#filterDescCancel').onclick = close;
-  modal.onclick = e => { if (e.target === modal) close(); };
+  // Don't close on overlay click — admin might be in the middle of typing and
+  // a misclick outside would lose their work. Esc and the X button still close.
+  modal.onclick = null;
+  // Close on Esc
+  const escHandler = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
   modal.querySelector('#filterDescSave').onclick = async () => {
     try {
       const res = await fetch(`/api/filters/${filterId}/description`, {
@@ -821,9 +830,22 @@ async function editFilterDescription(filterId) {
         body: JSON.stringify({ description: ruInput.value.trim(), descriptionEn: enInput.value.trim() })
       });
       const data = await res.json();
-      if (data.success) { await loadAnimatorsAndFilters(); applyFilters(); notify('Описание обновлено'); close(); }
+      console.log('[filter-desc] save response:', data);
+      if (data.success) {
+        // Patch local FILTERS cache directly so the next render uses the new data
+        // even if the API fetch is cached or slow.
+        const cached = FILTERS.find(f => f.id === filterId);
+        if (cached && data.filter) {
+          cached.description = data.filter.description || '';
+          cached.descriptionEn = data.filter.descriptionEn || '';
+        }
+        await loadAnimatorsAndFilters();
+        applyFilters();
+        notify('Описание обновлено');
+        close();
+      }
       else notify(data.error, true);
-    } catch { notify('Ошибка сети', true); }
+    } catch (e) { console.error('[filter-desc] save failed:', e); notify('Ошибка сети', true); }
   };
 }
 // Filter chips are rendered dynamically in renderFilterChips()
@@ -3221,7 +3243,8 @@ function renderClipPage(clip) {
   // Record view
   fetch(`/api/clips/${clip.id}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userToken:getUserToken()})}).catch(()=>{});
 
-  // Add comments section
+  // Add comments section. Tucked close to the clip-info above (the container's
+  // bottom padding is reduced via CSS so they don't drift apart).
   const commentsHtml = `<div class="clip-page-comments" style="max-width:960px;margin:0 auto;padding:0 1rem 3rem">
     <div class="player-notes-label">${esc(t('comments_title'))}</div>
     <div class="comments-list" id="clipPageCommentsList"></div>
