@@ -444,6 +444,14 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .comment-submit:hover{opacity:.85}
 
 /* Mobile */
+/* Mid-size screens — hide the centered socials block once header gets crowded
+   (e.g. when admin is logged in and EN labels make nav links wider). Without
+   this the socials block (which is position:absolute, not in the flex flow)
+   collides with nav-links and the logo. */
+@media(max-width:1280px){
+  .header-socials{display:none}
+}
+
 @media(max-width:768px){
   .header{padding:0 1rem}
   .header-inner{height:52px}

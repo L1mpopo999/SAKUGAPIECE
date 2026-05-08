@@ -3,7 +3,7 @@ let LANG = localStorage.getItem('sp_lang') || 'ru';
 
 const I18N = {
   // Navigation
-  nav_browse: { ru: 'Обзор', en: 'Browse' },
+  nav_browse: { ru: 'Главное', en: 'Main' },
   nav_episodes: { ru: 'Серии', en: 'Episodes' },
   nav_animators: { ru: 'Аниматоры', en: 'Animators' },
   nav_about: { ru: 'О сайте', en: 'About' },
@@ -157,8 +157,17 @@ function setLang(lang) {
   LANG = lang;
   localStorage.setItem('sp_lang', lang);
   applyI18n();
-  // Re-render dynamic parts that include translated strings
-  if (typeof applyFilters === 'function' && currentPage === 'browse') applyFilters();
+  // Re-render dynamic parts that include translated strings.
+  // applyFilters() normally resets pagination to page 1. Preserve the user's
+  // current page so a language toggle on page 8 doesn't bounce them to page 1.
+  if (typeof applyFilters === 'function' && currentPage === 'browse') {
+    const savedPage = currentPage_clips;
+    applyFilters();
+    if (savedPage > 1) {
+      currentPage_clips = savedPage;
+      renderClipPage_browse();
+    }
+  }
   if (typeof renderEpisodeGrid === 'function' && currentPage === 'episodes') renderEpisodeGrid();
   if (typeof renderAnimatorGrid === 'function' && currentPage === 'animators') renderAnimatorGrid();
   if (typeof renderEpisodeProfile === 'function' && currentPage === 'episode-profile' && currentEpisodeProfile) renderEpisodeProfile(currentEpisodeProfile);
@@ -192,6 +201,13 @@ function clipTitle(clip) {
   if (!clip) return '';
   if (LANG === 'en' && clip.titleEn && clip.titleEn.trim()) return clip.titleEn;
   return clip.title || '';
+}
+
+// Same idea for the description/notes field — fall back to RU if no EN provided.
+function clipNotes(clip) {
+  if (!clip) return '';
+  if (LANG === 'en' && clip.notesEn && clip.notesEn.trim()) return clip.notesEn;
+  return clip.notes || '';
 }
 
 // Returns the display label for a filter (tag/arc/section), language-aware.
@@ -1682,7 +1698,7 @@ function formatBytes(b){if(b<1024)return b+' Б';if(b<1048576)return(b/1024).toF
 // ===== UPLOAD SUBMIT =====
 $('#uploadForm').addEventListener('submit',async e=>{
   e.preventDefault();
-  const title=$('#clipTitleInput').value.trim(), titleEn=$('#clipTitleEnInput')?.value.trim()||'', episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=selectedTags.join(','), notes=$('#notesInput').value.trim();
+  const title=$('#clipTitleInput').value.trim(), titleEn=$('#clipTitleEnInput')?.value.trim()||'', episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=selectedTags.join(','), notes=$('#notesInput').value.trim(), notesEn=$('#notesEnInput')?.value.trim()||'';
   if(!selectedFile&&!selectedImages.length&&!preloadedVideoFilename){notify('Загрузите видео или хотя бы одно фото',true);return}
   if(!title){notify('Введите название',true);return}
   if(!selectedAnimators.length){notify('Выберите аниматора',true);return}
@@ -1693,7 +1709,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
   if(preloadedVideoFilename)fd.append('preloadedVideo', preloadedVideoFilename);
   if(selectedThumbnail)fd.append('thumbnail',selectedThumbnail);
   selectedImages.forEach(f=>fd.append('images',f));
-  fd.append('title',title);fd.append('titleEn',titleEn);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);
+  fd.append('title',title);fd.append('titleEn',titleEn);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);fd.append('notesEn',notesEn);
   fd.append('timecodes', $('#timecodesInput').value.trim());
   fd.append('clipOrder', $('#clipOrderInput').value.trim() || '0');
 
@@ -1771,8 +1787,8 @@ function openPlayer(id) {
 
   // Notes
   const notesEl = $('#playerNotes');
-  if (clip.notes && clip.notes.trim()) {
-    notesEl.innerHTML = `<div class="player-notes-label">${LANG==='en'?'Notes':'Заметки'}</div><div class="player-notes-text">${esc(clip.notes).replace(/\n/g, '<br>')}</div>`;
+  if (clipNotes(clip).trim()) {
+    notesEl.innerHTML = `<div class="player-notes-label">${LANG==='en'?'Notes':'Заметки'}</div><div class="player-notes-text">${esc(clipNotes(clip)).replace(/\n/g, '<br>')}</div>`;
     notesEl.style.display = '';
   } else {
     notesEl.innerHTML = '';
@@ -2341,6 +2357,7 @@ function openEditModal(id) {
   renderEditTagChips();
   $('#editTagsInput').value = '';
   $('#editNotesInput').value = clip.notes || '';
+  $('#editNotesEnInput').value = clip.notesEn || '';
   $('#editTimecodesInput').value = clip.timecodes || '';
   $('#editClipOrderInput').value = clip.clipOrder || 0;
   $('#editDirectorOverrideInput').value = clip.directorOverride || '';
@@ -2543,6 +2560,7 @@ $('#editSaveBtn').addEventListener('click', async () => {
     arc: $('#editArcSelect').value,
     tags: editSelectedTags.join(','),
     notes: $('#editNotesInput').value.trim(),
+    notesEn: $('#editNotesEnInput')?.value.trim() || '',
     timecodes: $('#editTimecodesInput').value.trim(),
     clipOrder: $('#editClipOrderInput').value.trim() || '0',
     directorOverride: $('#editDirectorOverrideInput').value.trim()
@@ -2987,7 +3005,7 @@ function renderClipPage(clip) {
           ${clip.tags.map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
         </div>
 
-        ${clip.notes ? `<div class="clip-page-notes">${esc(clip.notes).replace(/\n/g, '<br>')}</div>` : ''}
+        ${clipNotes(clip) ? `<div class="clip-page-notes">${esc(clipNotes(clip)).replace(/\n/g, '<br>')}</div>` : ''}
 
         <div class="clip-page-timecodes" id="clipPageTimecodes"></div>
       </div>

@@ -35,7 +35,7 @@
       <span class="header-socials-name">by <span style="color:var(--gold)">jef999</span></span>
     </div>
     <nav class="nav-links">
-      <button class="nav-link active" data-page="browse" data-i18n="nav_browse">Обзор</button>
+      <button class="nav-link active" data-page="browse" data-i18n="nav_browse">Главное</button>
       <button class="nav-link" data-page="episodes" data-i18n="nav_episodes">Серии</button>
       <button class="nav-link" data-page="animators" data-i18n="nav_animators">Аниматоры</button>
       <button class="nav-link" data-page="about" data-i18n="nav_about">О сайте</button>
@@ -314,6 +314,11 @@
         <textarea class="form-textarea" id="notesInput" placeholder="Дополнительная информация..."></textarea>
       </div>
 
+      <div class="form-group">
+        <label class="form-label">Заметки (EN, опционально)</label>
+        <textarea class="form-textarea" id="notesEnInput" placeholder="English description..."></textarea>
+      </div>
+
       <button type="submit" class="btn-submit" id="submitBtn">Загрузить</button>
 
       <div class="upload-progress" id="uploadProgress">
@@ -441,6 +446,10 @@
     <div class="form-group">
       <label class="form-label">Заметки</label>
       <textarea class="form-textarea" id="editNotesInput"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Заметки (EN, опционально)</label>
+      <textarea class="form-textarea" id="editNotesEnInput" placeholder="English description..."></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">Режиссёр (только для этого клипа)</label>
