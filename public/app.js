@@ -2947,12 +2947,12 @@ function renderClipPage(clip) {
 
   // Add comments section
   const commentsHtml = `<div class="clip-page-comments" style="max-width:960px;margin:0 auto;padding:0 1rem 3rem">
-    <div class="player-notes-label">Комментарии</div>
+    <div class="player-notes-label">${esc(t('comments_title'))}</div>
     <div class="comments-list" id="clipPageCommentsList"></div>
     <div class="comment-form">
-      <input class="comment-nick" id="clipPageCommentNick" type="text" placeholder="Ваш ник" maxlength="30" autocomplete="off">
-      <textarea class="comment-text" id="clipPageCommentText" placeholder="Написать комментарий..." maxlength="1000"></textarea>
-      <button class="comment-submit" id="clipPageCommentBtn">Отправить</button>
+      <input class="comment-nick" id="clipPageCommentNick" type="text" placeholder="${esc(t('comment_nick_placeholder'))}" maxlength="30" autocomplete="off">
+      <textarea class="comment-text" id="clipPageCommentText" placeholder="${esc(t('comment_placeholder'))}" maxlength="1000"></textarea>
+      <button class="comment-submit" id="clipPageCommentBtn">${esc(t('comment_send'))}</button>
     </div>
   </div>`;
   page.insertAdjacentHTML('beforeend', commentsHtml);
@@ -3001,11 +3001,13 @@ async function loadClipPageComments(clipId) {
 
 function renderClipPageComments(comments, clipId) {
   const list = $('#clipPageCommentsList');
-  if (!comments.length) { list.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Пока нет комментариев</span>'; return; }
+  if (!comments.length) { list.innerHTML = `<span style="color:var(--text-muted);font-size:.8rem">${esc(t('comment_no_comments'))}</span>`; return; }
+  const dateLocale = LANG === 'en' ? 'en-US' : 'ru-RU';
+  const editedTag = LANG === 'en' ? '(edited)' : '(ред.)';
   list.innerHTML = comments.map(c => {
     const date = new Date(c.createdAt);
-    const timeStr = date.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}) + ' ' + date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-    const edited = c.editedAt ? ' <span style="font-size:.6rem;color:var(--text-muted)">(ред.)</span>' : '';
+    const timeStr = date.toLocaleDateString(dateLocale,{day:'numeric',month:'short'}) + ' ' + date.toLocaleTimeString(dateLocale,{hour:'2-digit',minute:'2-digit'});
+    const edited = c.editedAt ? ` <span style="font-size:.6rem;color:var(--text-muted)">${esc(editedTag)}</span>` : '';
     return `<div class="comment-item${c.isOwn ? ' comment-own' : ''}">
       <div class="comment-header">
         <span class="comment-nickname">${esc(c.nickname)}</span>
@@ -3019,14 +3021,14 @@ function renderClipPageComments(comments, clipId) {
   }).join('');
   list.querySelectorAll('.comment-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Удалить комментарий?')) return;
+      if (!confirm(LANG === 'en' ? 'Delete this comment?' : 'Удалить комментарий?')) return;
       const headers = {}; if (isAdmin) headers['X-Admin-Token'] = adminToken; headers['X-User-Token'] = getUserToken();
       try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'DELETE',headers}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify('Ошибка сети',true); }
     });
   });
   list.querySelectorAll('.comment-edit-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const newText = prompt('Редактировать:',btn.dataset.text); if(!newText||!newText.trim()) return;
+      const newText = prompt(LANG === 'en' ? 'Edit your comment:' : 'Редактировать:', btn.dataset.text); if(!newText||!newText.trim()) return;
       try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-User-Token':getUserToken()},body:JSON.stringify({text:newText.trim()})}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify('Ошибка сети',true); }
     });
   });
