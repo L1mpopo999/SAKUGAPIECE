@@ -451,7 +451,11 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
   box-shadow:0 4px 18px rgba(244,162,38,.08);
 }
 .filter-desc-name{
-  font-family:'Bebas Neue',sans-serif;
+  /* Bebas Neue covers Latin chars beautifully but has NO Cyrillic glyphs.
+     Oswald comes second so the section name keeps a similar condensed/uppercase
+     vibe in Russian (ЭКТИНГ) too. */
+  font-family:'Bebas Neue','Oswald',sans-serif;
+  font-weight:600;
   font-size:2rem;color:var(--gold);
   letter-spacing:.05em;line-height:1;
   flex-shrink:0;text-transform:uppercase;

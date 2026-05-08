@@ -782,6 +782,9 @@ async function editFilterDescription(filterId) {
       <div class="modal" style="max-width:560px">
         <button class="modal-close" id="filterDescClose">&times;</button>
         <h2 class="modal-title">Описание раздела</h2>
+        <p style="color:var(--text-secondary);font-size:.85rem;margin:-0.4rem 0 1rem;line-height:1.4">
+          Заполните оба поля — на RU и EN. Если EN-поле пустое, англоязычные пользователи увидят русский текст.
+        </p>
         <div class="form-group">
           <label class="form-label">Описание (RU)</label>
           <textarea class="form-textarea" id="filterDescRu" rows="3" placeholder="Например: Все сцены с раскадровкой Кацуми Ишизуки"></textarea>
