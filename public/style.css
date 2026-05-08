@@ -441,7 +441,7 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .filter-description{max-width:1440px;margin:.8rem auto 1.4rem;padding:0 1rem}
 .filter-description:empty{display:none}
 .filter-description > .filter-desc-card{
-  display:flex;align-items:stretch;gap:1.4rem;
+  display:flex;align-items:center;gap:1.4rem;
   padding:1.3rem 1.6rem;
   background:linear-gradient(135deg,rgba(244,162,38,.18) 0%,rgba(230,57,70,.10) 50%,rgba(230,57,70,.04) 100%);
   border:1px solid rgba(244,162,38,.4);
@@ -451,18 +451,22 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
   box-shadow:0 4px 18px rgba(244,162,38,.08);
 }
 .filter-desc-name{
-  /* Bebas Neue covers Latin chars beautifully but has NO Cyrillic glyphs.
-     Oswald comes second so the section name keeps a similar condensed/uppercase
-     vibe in Russian (ЭКТИНГ) too. */
+  /* Bebas Neue (Latin only) and Oswald (covers Cyrillic) have very different
+     vertical font metrics — Oswald sits higher in its line box than Bebas Neue.
+     With a flex centered card, this makes Russian text visually float upward.
+     We force a consistent line-height + a small translateY for Cyrillic to
+     pull it down to the optical center matching the description. */
   font-family:'Bebas Neue','Oswald',sans-serif;
   font-weight:600;
   font-size:2rem;color:var(--gold);
   letter-spacing:.05em;line-height:1;
   flex-shrink:0;text-transform:uppercase;
   border-right:2px solid rgba(244,162,38,.35);padding-right:1.4rem;
-  display:flex;align-items:center;
   text-shadow:0 0 18px rgba(244,162,38,.4);
 }
+/* When the page is in Russian, nudge the section name down ~3px.
+   Oswald has more "ascent" space above its glyphs than Bebas Neue. */
+html[lang="ru"] .filter-desc-name{transform:translateY(3px)}
 .filter-desc-text{
   flex:1;min-width:0;
   font-size:1rem;color:var(--text-primary);line-height:1.6;
