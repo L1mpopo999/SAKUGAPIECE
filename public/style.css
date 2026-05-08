@@ -413,12 +413,24 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 .player-frame-controls .frame-info{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--text-muted);min-width:10rem;text-align:center}
 .player-frame-controls .frame-fps-select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.7rem;padding:.2rem .4rem;border-radius:var(--radius);cursor:pointer}
 
-/* Filter description */
-.filter-description{max-width:1440px;margin:0 auto;padding:0 1rem .5rem;display:flex;align-items:center;gap:.5rem}
-.filter-desc-text{font-size:.85rem;color:var(--text-secondary);line-height:1.5}
-.filter-desc-edit,.filter-desc-add{background:none;border:none;color:var(--gold);cursor:pointer;font-size:.8rem;font-family:'Space Mono',monospace}
-.filter-desc-add{font-size:.75rem;color:var(--text-muted)}
-.filter-desc-add:hover,.filter-desc-edit:hover{color:var(--gold)}
+/* Filter description — appears under the filter bar when a category is selected.
+   Designed to feel like a curator's note: gold left bar, slight tinted background,
+   bigger comfortable font. Stands out against the plain card grid below. */
+.filter-description{max-width:1440px;margin:0 auto 1rem;padding:0 1rem}
+.filter-description:empty{display:none}
+.filter-description > .filter-desc-card{
+  display:flex;align-items:flex-start;gap:.85rem;
+  padding:.9rem 1.1rem;
+  background:linear-gradient(135deg,rgba(244,162,38,.07),rgba(230,57,70,.04));
+  border-left:3px solid var(--gold);
+  border-radius:0 var(--radius) var(--radius) 0;
+  position:relative;
+}
+.filter-desc-icon{flex-shrink:0;font-size:1.1rem;line-height:1.5;color:var(--gold);opacity:.85}
+.filter-desc-text{font-size:.95rem;color:var(--text-primary);line-height:1.55;font-family:'Noto Sans',sans-serif;flex:1;font-weight:500}
+.filter-desc-edit,.filter-desc-add{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:.7rem;font-family:'Space Mono',monospace;padding:.3rem .55rem;border-radius:var(--radius);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;transition:all .15s}
+.filter-desc-edit:hover,.filter-desc-add:hover{border-color:var(--gold);color:var(--gold)}
+.filter-desc-add{display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;background:transparent;border-style:dashed}
 
 /* Comments */
 .player-comments{margin-top:1.2rem;border-top:1px solid var(--border);padding-top:.8rem}

@@ -3,7 +3,7 @@ let LANG = localStorage.getItem('sp_lang') || 'ru';
 
 const I18N = {
   // Navigation
-  nav_browse: { ru: 'Главное', en: 'Main' },
+  nav_browse: { ru: 'Главная', en: 'Main' },
   nav_episodes: { ru: 'Серии', en: 'Episodes' },
   nav_animators: { ru: 'Аниматоры', en: 'Animators' },
   nav_about: { ru: 'О сайте', en: 'About' },
@@ -734,12 +734,19 @@ function applyFilters() {
   if (descEl) {
     const filter = FILTERS.find(f => f.id === currentTagFilter);
     if (filter && filter.description) {
-      descEl.innerHTML = `<div class="filter-desc-text">${esc(filter.description)}</div>${isAdmin ? `<button class="filter-desc-edit" id="editFilterDescBtn">✎</button>` : ''}`;
+      // Wrap in a styled card with a left accent bar and a small icon for visual punch.
+      // The text honors line breaks from the admin's input.
+      const text = esc(filter.description).replace(/\n/g, '<br>');
+      descEl.innerHTML = `<div class="filter-desc-card">
+        <span class="filter-desc-icon">✎</span>
+        <div class="filter-desc-text">${text}</div>
+        ${isAdmin ? `<button class="filter-desc-edit" id="editFilterDescBtn" title="Редактировать">${LANG === 'en' ? 'Edit' : 'Изменить'}</button>` : ''}
+      </div>`;
       descEl.style.display = '';
       const editBtn = descEl.querySelector('#editFilterDescBtn');
       if (editBtn) editBtn.addEventListener('click', () => editFilterDescription(currentTagFilter));
     } else if (isAdmin && currentTagFilter) {
-      descEl.innerHTML = `<button class="filter-desc-add" id="addFilterDescBtn">+ Добавить описание</button>`;
+      descEl.innerHTML = `<button class="filter-desc-add" id="addFilterDescBtn">+ ${LANG === 'en' ? 'Add description' : 'Добавить описание'}</button>`;
       descEl.style.display = '';
       descEl.querySelector('#addFilterDescBtn').addEventListener('click', () => editFilterDescription(currentTagFilter));
     } else {
