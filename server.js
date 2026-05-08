@@ -16,6 +16,16 @@ const DATA_FILE = path.join(dataDir, 'clips.json');
 
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+// Atomic JSON write: serialize, write to *.tmp, then rename. Rename is atomic
+// on any sane filesystem, so partial writes can never leave a corrupt file —
+// the worst case is the new file simply isn't there yet.
+function writeJsonAtomic(filePath, data) {
+  const tmp = filePath + '.tmp';
+  const json = JSON.stringify(data, null, 2);
+  fs.writeFileSync(tmp, json, 'utf-8');
+  fs.renameSync(tmp, filePath);
+}
+
 function loadClips() {
   if (!fs.existsSync(DATA_FILE)) return [];
   try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')); }
@@ -23,7 +33,7 @@ function loadClips() {
 }
 
 function saveClips(clips) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(clips, null, 2), 'utf-8');
+  writeJsonAtomic(DATA_FILE, clips);
 }
 
 console.log(`Storage: ${useVolume ? 'Volume (/app/data)' : 'Local (non-persistent)'}`);
@@ -96,14 +106,48 @@ function loadAnimators() {
   try { return JSON.parse(fs.readFileSync(ANIMATORS_FILE, 'utf-8')); }
   catch { return DEFAULT_ANIMATORS; }
 }
-function saveAnimators(list) { fs.writeFileSync(ANIMATORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+function saveAnimators(list) { writeJsonAtomic(ANIMATORS_FILE, list); }
+
+// Detect "look-alike" duplicates: e.g. "Vincent Chansard" vs "Vincent Сhansard"
+// (the latter has a Cyrillic С). We normalize to lowercase Latin, removing
+// punctuation/whitespace, then compare. A match means the new name is suspiciously
+// close to an existing one and we want to warn the admin.
+const LATIN_LOOKALIKES = {
+  // Cyrillic → Latin (visually identical letters)
+  'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c',
+  'т':'t','у':'y','х':'x','ё':'e',
+  'А':'a','В':'b','Е':'e','К':'k','М':'m','Н':'h','О':'o','Р':'p','С':'c',
+  'Т':'t','У':'y','Х':'x','Ё':'e'
+};
+function normalizeName(name) {
+  if (!name) return '';
+  return String(name)
+    .toLowerCase()
+    .split('')
+    .map(ch => LATIN_LOOKALIKES[ch] || ch)
+    .join('')
+    .replace(/[\s._-]+/g, '');
+}
+// Returns the existing animator name that visually matches the input, or null.
+// Exact match (case-insensitive) is also returned, so the caller can decide.
+function findLookalikeAnimator(name, list) {
+  if (!name) return null;
+  const norm = normalizeName(name);
+  if (!norm) return null;
+  for (const existing of list) {
+    if (normalizeName(existing) === norm && existing.toLowerCase() !== name.toLowerCase()) {
+      return existing;
+    }
+  }
+  return null;
+}
 
 function loadFilters() {
   if (!fs.existsSync(FILTERS_FILE)) { saveFilters(DEFAULT_FILTERS); return DEFAULT_FILTERS; }
   try { return JSON.parse(fs.readFileSync(FILTERS_FILE, 'utf-8')); }
   catch { return DEFAULT_FILTERS; }
 }
-function saveFilters(list) { fs.writeFileSync(FILTERS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+function saveFilters(list) { writeJsonAtomic(FILTERS_FILE, list); }
 
 // ===== EPISODES DATA =====
 const EPISODES_FILE = path.join(dataDir, 'episodes.json');
@@ -114,7 +158,7 @@ function loadEpisodes() {
   try { return JSON.parse(fs.readFileSync(EPISODES_FILE, 'utf-8')); }
   catch { return DEFAULT_EPISODES; }
 }
-function saveEpisodes(data) { fs.writeFileSync(EPISODES_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+function saveEpisodes(data) { writeJsonAtomic(EPISODES_FILE, data); }
 
 // ===== HIDDEN ANIMATORS =====
 const HIDDEN_ANIMATORS_FILE = path.join(dataDir, 'hidden_animators.json');
@@ -124,7 +168,7 @@ function loadHiddenAnimators() {
   try { return JSON.parse(fs.readFileSync(HIDDEN_ANIMATORS_FILE, 'utf-8')); }
   catch { return []; }
 }
-function saveHiddenAnimators(list) { fs.writeFileSync(HIDDEN_ANIMATORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+function saveHiddenAnimators(list) { writeJsonAtomic(HIDDEN_ANIMATORS_FILE, list); }
 
 // ===== DIRECTORS =====
 const DIRECTORS_FILE = path.join(dataDir, 'directors.json');
@@ -148,12 +192,12 @@ function loadDirectors() {
     }
     if (migrated) {
       out.sort((a, b) => a.localeCompare(b));
-      try { fs.writeFileSync(DIRECTORS_FILE, JSON.stringify(out, null, 2), 'utf-8'); } catch {}
+      try { writeJsonAtomic(DIRECTORS_FILE, out); } catch {}
     }
     return out;
   } catch { return []; }
 }
-function saveDirectors(list) { fs.writeFileSync(DIRECTORS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+function saveDirectors(list) { writeJsonAtomic(DIRECTORS_FILE, list); }
 
 // Normalize a director value to an array of trimmed names.
 // Accepts: a single string (possibly comma-separated, legacy data), an array, null/undefined.
@@ -178,12 +222,12 @@ function loadEpisodeDirectors() {
     }
     // Persist migration so we don't redo it on every read
     if (migrated) {
-      try { fs.writeFileSync(EPISODE_DIRECTORS_FILE, JSON.stringify(out, null, 2), 'utf-8'); } catch {}
+      try { writeJsonAtomic(EPISODE_DIRECTORS_FILE, out); } catch {}
     }
     return out;
   } catch { return {}; }
 }
-function saveEpisodeDirectors(map) { fs.writeFileSync(EPISODE_DIRECTORS_FILE, JSON.stringify(map, null, 2), 'utf-8'); }
+function saveEpisodeDirectors(map) { writeJsonAtomic(EPISODE_DIRECTORS_FILE, map); }
 
 
 // ===== COMMENTS =====
@@ -195,16 +239,32 @@ function loadComments() {
   try { return JSON.parse(fs.readFileSync(COMMENTS_FILE, 'utf-8')); }
   catch { return {}; }
 }
-function saveComments(data) { fs.writeFileSync(COMMENTS_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+function saveComments(data) { writeJsonAtomic(COMMENTS_FILE, data); }
 
 function loadNicknames() {
   if (!fs.existsSync(NICKNAMES_FILE)) { saveNicknames({}); return {}; }
   try { return JSON.parse(fs.readFileSync(NICKNAMES_FILE, 'utf-8')); }
   catch { return {}; }
 }
-function saveNicknames(data) { fs.writeFileSync(NICKNAMES_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+function saveNicknames(data) { writeJsonAtomic(NICKNAMES_FILE, data); }
 
 // ===== MIDDLEWARE =====
+
+// gzip compression for all text responses (HTML, JS, CSS, JSON).
+// Saves ~70% bandwidth on the initial page load and on /api/clips.
+// Videos and images aren't recompressed (they're already compressed).
+const compression = require('compression');
+app.use(compression({
+  // Don't waste CPU on responses smaller than 1KB.
+  threshold: 1024,
+  // filter: skip already-compressed content (videos/images served from /uploads).
+  // Express's static middleware already sets the right Content-Type, so the
+  // default filter handles this — but we can be explicit too.
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
 
 // Security headers via helmet — closes clickjacking and various XSS vectors
 const helmet = require('helmet');
@@ -257,6 +317,97 @@ const commentLimiter = rateLimit({
 });
 
 app.use(express.json());
+
+// SEO / OpenGraph: when a /clip/:id URL is loaded directly (or fetched by a
+// social-media crawler like Telegram, Twitter, Discord), inject the clip's
+// title, description and image into the HTML <head>. This is what makes link
+// previews show a nice card with cover art instead of a bare URL.
+const indexHtmlPath = path.join(__dirname, 'public', 'index.html');
+let cachedIndexHtml = null;
+function getIndexHtml() {
+  // Cache the file in memory but re-read if the file mtime changed (so dev edits
+  // don't require a server restart).
+  try {
+    const st = fs.statSync(indexHtmlPath);
+    if (!cachedIndexHtml || cachedIndexHtml.mtime !== st.mtimeMs) {
+      cachedIndexHtml = { html: fs.readFileSync(indexHtmlPath, 'utf-8'), mtime: st.mtimeMs };
+    }
+  } catch { return null; }
+  return cachedIndexHtml.html;
+}
+
+const SITE_BASE_URL = process.env.SITE_BASE_URL || 'https://sakugapiece.ru';
+
+function escHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Inject meta tags for a clip page so link unfurls work nicely
+app.get(/^\/clip\/(\d+)$/, (req, res, next) => {
+  const id = parseInt(req.params[0]);
+  const clips = loadClips();
+  const clip = clips.find(c => c.id === id);
+  let html = getIndexHtml();
+  if (!html) return next();
+
+  if (clip) {
+    const title = clip.title || `Клип ${id}`;
+    const desc = `${clip.arc || ''} · Эпизод ${clip.episode || '?'} · ${(clip.animators || []).join(', ')}`.trim();
+    const image = clip.thumbnailUrl
+      ? SITE_BASE_URL + clip.thumbnailUrl
+      : (clip.images && clip.images[0] ? SITE_BASE_URL + clip.images[0].url : SITE_BASE_URL + '/og-default.png');
+    const url = SITE_BASE_URL + '/clip/' + id;
+    const metaBlock = `
+    <title>${escHtml(title)} — Sakuga Piece</title>
+    <meta name="description" content="${escHtml(desc)}">
+    <meta property="og:type" content="video.other">
+    <meta property="og:title" content="${escHtml(title)}">
+    <meta property="og:description" content="${escHtml(desc)}">
+    <meta property="og:image" content="${escHtml(image)}">
+    <meta property="og:url" content="${escHtml(url)}">
+    <meta property="og:site_name" content="Sakuga Piece">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${escHtml(title)}">
+    <meta name="twitter:description" content="${escHtml(desc)}">
+    <meta name="twitter:image" content="${escHtml(image)}">
+    `;
+    // Inject right before </head>
+    html = html.replace('</head>', metaBlock + '</head>');
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
+// XML sitemap so search engines can discover all clip pages
+app.get('/sitemap.xml', (req, res) => {
+  const clips = loadClips();
+  const urls = [
+    `<url><loc>${SITE_BASE_URL}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${SITE_BASE_URL}/#episodes</loc><changefreq>weekly</changefreq></url>`,
+    `<url><loc>${SITE_BASE_URL}/#animators</loc><changefreq>weekly</changefreq></url>`,
+    `<url><loc>${SITE_BASE_URL}/#about</loc><changefreq>monthly</changefreq></url>`,
+    ...clips.map(c => {
+      const last = c.uploadedAt ? new Date(c.uploadedAt).toISOString().slice(0, 10) : '';
+      return `<url><loc>${SITE_BASE_URL}/clip/${c.id}</loc>${last ? `<lastmod>${last}</lastmod>` : ''}<changefreq>monthly</changefreq></url>`;
+    })
+  ];
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join('\n')}
+</urlset>`;
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.send(xml);
+});
+
+// Tell crawlers where to find the sitemap
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *
+Allow: /
+Disallow: /api/
+Sitemap: ${SITE_BASE_URL}/sitemap.xml
+`);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
@@ -294,14 +445,14 @@ function loadUsers() {
   try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8')); }
   catch { return []; }
 }
-function saveUsers(list) { fs.writeFileSync(USERS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+function saveUsers(list) { writeJsonAtomic(USERS_FILE, list); }
 
 function loadAuditLog() {
   if (!fs.existsSync(AUDIT_LOG_FILE)) { saveAuditLog([]); return []; }
   try { return JSON.parse(fs.readFileSync(AUDIT_LOG_FILE, 'utf-8')); }
   catch { return []; }
 }
-function saveAuditLog(entries) { fs.writeFileSync(AUDIT_LOG_FILE, JSON.stringify(entries, null, 2), 'utf-8'); }
+function saveAuditLog(entries) { writeJsonAtomic(AUDIT_LOG_FILE, entries); }
 
 function addAudit(username, action, target) {
   try {
@@ -546,6 +697,16 @@ app.get('/api/clips', (req, res) => {
   res.json(loadClips());
 });
 
+// Returns a random clip's id. Convenience endpoint for the "🎲 Random" button.
+// We return only the id so the client can navigate to /clip/:id and let the
+// existing render path do the rest.
+app.get('/api/clips/random', (req, res) => {
+  const clips = loadClips();
+  if (!clips.length) return res.status(404).json({ error: 'Нет клипов' });
+  const random = clips[Math.floor(Math.random() * clips.length)];
+  res.json({ id: random.id });
+});
+
 // Record a view (unique per user token)
 const VIEWS_FILE = path.join(dataDir, 'views.json');
 function loadViews() {
@@ -553,7 +714,53 @@ function loadViews() {
   try { return JSON.parse(fs.readFileSync(VIEWS_FILE, 'utf-8')); }
   catch { return {}; }
 }
-function saveViews(data) { fs.writeFileSync(VIEWS_FILE, JSON.stringify(data, null, 2), 'utf-8'); }
+function saveViews(data) { writeJsonAtomic(VIEWS_FILE, data); }
+
+// Likes — stored per-clip as an array of user tokens (one like per user max).
+// Same shape as views.json for consistency: { "clipId": ["tok1", "tok2", ...] }
+const LIKES_FILE = path.join(dataDir, 'likes.json');
+function loadLikes() {
+  if (!fs.existsSync(LIKES_FILE)) { saveLikes({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(LIKES_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveLikes(data) { writeJsonAtomic(LIKES_FILE, data); }
+
+// Get like counts for all clips at once
+app.get('/api/likes/counts', (req, res) => {
+  const likes = loadLikes();
+  const out = {};
+  for (const id of Object.keys(likes)) out[id] = (likes[id] || []).length;
+  res.json(out);
+});
+
+// Toggle like for a clip (anonymous via userToken in body)
+app.post('/api/clips/:id/like', (req, res) => {
+  const { userToken } = req.body || {};
+  if (!userToken) return res.status(400).json({ error: 'Нет userToken' });
+  const id = parseInt(req.params.id);
+  const clips = loadClips();
+  if (!clips.find(c => c.id === id)) return res.status(404).json({ error: 'Клип не найден' });
+
+  const likes = loadLikes();
+  const key = String(id);
+  if (!likes[key]) likes[key] = [];
+  const idx = likes[key].indexOf(userToken);
+  let liked;
+  if (idx === -1) { likes[key].push(userToken); liked = true; }
+  else { likes[key].splice(idx, 1); liked = false; }
+  saveLikes(likes);
+  res.json({ success: true, liked, count: likes[key].length });
+});
+
+// Get whether the current user liked a specific clip
+app.get('/api/clips/:id/like-status', (req, res) => {
+  const userToken = req.query.userToken;
+  const id = String(parseInt(req.params.id));
+  const likes = loadLikes();
+  const list = likes[id] || [];
+  res.json({ liked: !!userToken && list.includes(userToken), count: list.length });
+});
 
 app.post('/api/clips/:id/view', viewLimiter, (req, res) => {
   const { userToken } = req.body;
@@ -593,6 +800,91 @@ app.get('/clip/:id', (req, res) => {
 });
 
 // Upload a new clip (admin only)
+// Download a video file from a public URL into our uploads dir, then return the
+// resulting filename so the upload form can submit it like a regular file.
+// This saves the admin from having to download → re-upload manually for each clip.
+//
+// Limits: 200 MB max (matches multer config), https/http only, content-type must
+// be video/*, hard 60s timeout.
+const http = require('http');
+const https = require('https');
+const URL = require('url').URL;
+
+app.post('/api/clips/from-url', express.json(), async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const rawUrl = String(req.body?.url || '').trim();
+  if (!rawUrl) return res.status(400).json({ error: 'URL обязателен' });
+
+  let urlObj;
+  try { urlObj = new URL(rawUrl); }
+  catch { return res.status(400).json({ error: 'Некорректный URL' }); }
+  if (urlObj.protocol !== 'https:' && urlObj.protocol !== 'http:') {
+    return res.status(400).json({ error: 'Только http/https-ссылки' });
+  }
+
+  // Build a unique target filename in uploads dir
+  const ext = (path.extname(urlObj.pathname) || '.mp4').toLowerCase().slice(0, 6);
+  const safeExt = /^\.[a-z0-9]+$/.test(ext) ? ext : '.mp4';
+  const filename = `${Date.now()}-from-url${safeExt}`;
+  const destPath = path.join(uploadsDir, filename);
+  const MAX_SIZE = 200 * 1024 * 1024; // 200 MB
+
+  // Helper: download with redirect following (max 5 redirects)
+  function download(targetUrl, redirectsLeft) {
+    return new Promise((resolve, reject) => {
+      const lib = targetUrl.startsWith('https:') ? https : http;
+      const request = lib.get(targetUrl, { timeout: 60000 }, response => {
+        // Handle redirects
+        if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+          if (redirectsLeft <= 0) return reject(new Error('Слишком много перенаправлений'));
+          response.resume();
+          const next = new URL(response.headers.location, targetUrl).toString();
+          return resolve(download(next, redirectsLeft - 1));
+        }
+        if (response.statusCode !== 200) {
+          response.resume();
+          return reject(new Error(`Сервер вернул ${response.statusCode}`));
+        }
+        const ct = String(response.headers['content-type'] || '').toLowerCase();
+        if (!ct.startsWith('video/')) {
+          response.resume();
+          return reject(new Error(`Это не видео (${ct || 'без типа'})`));
+        }
+        const declaredSize = parseInt(response.headers['content-length']) || 0;
+        if (declaredSize && declaredSize > MAX_SIZE) {
+          response.resume();
+          return reject(new Error(`Файл слишком большой: ${(declaredSize / 1024 / 1024).toFixed(1)} МБ (макс 200)`));
+        }
+
+        let received = 0;
+        const file = fs.createWriteStream(destPath);
+        response.on('data', chunk => {
+          received += chunk.length;
+          if (received > MAX_SIZE) {
+            request.destroy();
+            file.destroy();
+            try { fs.unlinkSync(destPath); } catch {}
+            reject(new Error('Файл превысил лимит 200 МБ'));
+          }
+        });
+        response.pipe(file);
+        file.on('finish', () => file.close(() => resolve({ filename, size: received })));
+        file.on('error', err => { try { fs.unlinkSync(destPath); } catch {}; reject(err); });
+      });
+      request.on('timeout', () => { request.destroy(new Error('Таймаут (60 сек)')); });
+      request.on('error', reject);
+    });
+  }
+
+  try {
+    const result = await download(rawUrl, 5);
+    res.json({ success: true, filename: result.filename, size: result.size, url: '/uploads/' + result.filename });
+  } catch (err) {
+    try { if (fs.existsSync(destPath)) fs.unlinkSync(destPath); } catch {}
+    res.status(400).json({ error: err.message || 'Не удалось скачать' });
+  }
+});
+
 app.post('/api/clips', uploadHandler, (req, res) => {
   if (!checkAdmin(req, res)) {
     // Clean up uploaded files
@@ -608,7 +900,14 @@ app.post('/api/clips', uploadHandler, (req, res) => {
   const thumbnailFile = req.files?.thumbnail?.[0];
   const imageFiles = req.files?.images || [];
 
-  if (!videoFile && imageFiles.length === 0) {
+  // Pre-downloaded video filename (from /api/clips/from-url). The file already
+  // sits in uploads/ — we just record its path on the clip.
+  const preloadedFilename = req.body?.preloadedVideo
+    ? String(req.body.preloadedVideo).replace(/[^a-zA-Z0-9._-]/g, '')
+    : null;
+  const preloadedExists = preloadedFilename && fs.existsSync(path.join(uploadsDir, preloadedFilename));
+
+  if (!videoFile && !preloadedExists && imageFiles.length === 0) {
     return res.status(400).json({ error: 'Загрузите видео или хотя бы одно изображение' });
   }
 
@@ -618,8 +917,13 @@ app.post('/api/clips', uploadHandler, (req, res) => {
     // Clean up
     if (videoFile && fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
     imageFiles.forEach(f => { if (fs.existsSync(f.path)) fs.unlinkSync(f.path); });
+    if (preloadedExists) { try { fs.unlinkSync(path.join(uploadsDir, preloadedFilename)); } catch {} }
     return res.status(400).json({ error: 'Заполните название, аниматора и номер эпизода' });
   }
+
+  // Effective video info: either an uploaded multipart file OR a pre-downloaded one
+  const effectiveVideoName = videoFile ? videoFile.filename : (preloadedExists ? preloadedFilename : null);
+  const effectiveVideoSize = videoFile ? videoFile.size : (preloadedExists ? fs.statSync(path.join(uploadsDir, preloadedFilename)).size : 0);
 
   const clips = loadClips();
 
@@ -636,17 +940,17 @@ app.post('/api/clips', uploadHandler, (req, res) => {
     clipOrder: parseInt(clipOrder) || 0,
     // Thumbnail
     thumbnailUrl: thumbnailFile ? '/uploads/' + thumbnailFile.filename : null,
-    // Video
-    filename: videoFile ? videoFile.filename : null,
-    videoUrl: videoFile ? '/uploads/' + videoFile.filename : null,
+    // Video (either uploaded or downloaded-from-URL)
+    filename: effectiveVideoName,
+    videoUrl: effectiveVideoName ? '/uploads/' + effectiveVideoName : null,
     // Images
     images: imageFiles.map(f => ({
       filename: f.filename,
       url: '/uploads/' + f.filename
     })),
-    quality: videoFile ? '1080p' : null,
-    type: videoFile ? 'video' : 'images',
-    size: videoFile ? videoFile.size : imageFiles.reduce((sum, f) => sum + f.size, 0),
+    quality: effectiveVideoName ? '1080p' : null,
+    type: effectiveVideoName ? 'video' : 'images',
+    size: effectiveVideoName ? effectiveVideoSize : imageFiles.reduce((sum, f) => sum + f.size, 0),
     uploadedAt: new Date().toISOString()
   };
 
@@ -835,11 +1139,23 @@ app.get('/api/animators', (req, res) => { res.json(loadAnimators()); });
 
 app.post('/api/animators', (req, res) => {
   if (!checkAdmin(req, res)) return;
-  const { name } = req.body;
+  const { name, force } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Имя обязательно' });
   const list = loadAnimators();
   const trimmed = name.trim();
   if (list.find(a => a.toLowerCase() === trimmed.toLowerCase())) return res.status(400).json({ error: 'Аниматор уже существует' });
+
+  // Look for "visually identical" lookalikes (e.g. mixed cyrillic/latin letters).
+  // If found and the admin didn't pass `force: true`, return a warning instead of creating.
+  const lookalike = findLookalikeAnimator(trimmed, list);
+  if (lookalike && !force) {
+    return res.status(409).json({
+      error: 'duplicate_lookalike',
+      lookalike,
+      message: `Очень похоже на «${lookalike}». Если это всё-таки разные люди — повторите с force=true.`
+    });
+  }
+
   list.push(trimmed);
   list.sort((a, b) => a.localeCompare(b));
   saveAnimators(list);
@@ -1166,7 +1482,7 @@ function loadBannedUsers() {
   try { return JSON.parse(fs.readFileSync(BANNED_USERS_FILE, 'utf-8')); }
   catch { return []; }
 }
-function saveBannedUsers(list) { fs.writeFileSync(BANNED_USERS_FILE, JSON.stringify(list, null, 2), 'utf-8'); }
+function saveBannedUsers(list) { writeJsonAtomic(BANNED_USERS_FILE, list); }
 
 function containsLinks(text) {
   return /https?:\/\/|www\.|\.com|\.ru|\.org|\.net|\.io|t\.me\//i.test(text);
@@ -1366,7 +1682,7 @@ app.get('/api/backup', (req, res) => {
   // This is what the client uses for the progress bar.
   const filesToInclude = [
     DATA_FILE, ANIMATORS_FILE, FILTERS_FILE, EPISODES_FILE, HIDDEN_ANIMATORS_FILE,
-    COMMENTS_FILE, NICKNAMES_FILE, VIEWS_FILE, BANNED_USERS_FILE,
+    COMMENTS_FILE, NICKNAMES_FILE, VIEWS_FILE, LIKES_FILE, BANNED_USERS_FILE,
     DIRECTORS_FILE, EPISODE_DIRECTORS_FILE,
     USERS_FILE, AUDIT_LOG_FILE
   ];
@@ -1403,6 +1719,7 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(NICKNAMES_FILE)) archive.file(NICKNAMES_FILE, { name: 'nicknames.json' });
   // Add views.json
   if (fs.existsSync(VIEWS_FILE)) archive.file(VIEWS_FILE, { name: 'views.json' });
+  if (fs.existsSync(LIKES_FILE)) archive.file(LIKES_FILE, { name: 'likes.json' });
   // Add users.json (admin accounts)
   if (fs.existsSync(USERS_FILE)) archive.file(USERS_FILE, { name: 'users.json' });
   // Add audit_log.json
