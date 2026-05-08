@@ -164,6 +164,26 @@ function setLang(lang) {
   if (typeof renderEpisodeProfile === 'function' && currentPage === 'episode-profile' && currentEpisodeProfile) renderEpisodeProfile(currentEpisodeProfile);
   if (typeof renderAnimatorProfile === 'function' && currentPage === 'animator-profile' && currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
   if (typeof renderFilterChips === 'function') renderFilterChips();
+  // Standalone /clip/... page is built imperatively, so re-render it too.
+  // Preserve playback position and play/pause state across the re-render.
+  if (currentClipPage && /^\/clip\/\d+/.test(window.location.pathname)) {
+    const oldVideo = document.getElementById('clipPageVideo');
+    const savedTime = oldVideo ? oldVideo.currentTime : 0;
+    const wasPlaying = oldVideo ? !oldVideo.paused : false;
+    renderClipPage(currentClipPage);
+    const newVideo = document.getElementById('clipPageVideo');
+    if (newVideo && savedTime > 0) {
+      // The new <video> has autoplay; we just need to seek to where we were.
+      const restore = () => {
+        try { newVideo.currentTime = savedTime; } catch {}
+        if (!wasPlaying) { try { newVideo.pause(); } catch {} }
+      };
+      if (newVideo.readyState >= 1) restore();
+      else newVideo.addEventListener('loadedmetadata', restore, { once: true });
+    } else if (newVideo && !wasPlaying) {
+      try { newVideo.pause(); } catch {}
+    }
+  }
 }
 
 // Returns the title to display for a clip based on current language.
@@ -233,6 +253,9 @@ let editSelectedAnimators = [];
 let currentPage = 'browse';
 let currentAnimatorProfile = null;
 let currentEpisodeProfile = null;
+// Current clip rendered as a standalone /clip/... page. Kept so we can re-render
+// when language changes (or other state requires it).
+let currentClipPage = null;
 let isAdmin = false;
 let isOwner = false;
 let canBackup = false;
@@ -288,6 +311,9 @@ function stopAllMedia() {
   });
   // Drop the dynamically-created clip page entirely if it exists
   document.querySelectorAll('.page.clip-page').forEach(el => el.remove());
+  // Also clear the cached current-clip pointer; otherwise setLang would try
+  // to re-render a page that's no longer on screen.
+  currentClipPage = null;
 }
 
 function navigateTo(page, data) {
@@ -2719,6 +2745,8 @@ function openFilterManager() {
 }
 
 function renderClipPage(clip) {
+  // Track current clip-page so setLang() can re-render after language switch.
+  currentClipPage = clip;
   // Hide all pages and header nav
   $$('.page').forEach(p => p.classList.remove('active'));
 
@@ -2776,7 +2804,7 @@ function renderClipPage(clip) {
         <h1 class="clip-page-title">${esc(clipTitle(clip))}</h1>
         <div class="clip-page-current-animator" id="clipPageCurrentAnimator"></div>
         <div class="clip-page-meta">
-          <span>Эпизод ${esc(clip.episode)}</span>
+          <span>${LANG === 'en' ? 'Episode' : 'Эпизод'} ${esc(clip.episode)}</span>
           <span class="clip-meta-divider">·</span>
           <span>${esc(clip.arc)}</span>
           ${clip.quality ? `<span class="clip-meta-divider">·</span><span>${clip.quality}</span>` : ''}
