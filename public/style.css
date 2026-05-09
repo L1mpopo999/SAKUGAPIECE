@@ -286,7 +286,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   justify-content:space-between;
   /* Sit above the banner, which now extends down behind this row */
   position:relative;
-  z-index:2;
+  z-index:10;
 }
 .animator-profile-types{display:flex;flex-wrap:wrap;gap:.4rem;flex-shrink:0}
 .animator-profile-search-wrap{
@@ -352,7 +352,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-arc-dropdown-item.active{background:rgba(244,162,38,.18);color:var(--gold)}
 
 /* Animator Profile */
-.animator-profile-header{padding:1.8rem 2rem 1rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;overflow:hidden;min-height:280px;display:flex;flex-direction:column}
+.animator-profile-header{padding:1.8rem 2rem 1rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;min-height:280px;display:flex;flex-direction:column}
 /* Push the back-btn to the top, name + stats float in the middle, actions stay at the bottom */
 .animator-profile-header .back-btn{align-self:flex-start;margin-bottom:auto}
 body.admin-mode .animator-profile-header{min-height:240px}
@@ -364,7 +364,10 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
    as a hard cut. */
 .animator-profile-banner{
   position:absolute;
-  top:0;right:0;bottom:0;
+  top:0;right:0;
+  /* Extend below the header so the image fades down behind the filter row.
+     The filter row has its own z-index:10 above this banner. */
+  bottom:-90px;
   width:70%;max-width:880px;
   background-position:center center;background-size:cover;background-repeat:no-repeat;
   pointer-events:none;
@@ -380,13 +383,8 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
     radial-gradient(ellipse 70% 80% at 60% 50%, #000 25%, rgba(0,0,0,.7) 60%, rgba(0,0,0,.2) 90%, transparent 100%);
   -webkit-mask-composite:source-in;
   mask-composite:intersect;
-  z-index:0;
 }
 .animator-profile-banner.has-banner{opacity:1}
-  -webkit-mask-composite:source-in;
-  mask-composite:intersect;
-  z-index:0;
-}
 /* Banner sits BELOW everything — text and buttons render on top of the image,
    not under its semi-transparent mask (which made letters look faded). */
 .animator-profile-banner{z-index:-1 !important}
