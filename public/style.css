@@ -590,7 +590,21 @@ body.admin-mode .header-socials{display:none}
 
 /* In light theme: small adjustments to keep video badges/overlays readable */
 :root[data-theme="light"] .clip-thumb{background:#000}
-:root[data-theme="light"] .play-btn{background:rgba(255,255,255,.92);color:#1a1a1f}
+/* Keep the play button accent-red (same as dark theme) so it's always visible
+   over any thumbnail. The previous white-on-white version was invisible. */
+:root[data-theme="light"] .play-btn{background:var(--accent);color:#fff}
+:root[data-theme="light"] .play-btn svg{color:#fff}
+/* Force gold fill + black text on the HD/PHOTO badge regardless of theme quirks */
+:root[data-theme="light"] .clip-hd-badge{background:var(--gold);color:#000;text-shadow:none}
+/* Duration / image count badges sit on a dark translucent pill on top of the
+   thumbnail — they need WHITE text in both themes (text-primary becomes black
+   in light theme, which would make them invisible). */
+:root[data-theme="light"] .clip-duration,
+:root[data-theme="light"] .clip-img-count{color:#fff}
+/* "More tags" chip uses white-tinted backgrounds that disappear on light bg */
+:root[data-theme="light"] .clip-tags-more{background:rgba(0,0,0,.06)}
+:root[data-theme="light"] .clip-tags-more:hover{background:rgba(0,0,0,.12);color:var(--text-primary)}
+:root[data-theme="light"] .clip-tag.category:hover{background:rgba(0,0,0,.06)}
 :root[data-theme="light"] .player-modal,
 :root[data-theme="light"] .image-viewer{background:rgba(20,20,30,.92)}
 :root[data-theme="light"] body::before{background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(230,57,70,.04) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 90%,rgba(244,162,38,.04) 0%,transparent 60%)}

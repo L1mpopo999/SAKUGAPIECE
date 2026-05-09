@@ -1394,7 +1394,8 @@ app.put('/api/filters/:id/description', (req, res) => {
   const list = loadFilters();
   const filter = list.find(f => f.id === req.params.id);
   if (!filter) return res.status(404).json({ error: 'Фильтр не найден' });
-  filter.description = req.body.description || '';
+  filter.description = (req.body.description || '').toString();
+  filter.descriptionEn = (req.body.descriptionEn || '').toString();
   saveFilters(list);
   res.json({ success: true, filter });
 });
