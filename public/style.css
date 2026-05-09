@@ -71,6 +71,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .filter-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .filter-tags-toggle{border-color:var(--gold)!important;color:var(--gold)!important}
 .filter-tags-toggle:hover{background:rgba(244,162,38,.1)}
+/* When the categories chip is active (a tag filter is selected), don't keep
+   gold text on the red active background — that's hard to read. Use a softer
+   gold-tinted background with bold gold text + gold border instead. */
+.filter-tags-toggle.active{
+  background:rgba(244,162,38,.18) !important;
+  border-color:var(--gold) !important;
+  color:var(--gold) !important;
+  font-weight:700;
+}
+.filter-tags-toggle.active:hover{
+  background:rgba(244,162,38,.28) !important;
+}
 .filter-tags-dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.8rem;margin-top:.3rem;flex-wrap:wrap;gap:.4rem;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 .filter-tags-dropdown.visible{display:flex}
 /* Director dropdown: search input takes full width on top, chips wrap below */
@@ -84,7 +96,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .director-chip{color:var(--text-primary);display:inline-flex;align-items:center;gap:.45rem;padding-right:.65rem}
 .director-chip:hover{color:var(--text-primary);border-color:var(--text-primary)}
 .director-chip-count{font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;color:var(--gold);background:rgba(244,162,38,.15);padding:.08rem .4rem;border-radius:8px;letter-spacing:.04em;line-height:1}
-.director-chip.active .director-chip-count{background:rgba(255,255,255,.22);color:#fff}
+/* Active director chip — gold theme to match the active filter-tags-toggle */
+.director-chip.active,
+.tag-filter-chip.active{
+  background:rgba(244,162,38,.18) !important;
+  border-color:var(--gold) !important;
+  color:var(--gold) !important;
+  font-weight:700;
+}
+.director-chip.active:hover,
+.tag-filter-chip.active:hover{background:rgba(244,162,38,.28) !important}
+.director-chip.active .director-chip-count{background:rgba(244,162,38,.3);color:var(--gold)}
 .filter-separator{width:1px;height:20px;background:var(--border);margin:0 .3rem}
 .results-count{margin-left:auto;font-size:.8rem;color:var(--text-muted);font-family:'Space Mono',monospace}
 

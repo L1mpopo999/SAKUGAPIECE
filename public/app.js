@@ -587,11 +587,17 @@ function attachClipEvents(container) {
           if (filter.type === 'arc') { currentArcFilter = filter.id; currentTagFilter = null; }
           else { currentTagFilter = filter.id; }
           currentTypeFilter = 'all';
+          // If we're on a sub-page (animator/episode profile), navigate home first
+          // so the user actually sees the filter applied. Otherwise just re-render.
+          if (currentPage !== 'browse') {
+            navigateTo('browse');
+          }
           renderFilterChips();
           applyFilters();
         } else {
           // Could be episode number — search for it
           $('#searchInput').value = tagText;
+          if (currentPage !== 'browse') navigateTo('browse');
           applyFilters();
         }
         return;
