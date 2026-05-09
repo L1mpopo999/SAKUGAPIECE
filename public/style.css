@@ -187,14 +187,20 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   opacity:.75;
 }
 .clip-views{font-size:.82rem;opacity:1;display:inline-flex;align-items:center}
-/* Like count in meta row — same shape as views, but accent-red to pop */
+/* Like count in meta row — gray by default to match views/comments;
+   turns red once the current user has liked the clip. */
 .clip-meta-likes{
   font-size:.82rem;
   display:inline-flex;align-items:center;
+  color:var(--text-secondary);
+  font-weight:600;
+}
+.clip-meta-likes.liked{
   color:var(--accent);
   font-weight:700;
 }
-.clip-meta-likes .meta-icon{opacity:.95}
+.clip-meta-likes .meta-icon{opacity:.75}
+.clip-meta-likes.liked .meta-icon{opacity:.95}
 /* Thin separator line between meta and tags */
 .clip-info-separator{
   height:1px;
@@ -203,7 +209,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   opacity:.6;
 }
 /* === Tags — compact pill-shape, no leading icons === */
-.clip-tags{display:flex;flex-wrap:wrap;gap:.35rem;max-height:none;position:relative}
+/* Tags collapsed to 2 rows max; if there are more, attachClipEvents()
+   will append a "+N more" chip. Clicking the more chip just opens the clip. */
+.clip-tags{display:flex;flex-wrap:wrap;gap:.35rem;max-height:3.6em;overflow:hidden;position:relative}
 .clip-tag{
   font-family:'Space Mono',monospace;
   font-size:.7rem;
@@ -432,7 +440,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-page-title{font-family:'Oswald','Bebas Neue',sans-serif;font-size:clamp(1.5rem,3vw,2.2rem);font-weight:600;letter-spacing:.04em;margin-bottom:.3rem}
 .clip-page-current-animator{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--gold);margin-bottom:.5rem;min-height:1.2rem}
 .clip-page-meta{display:flex;align-items:center;gap:.5rem;font-size:.8rem;color:var(--text-secondary);font-family:'Space Mono',monospace;margin-bottom:.8rem;flex-wrap:wrap}
-.clip-page-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem}
+.clip-page-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0 1rem}
 .clip-page-notes{font-size:.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.2rem;padding:1rem;background:var(--bg-card);border-radius:var(--radius-lg);border:1px solid var(--border);white-space:pre-wrap}
 .clip-page-section-title{font-family:'Oswald','Bebas Neue',sans-serif;font-size:1.2rem;font-weight:600;letter-spacing:.04em;color:var(--text-primary);margin-bottom:.6rem;text-transform:uppercase}
 .clip-page-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.8rem;margin-bottom:1.2rem}
@@ -663,21 +671,53 @@ body.admin-mode .header-socials{display:none}
 }
 
 /* === Clip page actions: like / share / download === */
-.clip-page-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 1.2rem}
-.clip-action-btn{display:inline-flex;align-items:center;gap:.45rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:.5rem .9rem;border-radius:var(--radius);font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;text-decoration:none;transition:all .15s}
-.clip-action-btn:hover{border-color:var(--gold);color:var(--text-primary);transform:translateY(-1px)}
+/* === Clip page action row — YouTube-style: like / download / share ▾ === */
+.clip-page-action-row{display:flex;flex-wrap:wrap;gap:.6rem;margin:1.2rem 0 1.4rem;align-items:center}
+.clip-action-btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);padding:.6rem 1rem;border-radius:24px;font-family:'Manrope',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;text-decoration:none;transition:all .15s}
+.clip-action-btn:hover{border-color:var(--gold);color:var(--text-primary);background:var(--bg-card-hover)}
+.clip-action-btn .action-icon{width:18px;height:18px;flex-shrink:0}
 
-/* Primary like action — bigger, more prominent than the share row */
-.clip-page-like-row{margin:1.2rem 0 .6rem}
-.clip-like-btn{display:inline-flex;align-items:center;gap:.65rem;background:var(--bg-card);border:2px solid var(--border);color:var(--text-primary);padding:.75rem 1.4rem;border-radius:var(--radius-lg);font-family:'Manrope',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;transition:all .2s ease;letter-spacing:.02em}
-.clip-like-btn:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 12px rgba(230,57,70,.2)}
-.clip-like-btn .like-heart{font-size:1.4rem;color:var(--text-muted);transition:all .2s}
-.clip-like-btn .like-count{font-variant-numeric:tabular-nums;color:var(--text-secondary);font-size:.95rem}
-.clip-like-btn .like-label{text-transform:uppercase;font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;color:var(--text-secondary)}
-.clip-like-btn.liked{border-color:var(--accent);background:rgba(230,57,70,.1)}
+/* Like button — same pill shape as action buttons but with stronger active state */
+.clip-like-btn{display:inline-flex;align-items:center;gap:.55rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);padding:.6rem 1.1rem;border-radius:24px;font-family:'Manrope',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;transition:all .2s ease}
+.clip-like-btn:hover{border-color:var(--accent);background:var(--bg-card-hover)}
+.clip-like-btn .like-heart{font-size:1.1rem;color:var(--text-muted);transition:all .2s;line-height:1}
+.clip-like-btn .like-count{font-variant-numeric:tabular-nums;color:var(--text-secondary);font-size:.9rem;font-weight:700}
+.clip-like-btn.liked{border-color:var(--accent);background:rgba(230,57,70,.12)}
 .clip-like-btn.liked .like-heart{color:var(--accent);transform:scale(1.15);animation:heartPop .35s ease}
 .clip-like-btn.liked .like-count{color:var(--accent)}
-.clip-like-btn.liked .like-label{color:var(--accent)}
+
+/* Share dropdown */
+.clip-share-wrap{position:relative;display:inline-block}
+.clip-share-menu{
+  display:none;
+  position:absolute;top:calc(100% + 6px);right:0;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:0 8px 28px rgba(0,0,0,.4);
+  min-width:220px;
+  z-index:50;
+  overflow:hidden;
+  padding:.35rem;
+}
+.clip-share-menu.open{display:block}
+.clip-share-item{
+  display:flex;align-items:center;gap:.7rem;
+  width:100%;
+  background:none;border:none;
+  color:var(--text-primary);
+  padding:.6rem .8rem;
+  border-radius:var(--radius);
+  font-family:'Manrope',sans-serif;font-weight:500;font-size:.85rem;
+  cursor:pointer;
+  text-align:left;
+  transition:background .15s;
+}
+.clip-share-item:hover{background:var(--bg-card-hover)}
+.clip-share-item .action-icon{width:18px;height:18px;flex-shrink:0;color:var(--text-secondary)}
+
+/* (Old .clip-page-like-row + bigger .clip-like-btn rules removed — the
+   new YouTube-style action row above replaces them.) */
 @keyframes heartPop{0%{transform:scale(1)}50%{transform:scale(1.4)}100%{transform:scale(1.15)}}
 
 /* Theme/random toggle buttons in the header — small icon-only buttons */

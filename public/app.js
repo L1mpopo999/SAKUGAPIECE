@@ -535,7 +535,7 @@ function renderClipCard(clip, i) {
     <div class="clip-info">
       <div class="clip-title">${esc(clipTitle(clip))}</div>
       <div class="clip-title-bar"></div>
-      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>${clip.views}</span>` : ''}${likeCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-meta-likes"><svg class="meta-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.8 8.6 2.5 4.5 6.5 4.5c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3 4 0 5.7 4.1 4 7.5C19 16.5 12 21 12 21z"/></svg>${likeCounts[clip.id]}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>${commentCounts[clip.id]}</span>` : ''}</div>
+      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>${clip.views}</span>` : ''}${likeCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-meta-likes${likedByMe.has(String(clip.id)) ? ' liked' : ''}"><svg class="meta-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.8 8.6 2.5 4.5 6.5 4.5c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3 4 0 5.7 4.1 4 7.5C19 16.5 12 21 12 21z"/></svg>${likeCounts[clip.id]}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>${commentCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-info-separator"></div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
@@ -548,31 +548,40 @@ function renderClipCard(clip, i) {
 }
 
 function attachClipEvents(container) {
-  // Add "..." buttons to overflowing tag containers
+  // If tags overflow the 2-row limit, count how many are hidden and append
+  // a "+N" chip. Clicking the chip falls through to the card click handler
+  // (i.e. opens the clip page) — we don't expand inline.
   container.querySelectorAll('.clip-tags').forEach(tagsEl => {
     if (tagsEl.scrollHeight > tagsEl.clientHeight + 2) {
-      const moreBtn = document.createElement('span');
-      moreBtn.className = 'clip-tag clip-tags-more';
-      moreBtn.textContent = '...';
-      tagsEl.appendChild(moreBtn);
+      const allTags = Array.from(tagsEl.querySelectorAll('.clip-tag'));
+      const containerTop = tagsEl.getBoundingClientRect().top;
+      const maxBottom = containerTop + tagsEl.clientHeight + 2;
+      let visibleCount = 0;
+      for (const t of allTags) {
+        if (t.getBoundingClientRect().bottom <= maxBottom) visibleCount++;
+        else break;
+      }
+      const hiddenCount = allTags.length - visibleCount;
+      if (hiddenCount > 0) {
+        // Hide overflowing tags so the "+N" chip can take their slot in row 2
+        // without being pushed to a 3rd row.
+        for (let i = visibleCount; i < allTags.length; i++) {
+          allTags[i].style.display = 'none';
+        }
+        // Drop one more visible tag to make room for the +N chip on the same row
+        if (visibleCount > 0) {
+          allTags[visibleCount - 1].style.display = 'none';
+        }
+        const moreBtn = document.createElement('span');
+        moreBtn.className = 'clip-tag clip-tags-more';
+        moreBtn.textContent = `+${hiddenCount + (visibleCount > 0 ? 1 : 0)}`;
+        tagsEl.appendChild(moreBtn);
+      }
     }
   });
 
   container.querySelectorAll('.clip-card').forEach(card => {
     card.addEventListener('click', e => {
-      if (e.target.closest('.clip-tags-more')) {
-        e.preventDefault();
-        e.stopPropagation();
-        const tagsContainer = e.target.closest('.clip-tags');
-        tagsContainer.classList.toggle('expanded');
-        const moreBtn = tagsContainer.querySelector('.clip-tags-more');
-        if (tagsContainer.classList.contains('expanded')) {
-          moreBtn.textContent = '▲';
-        } else {
-          moreBtn.textContent = '...';
-        }
-        return;
-      }
       if (e.target.closest('.admin-delete-btn')) { e.preventDefault(); e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
       if (e.target.closest('.admin-edit-btn')) { e.preventDefault(); e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
       if (e.target.closest('.clip-tag.animator')) {
@@ -3067,33 +3076,42 @@ function renderClipPage(clip) {
           ${clip.views ? `<span class="clip-meta-divider">·</span><span>👁 ${clip.views}</span>` : ''}
         </div>
 
-        <!-- Like is the primary action — bigger, separated from secondary actions -->
-        <div class="clip-page-like-row">
+        <!-- Tags right under the meta line (compact YouTube-like layout) -->
+        <div class="clip-page-tags">
+          ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
+          ${clip.tags.map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
+        </div>
+
+        <!-- Action row: like / download / share — like sits on the LEFT of the row -->
+        <div class="clip-page-action-row">
           <button class="clip-like-btn ${likedByMe.has(String(clip.id)) ? 'liked' : ''}" data-like-clip="${clip.id}" title="${LANG === 'en' ? 'Like this clip' : 'Поставить лайк'}">
             <span class="like-heart">♥</span>
             <span class="like-count">${likeCounts[clip.id] || 0}</span>
           </button>
-        </div>
-
-        <!-- Secondary actions: share / download -->
-        <div class="clip-page-actions">
-          <button class="clip-action-btn" data-action="share-copy" title="${LANG === 'en' ? 'Copy link' : 'Скопировать ссылку'}">
-            🔗 <span>${LANG === 'en' ? 'Copy link' : 'Ссылка'}</span>
-          </button>
-          <button class="clip-action-btn" data-action="share-tg" title="${LANG === 'en' ? 'Share on Telegram' : 'В Telegram'}">
-            ✈ <span>Telegram</span>
-          </button>
-          <button class="clip-action-btn" data-action="share-twitter" title="X / Twitter">
-            𝕏 <span>X</span>
-          </button>
           ${clip.videoUrl ? `<a class="clip-action-btn" href="${esc(clip.videoUrl)}" download title="${LANG === 'en' ? 'Download video' : 'Скачать видео'}">
-            ⬇ <span>${LANG === 'en' ? 'Download' : 'Скачать'}</span>
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>${LANG === 'en' ? 'Download' : 'Скачать'}</span>
           </a>` : ''}
-        </div>
-
-        <div class="clip-page-tags">
-          ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
-          ${clip.tags.map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
+          <div class="clip-share-wrap">
+            <button class="clip-action-btn clip-share-toggle" data-action="share-toggle" title="${LANG === 'en' ? 'Share' : 'Поделиться'}">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              <span>${LANG === 'en' ? 'Share' : 'Поделиться'}</span>
+            </button>
+            <div class="clip-share-menu" id="clipShareMenu">
+              <button class="clip-share-item" data-action="share-copy">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span>${LANG === 'en' ? 'Copy link' : 'Скопировать ссылку'}</span>
+              </button>
+              <button class="clip-share-item" data-action="share-tg">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.94 8.2c-.18 1.9-.96 6.51-1.36 8.64-.17.9-.5 1.2-.83 1.23-.71.07-1.25-.47-1.94-.92-1.08-.71-1.69-1.15-2.74-1.84-1.21-.8-.43-1.24.27-1.96.18-.19 3.36-3.08 3.42-3.34.01-.03.01-.16-.06-.22-.07-.06-.18-.04-.26-.02-.11.02-1.85 1.18-5.23 3.46-.5.34-.94.51-1.34.5-.44-.01-1.29-.25-1.92-.46-.77-.25-1.39-.39-1.33-.82.03-.22.34-.45.92-.68 3.6-1.57 6-2.6 7.21-3.1 3.43-1.43 4.14-1.68 4.61-1.69.1 0 .33.02.48.15.13.1.16.24.18.34-.01.06.01.27 0 .43z"/></svg>
+                <span>Telegram</span>
+              </button>
+              <button class="clip-share-item" data-action="share-twitter">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span>X (Twitter)</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         ${clipNotes(clip) ? `<div class="clip-page-notes">${esc(clipNotes(clip)).replace(/\n/g, '<br>')}</div>` : ''}
@@ -3108,7 +3126,25 @@ function renderClipPage(clip) {
   // Wire up actions: like / share / download.
   // The download button is a plain <a download>, so we don't need JS for it.
   page.querySelector('[data-like-clip]')?.addEventListener('click', () => toggleLike(clip.id));
+
+  // Share dropdown: toggle, close on outside click, close after picking an item
+  const shareToggle = page.querySelector('[data-action="share-toggle"]');
+  const shareMenu = page.querySelector('#clipShareMenu');
+  const closeShareMenu = () => shareMenu?.classList.remove('open');
+  shareToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    shareMenu?.classList.toggle('open');
+  });
+  // Click anywhere else closes the menu
+  document.addEventListener('click', (e) => {
+    if (!shareMenu) return;
+    if (!shareMenu.contains(e.target) && e.target !== shareToggle && !shareToggle?.contains(e.target)) {
+      closeShareMenu();
+    }
+  });
+
   page.querySelector('[data-action="share-copy"]')?.addEventListener('click', async () => {
+    closeShareMenu();
     const url = window.location.origin + '/clip/' + clip.id;
     try {
       await navigator.clipboard.writeText(url);
@@ -3123,11 +3159,13 @@ function renderClipPage(clip) {
     }
   });
   page.querySelector('[data-action="share-tg"]')?.addEventListener('click', () => {
+    closeShareMenu();
     const url = window.location.origin + '/clip/' + clip.id;
     const text = clipTitle(clip);
     window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   });
   page.querySelector('[data-action="share-twitter"]')?.addEventListener('click', () => {
+    closeShareMenu();
     const url = window.location.origin + '/clip/' + clip.id;
     const text = clipTitle(clip);
     window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank', 'noopener');
