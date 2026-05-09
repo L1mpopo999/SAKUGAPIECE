@@ -1698,7 +1698,7 @@ function closeUploadModal(){$('#uploadModal').classList.remove('visible');docume
 $('#openUploadBtn').addEventListener('click',()=>openUploadModal());
 $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('Войдите как админ',true);return}openUploadModal(currentAnimatorProfile)});
 
-// Banner upload — opens hidden file input, then POSTs to /api/animators/:name/banner
+// Banner upload — opens hidden file input → crop modal → POST cropped result
 {
   const bannerBtn = $('#uploadBannerBtn');
   const bannerInput = $('#bannerFileInput');
@@ -1709,7 +1709,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
       if (!currentAnimatorProfile) return;
       bannerInput.click();
     });
-    bannerInput.addEventListener('change', async () => {
+    bannerInput.addEventListener('change', () => {
       const file = bannerInput.files && bannerInput.files[0];
       if (!file || !currentAnimatorProfile) return;
       if (!/^image\//.test(file.type)) {
@@ -1717,25 +1717,8 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
         bannerInput.value = '';
         return;
       }
-      const fd = new FormData();
-      fd.append('banner', file);
-      try {
-        const res = await fetch(`/api/animators/${encodeURIComponent(currentAnimatorProfile)}/banner`, {
-          method: 'POST',
-          headers: { 'X-Admin-Token': adminToken },
-          body: fd,
-        });
-        const data = await res.json();
-        if (data.success) {
-          ANIMATOR_BANNERS[currentAnimatorProfile] = data.url;
-          renderAnimatorProfile(currentAnimatorProfile);
-          notify('Баннер обновлён');
-        } else {
-          notify(data.error || 'Не удалось загрузить', true);
-        }
-      } catch (e) {
-        notify('Ошибка сети', true);
-      }
+      // Open crop modal instead of uploading directly
+      openBannerCrop(file);
       bannerInput.value = '';
     });
   }
@@ -1762,6 +1745,180 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
       }
     });
   }
+}
+
+// === Banner crop modal logic ===
+// Loads the file into an <img>, then lets the user pan + zoom inside a 4:1 frame.
+// "Save" rasterizes the visible region to a JPEG and POSTs it as the new banner.
+function openBannerCrop(file) {
+  const modal = document.getElementById('bannerCropModal');
+  const stage = document.getElementById('bannerCropStage');
+  const img = document.getElementById('bannerCropImage');
+  const zoomInput = document.getElementById('bannerCropZoom');
+  const saveBtn = document.getElementById('bannerCropSave');
+  const cancelBtn = document.getElementById('bannerCropCancel');
+  const closeBtn = document.getElementById('bannerCropClose');
+  if (!modal || !stage || !img || !zoomInput) return;
+
+  // State held in a closure
+  const state = {
+    naturalW: 0, naturalH: 0,
+    stageW: 0, stageH: 0,
+    baseScale: 1,   // scale that makes the image "cover" the stage at 100% zoom
+    zoom: 1,        // additional zoom (1.0 - 3.0)
+    // Translation in stage pixels (top-left of image relative to stage)
+    tx: 0, ty: 0,
+    dragging: false,
+    dragStartX: 0, dragStartY: 0,
+    txStart: 0, tyStart: 0,
+  };
+
+  const url = URL.createObjectURL(file);
+  img.src = url;
+
+  // Wait for image to load before measuring
+  img.onload = () => {
+    state.naturalW = img.naturalWidth;
+    state.naturalH = img.naturalHeight;
+    measureAndFit();
+    modal.classList.add('visible');
+    zoomInput.value = '100';
+    state.zoom = 1;
+  };
+
+  function measureAndFit() {
+    const r = stage.getBoundingClientRect();
+    state.stageW = r.width;
+    state.stageH = r.height;
+    // "Cover" scale — fill the stage entirely at zoom=1
+    state.baseScale = Math.max(state.stageW / state.naturalW, state.stageH / state.naturalH);
+    // Center image
+    const w = state.naturalW * state.baseScale * state.zoom;
+    const h = state.naturalH * state.baseScale * state.zoom;
+    state.tx = (state.stageW - w) / 2;
+    state.ty = (state.stageH - h) / 2;
+    apply();
+  }
+
+  function clampTranslate() {
+    const w = state.naturalW * state.baseScale * state.zoom;
+    const h = state.naturalH * state.baseScale * state.zoom;
+    // Don't let the image leave gaps inside the frame
+    const minX = state.stageW - w;
+    const maxX = 0;
+    const minY = state.stageH - h;
+    const maxY = 0;
+    state.tx = Math.min(maxX, Math.max(minX, state.tx));
+    state.ty = Math.min(maxY, Math.max(minY, state.ty));
+  }
+
+  function apply() {
+    clampTranslate();
+    const s = state.baseScale * state.zoom;
+    img.style.transform = `translate(${state.tx}px, ${state.ty}px) scale(${s})`;
+  }
+
+  // Pan with pointer
+  function onPointerDown(e) {
+    state.dragging = true;
+    state.dragStartX = e.clientX;
+    state.dragStartY = e.clientY;
+    state.txStart = state.tx;
+    state.tyStart = state.ty;
+    stage.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e) {
+    if (!state.dragging) return;
+    state.tx = state.txStart + (e.clientX - state.dragStartX);
+    state.ty = state.tyStart + (e.clientY - state.dragStartY);
+    apply();
+  }
+  function onPointerUp(e) {
+    state.dragging = false;
+    try { stage.releasePointerCapture(e.pointerId); } catch (_) {}
+  }
+  stage.addEventListener('pointerdown', onPointerDown);
+  stage.addEventListener('pointermove', onPointerMove);
+  stage.addEventListener('pointerup', onPointerUp);
+  stage.addEventListener('pointercancel', onPointerUp);
+
+  // Zoom — keep the center pixel fixed under the cursor
+  zoomInput.oninput = () => {
+    const newZoom = parseInt(zoomInput.value, 10) / 100;
+    // Anchor zoom to stage center
+    const cx = state.stageW / 2;
+    const cy = state.stageH / 2;
+    const oldS = state.baseScale * state.zoom;
+    const newS = state.baseScale * newZoom;
+    // Image-space coordinate at the stage center
+    const imgX = (cx - state.tx) / oldS;
+    const imgY = (cy - state.ty) / oldS;
+    state.zoom = newZoom;
+    // Re-anchor so the same image point stays under the center
+    state.tx = cx - imgX * newS;
+    state.ty = cy - imgY * newS;
+    apply();
+  };
+
+  function close() {
+    modal.classList.remove('visible');
+    URL.revokeObjectURL(url);
+    img.src = '';
+    img.onload = null;
+    stage.removeEventListener('pointerdown', onPointerDown);
+    stage.removeEventListener('pointermove', onPointerMove);
+    stage.removeEventListener('pointerup', onPointerUp);
+    stage.removeEventListener('pointercancel', onPointerUp);
+  }
+
+  cancelBtn.onclick = close;
+  closeBtn.onclick = close;
+  // Don't close on outside click — user could lose progress
+
+  saveBtn.onclick = async () => {
+    // Render the current view to a canvas, then upload as a Blob.
+    const OUT_W = 1600;
+    const OUT_H = 400; // 4:1
+    const canvas = document.createElement('canvas');
+    canvas.width = OUT_W;
+    canvas.height = OUT_H;
+    const ctx = canvas.getContext('2d');
+    // Map stage coords -> source image crop
+    const s = state.baseScale * state.zoom;
+    const srcX = -state.tx / s;
+    const srcY = -state.ty / s;
+    const srcW = state.stageW / s;
+    const srcH = state.stageH / s;
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, OUT_W, OUT_H);
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Сохраняем…';
+    try {
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+      if (!blob) throw new Error('toBlob failed');
+      const fd = new FormData();
+      fd.append('banner', blob, 'banner.jpg');
+      const r = await fetch(`/api/animators/${encodeURIComponent(currentAnimatorProfile)}/banner`, {
+        method: 'POST',
+        headers: { 'X-Admin-Token': adminToken },
+        body: fd,
+      });
+      const data = await r.json();
+      if (data.success) {
+        ANIMATOR_BANNERS[currentAnimatorProfile] = data.url;
+        renderAnimatorProfile(currentAnimatorProfile);
+        notify('Баннер обновлён');
+        close();
+      } else {
+        notify(data.error || 'Не удалось загрузить', true);
+      }
+    } catch (e) {
+      notify('Ошибка сети', true);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Сохранить';
+    }
+  };
 }
 $('#closeUploadBtn').addEventListener('click',closeUploadModal);
 

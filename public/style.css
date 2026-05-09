@@ -351,19 +351,31 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* Animator Profile */
 .animator-profile-header{padding:1.5rem 2rem .8rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;overflow:hidden}
 /* Banner: positioned absolutely at the top-right, sized to the header height.
-   On the LEFT it fades into the page background via a horizontal mask, so the
-   text on the left stays readable without a hard edge. */
+   The image is feathered on all sides — the strongest fade is on the left
+   (so it blends into the title area) and softer fades top/bottom/right give
+   a vignette feel rather than a hard rectangle. */
 .animator-profile-banner{
   position:absolute;
   top:0;right:0;bottom:0;
-  width:55%;max-width:720px;
-  background-position:center;background-size:cover;background-repeat:no-repeat;
+  width:62%;max-width:780px;
+  background-position:center center;background-size:cover;background-repeat:no-repeat;
   pointer-events:none;
   opacity:0;
   transition:opacity .35s ease;
-  /* Left fade — image visible only on the right; smoothly disappears toward the text */
-  -webkit-mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,.35) 30%, #000 70%);
-  mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,.35) 30%, #000 70%);
+  /* Composite mask:
+     - Horizontal: fade in from 0% to ~50% then full toward the right edge,
+       but pull back at 95-100% so the right edge isn't a hard cut either.
+     - Vertical: feather top and bottom 12% so it doesn't slam into the header edges.
+     mask-composite:intersect uses the darker of the two — only pixels covered by
+     BOTH masks are visible. */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, rgba(0,0,0,.15) 18%, rgba(0,0,0,.6) 42%, #000 65%, #000 90%, rgba(0,0,0,.6) 100%),
+    linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  mask-image:
+    linear-gradient(to right, transparent 0%, rgba(0,0,0,.15) 18%, rgba(0,0,0,.6) 42%, #000 65%, #000 90%, rgba(0,0,0,.6) 100%),
+    linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  -webkit-mask-composite:source-in;
+  mask-composite:intersect;
   z-index:0;
 }
 .animator-profile-banner.has-banner{opacity:1}
@@ -395,6 +407,56 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   display:inline-flex;align-items:center;justify-content:center;
 }
 .btn-banner-remove:hover{background:rgba(230,57,70,.15);border-color:var(--accent);color:var(--accent);box-shadow:none}
+
+/* === Banner crop modal: drag-to-position + zoom slider ==================== */
+.banner-crop-stage{
+  position:relative;
+  width:100%;
+  /* 4:1 aspect — matches the live banner box on the profile page */
+  aspect-ratio:4 / 1;
+  background:#000;
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  user-select:none;
+  cursor:grab;
+  touch-action:none;
+}
+.banner-crop-stage:active{cursor:grabbing}
+#bannerCropImage{
+  position:absolute;
+  top:0;left:0;
+  /* Sized + positioned via JS using transform */
+  transform-origin:0 0;
+  max-width:none;
+  pointer-events:none;
+}
+.banner-crop-frame{
+  position:absolute;inset:0;
+  pointer-events:none;
+  border:2px solid rgba(244,162,38,.55);
+  box-shadow:0 0 0 9999px rgba(0,0,0,.35);
+  border-radius:var(--radius-lg);
+}
+/* Show the same mask the live page will apply — admins see the actual fade */
+.banner-crop-mask{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(to right, var(--bg-primary) 0%, rgba(10,10,15,.85) 18%, rgba(10,10,15,.4) 42%, transparent 65%, transparent 90%, rgba(10,10,15,.4) 100%),
+    linear-gradient(to bottom, var(--bg-primary) 0%, transparent 14%, transparent 86%, var(--bg-primary) 100%);
+  pointer-events:none;
+}
+.banner-crop-controls{
+  margin-top:1rem;
+  display:flex;flex-direction:column;gap:.9rem;
+}
+.banner-crop-zoom-label{
+  display:flex;align-items:center;gap:.7rem;
+  font-family:'Manrope',sans-serif;font-size:.78rem;font-weight:600;
+  color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;
+}
+#bannerCropZoom{flex:1;accent-color:var(--gold)}
+.banner-crop-actions{display:flex;gap:.6rem;justify-content:flex-end}
+.banner-crop-actions .btn-submit{flex:0 0 auto;width:auto;padding:.5rem 1.1rem;margin-top:0}
 
 /* Episode director block */
 .episode-director-block{margin-top:.5rem;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;font-family:'Space Mono',monospace;font-size:.75rem;color:var(--text-secondary)}

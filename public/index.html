@@ -552,6 +552,32 @@
   </div>
 </div>
 
+<!-- BANNER CROP MODAL — drag to position, slider to zoom -->
+<div class="modal-overlay" id="bannerCropModal">
+  <div class="modal" style="max-width:780px">
+    <button class="modal-close" id="bannerCropClose">&times;</button>
+    <h2 class="modal-title">Настройка баннера</h2>
+    <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:1rem">Перетащите картинку и используйте ползунок для масштаба. То, что внутри рамки — попадёт на страницу.</p>
+    <div class="banner-crop-stage" id="bannerCropStage">
+      <img id="bannerCropImage" alt="" draggable="false">
+      <div class="banner-crop-frame">
+        <!-- Visual preview of how the banner mask will fade on the live page -->
+        <div class="banner-crop-mask"></div>
+      </div>
+    </div>
+    <div class="banner-crop-controls">
+      <label class="banner-crop-zoom-label">
+        <span>Масштаб</span>
+        <input type="range" id="bannerCropZoom" min="100" max="300" value="100" step="1">
+      </label>
+      <div class="banner-crop-actions">
+        <button class="btn-submit btn-cancel" id="bannerCropCancel">Отмена</button>
+        <button class="btn-submit" id="bannerCropSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- NOTIFICATION -->
 <div class="notification" id="notification">
   <span class="notification-icon">✦</span>
