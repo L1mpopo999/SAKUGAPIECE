@@ -103,10 +103,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-thumb video,.clip-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .clip-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card))}
 .clip-thumb-placeholder svg{width:48px;height:48px;color:var(--text-muted);opacity:.5}
-.clip-duration{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.7rem;padding:.15rem .45rem;border-radius:3px}
-.clip-hd-badge{position:absolute;top:8px;right:8px;background:var(--gold);color:#000;font-family:'Bebas Neue',sans-serif;font-size:.7rem;letter-spacing:.1em;padding:.1rem .45rem;border-radius:3px;box-shadow:0 0 10px var(--gold-glow)}
+.clip-duration{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.82);color:#fff;font-family:'Space Mono',monospace;font-size:.7rem;padding:.15rem .45rem;border-radius:5px;backdrop-filter:blur(4px)}
+/* HD/PHOTO badge — slightly bigger and more prominent than before, but not huge */
+.clip-hd-badge{position:absolute;top:8px;right:8px;background:var(--gold);color:#1a1206;font-family:'Bebas Neue',sans-serif;font-size:.78rem;letter-spacing:.08em;padding:.18rem .55rem;border-radius:5px;box-shadow:0 3px 10px rgba(244,162,38,.35);font-weight:700}
 .clip-type-badge{position:absolute;top:8px;left:40px;background:rgba(0,0,0,.7);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.6rem;padding:.1rem .4rem;border-radius:3px}
-.clip-img-count{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.8);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.7rem;padding:.15rem .45rem;border-radius:3px}
+.clip-img-count{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.82);color:#fff;font-family:'Space Mono',monospace;font-size:.7rem;padding:.15rem .45rem;border-radius:5px;backdrop-filter:blur(4px)}
 /* Like badge — appears on the bottom-right of the clip thumb when the clip
    has likes. Designed to pop: red gradient + heart, glow ring on hover. */
 .clip-like-badge{position:absolute;bottom:8px;right:8px;background:linear-gradient(135deg,#ff4458,#e63946);color:#fff;font-family:'Space Mono',monospace;font-weight:700;font-size:.78rem;padding:.22rem .55rem;border-radius:14px;display:inline-flex;align-items:center;gap:.3rem;box-shadow:0 2px 10px rgba(230,57,70,.5);letter-spacing:.02em;backdrop-filter:blur(4px);z-index:2}
@@ -120,31 +121,99 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .play-btn{width:52px;height:52px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px var(--accent-glow);transition:transform .2s}
 .clip-card:hover .play-btn{transform:scale(1.1)}
 .play-btn svg{width:20px;height:20px;color:#fff;margin-left:2px}
-.clip-info{padding:.8rem 1rem 1rem}
-.clip-title{font-size:.9rem;font-weight:600;margin-bottom:.4rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
-.clip-meta{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;font-size:.75rem;color:var(--text-secondary);font-family:'Space Mono',monospace}
-.clip-meta-divider{color:var(--text-muted)}
-.clip-tags{display:flex;flex-wrap:wrap;gap:.35rem;max-height:3.2em;overflow:hidden;position:relative;transition:max-height .3s ease}
-.clip-tags.expanded{max-height:none}
-.clip-tag{font-size:.68rem;padding:.15rem .5rem;border-radius:3px;font-family:'Space Mono',monospace}
-.clip-tag.animator{background:var(--tag-animator-bg);color:var(--tag-animator-text);cursor:pointer}
-.clip-tag.animator:hover{background:rgba(244,162,38,.25)}
-.clip-tag.category{background:var(--tag-bg);color:var(--tag-text);cursor:pointer}
-.clip-tag.category:hover{background:rgba(255,255,255,.12)}
-.clip-views{font-size:.7rem;opacity:.7}
-/* Like count in clip card meta — punchier than views/comments. Solid color, slight bold,
-   pops against muted siblings. Hidden when zero (markup-side). */
+/* === Card info area: compact redesign — new style, similar size to old === */
+.clip-info{padding:.85rem 1rem 1rem}
+/* Bold title with gold accent bar underneath. Preserves user's case. */
+.clip-title{
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:1.05rem;
+  font-weight:800;
+  letter-spacing:-.012em;
+  line-height:1.2;
+  color:var(--text-primary);
+  margin-bottom:.45rem;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  word-break:break-word;
+}
+.clip-title::after{
+  content:"";
+  display:block;
+  width:38px;height:2px;
+  background:var(--gold);
+  border-radius:2px;
+  margin-top:.45rem;
+}
+/* Meta row: gold dot dividers and subtle eye/comment icons */
+.clip-meta{
+  display:flex;align-items:center;gap:.5rem;
+  margin-bottom:.55rem;
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:.82rem;font-weight:600;
+  color:var(--text-secondary);
+}
+.clip-meta-divider{
+  display:inline-block;
+  width:4px;height:4px;
+  background:var(--gold);
+  border-radius:50%;
+  font-size:0;line-height:0;
+  flex-shrink:0;
+  opacity:.85;
+}
+.clip-meta .meta-icon{
+  width:14px;height:14px;
+  display:inline-block;vertical-align:-2px;
+  margin-right:.22rem;
+  opacity:.75;
+}
+.clip-views{font-size:.82rem;opacity:1;display:inline-flex;align-items:center}
+/* Thin separator line between meta and tags */
+.clip-info-separator{
+  height:1px;
+  background:var(--border);
+  margin:.15rem 0 .55rem;
+  opacity:.6;
+}
+/* === Tags — compact pill-shape, no leading icons === */
+.clip-tags{display:flex;flex-wrap:wrap;gap:.35rem;max-height:none;position:relative}
+.clip-tag{
+  font-family:'Space Mono',monospace;
+  font-size:.7rem;
+  font-weight:500;
+  padding:.25rem .6rem;
+  border-radius:5px;
+  letter-spacing:.01em;
+  line-height:1.2;
+}
+.clip-tag.animator{
+  background:rgba(244,162,38,.13);
+  color:var(--tag-animator-text);
+  cursor:pointer;
+  border:1px solid rgba(244,162,38,.16);
+}
+.clip-tag.animator:hover{background:rgba(244,162,38,.22);border-color:rgba(244,162,38,.32)}
+.clip-tag.category{
+  background:rgba(230,57,70,.12);
+  color:#ff8a96;
+  cursor:pointer;
+  border:1px solid rgba(230,57,70,.16);
+}
+.clip-tag.category:hover{background:rgba(230,57,70,.2);border-color:rgba(230,57,70,.36)}
 .clip-likes{
-  font-size:.72rem;color:var(--accent);font-weight:700;
+  font-size:.78rem;color:var(--accent);font-weight:700;
   display:inline-flex;align-items:center;gap:.25rem;letter-spacing:.02em;
-  /* Subtle pill background so the like count pops against the muted meta line */
   background:rgba(230,57,70,.12);
   border:1px solid rgba(230,57,70,.35);
-  padding:.1rem .45rem .12rem;
-  border-radius:10px;line-height:1.1;
+  padding:.14rem .5rem;
+  border-radius:8px;line-height:1.1;
 }
 .clip-likes::first-letter{font-size:.95rem}
-.clip-tags-more{background:rgba(255,255,255,.08);color:var(--text-muted);cursor:pointer;font-size:.65rem;padding:.15rem .5rem;border-radius:3px;font-family:'Space Mono',monospace;transition:background .2s}
+.clip-tags-more{
+  background:rgba(255,255,255,.08);color:var(--text-muted);cursor:pointer;
+  font-size:.7rem;padding:.25rem .6rem;border-radius:5px;
+  font-family:'Space Mono',monospace;transition:background .2s;
+  border:1px solid rgba(255,255,255,.06);
+}
 .clip-tags-more:hover{background:rgba(255,255,255,.15);color:var(--text-primary)}
 
 /* Animator Grid */
@@ -535,6 +604,13 @@ body.admin-mode .header-socials{display:none}
   .hero{padding:2rem 1rem 1.2rem}
   .hero-sub{font-size:.82rem;margin-bottom:1.5rem}
   .clip-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+  .clip-info{padding:.75rem .85rem .9rem}
+  .clip-title{font-size:.95rem}
+  .clip-title::after{width:32px;height:2px;margin-top:.4rem}
+  .clip-meta{font-size:.75rem;gap:.4rem}
+  .clip-meta .meta-icon{width:13px;height:13px}
+  .clip-tag{font-size:.66rem;padding:.22rem .55rem}
+  .clip-hd-badge{font-size:.72rem;padding:.16rem .5rem}
   .animator-grid{grid-template-columns:1fr}
   #episodeGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
   #animatorGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
@@ -604,7 +680,11 @@ body.admin-mode .header-socials{display:none}
 /* "More tags" chip uses white-tinted backgrounds that disappear on light bg */
 :root[data-theme="light"] .clip-tags-more{background:rgba(0,0,0,.06)}
 :root[data-theme="light"] .clip-tags-more:hover{background:rgba(0,0,0,.12);color:var(--text-primary)}
-:root[data-theme="light"] .clip-tag.category:hover{background:rgba(0,0,0,.06)}
+:root[data-theme="light"] .clip-tag.category{background:rgba(230,57,70,.10);color:#c1303d;border-color:rgba(230,57,70,.2)}
+:root[data-theme="light"] .clip-tag.category:hover{background:rgba(230,57,70,.18);border-color:rgba(230,57,70,.4)}
+:root[data-theme="light"] .clip-tag.animator{background:rgba(244,162,38,.16);color:#a87015;border-color:rgba(244,162,38,.28)}
+:root[data-theme="light"] .clip-tag.animator:hover{background:rgba(244,162,38,.28);border-color:rgba(244,162,38,.5)}
+:root[data-theme="light"] .clip-info-separator{background:var(--border);opacity:1}
 :root[data-theme="light"] .player-modal,
 :root[data-theme="light"] .image-viewer{background:rgba(20,20,30,.92)}
 :root[data-theme="light"] body::before{background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(230,57,70,.04) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 90%,rgba(244,162,38,.04) 0%,transparent 60%)}
