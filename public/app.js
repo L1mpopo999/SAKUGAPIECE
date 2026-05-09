@@ -532,6 +532,7 @@ function renderClipCard(clip, i) {
     </div>
     <div class="clip-info">
       <div class="clip-title">${esc(clipTitle(clip))}</div>
+      <div class="clip-title-bar"></div>
       <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>${commentCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-info-separator"></div>
       <div class="clip-tags" data-clip-id="${clip.id}">
@@ -539,6 +540,7 @@ function renderClipCard(clip, i) {
         ${clip.tags.slice(0,2).map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
         ${clip.episode ? `<span class="clip-tag category">${esc(clip.episode)}</span>` : ''}
       </div>
+      <div class="clip-info-tail"></div>
     </div>
   ${cardClose}`;
 }

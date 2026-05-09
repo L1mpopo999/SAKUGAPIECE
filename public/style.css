@@ -97,7 +97,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .pagination-btn.disabled{opacity:.3;cursor:default;pointer-events:none}
 .pagination-dots{color:var(--text-muted);font-size:.8rem;padding:0 .2rem}
 .clip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.2rem}
-.clip-card{background:var(--bg-card);border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);transition:all .3s cubic-bezier(.25,.46,.45,.94);cursor:pointer;position:relative;animation:fadeUp .4s ease both;text-decoration:none;color:inherit;display:block}
+.clip-card{background:var(--bg-card);border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);transition:all .3s cubic-bezier(.25,.46,.45,.94);cursor:pointer;position:relative;animation:fadeUp .4s ease both;text-decoration:none;color:inherit;display:flex;flex-direction:column}
 .clip-card:hover{border-color:var(--border-light);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .clip-thumb{position:relative;aspect-ratio:16/9;background:var(--bg-secondary);overflow:hidden}
 .clip-thumb video,.clip-thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -122,8 +122,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-card:hover .play-btn{transform:scale(1.1)}
 .play-btn svg{width:20px;height:20px;color:#fff;margin-left:2px}
 /* === Card info area: compact redesign — new style, similar size to old === */
-.clip-info{padding:.85rem 1rem 1rem}
-/* Bold title with gold accent bar underneath. Preserves user's case. */
+/* Flex column lets us push a spacer to the bottom so all cards in a row line up.
+   The spacer goes AFTER tags (not between title and meta) — that way meta+tags
+   stay tight against the title and the empty space falls below. */
+.clip-info{padding:.85rem 1rem 1rem;display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
 .clip-title{
   font-family:'Manrope','Noto Sans',sans-serif;
   font-size:1.05rem;
@@ -131,18 +133,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   letter-spacing:-.012em;
   line-height:1.2;
   color:var(--text-primary);
-  margin-bottom:.45rem;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  margin-bottom:.55rem;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   word-break:break-word;
+  flex-shrink:0;
 }
-.clip-title::after{
-  content:"";
-  display:block;
-  width:38px;height:2px;
+/* Full-width gold underline — separate element (NOT ::after on title, because
+   -webkit-line-clamp with overflow:hidden eats pseudo-elements when the title
+   reaches the line limit). */
+.clip-title-bar{
+  width:100%;
+  height:2px;
   background:var(--gold);
   border-radius:2px;
-  margin-top:.45rem;
+  margin-bottom:.55rem;
+  flex-shrink:0;
 }
+/* Tail spacer: pushes everything else up so cards in a row align by bottom edge */
+.clip-info-tail{flex:1 1 auto;min-height:0}
 /* Meta row: gold dot dividers and subtle eye/comment icons */
 .clip-meta{
   display:flex;align-items:center;gap:.5rem;
