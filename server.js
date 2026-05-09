@@ -188,6 +188,22 @@ function getAnimatorBanner(name) {
   return key ? banners[key] : null;
 }
 
+// ===== EPISODE BANNERS =====
+// Map of { episodeNumber: '/uploads/<file>' }. Episodes are referenced by their
+// number (string). Same pattern as animator banners.
+const EPISODE_BANNERS_FILE = path.join(dataDir, 'episode_banners.json');
+function loadEpisodeBanners() {
+  if (!fs.existsSync(EPISODE_BANNERS_FILE)) { saveEpisodeBanners({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(EPISODE_BANNERS_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveEpisodeBanners(data) { writeJsonAtomic(EPISODE_BANNERS_FILE, data); }
+function getEpisodeBanner(num) {
+  if (!num) return null;
+  const banners = loadEpisodeBanners();
+  return banners[String(num)] || null;
+}
+
 // ===== DIRECTORS =====
 const DIRECTORS_FILE = path.join(dataDir, 'directors.json');
 const EPISODE_DIRECTORS_FILE = path.join(dataDir, 'episode_directors.json');
@@ -1272,6 +1288,48 @@ app.delete('/api/animators/:name/banner', (req, res) => {
     }
     delete banners[key];
     saveAnimatorBanners(banners);
+  }
+  res.json({ success: true });
+});
+
+// ===== EPISODE BANNER (admin only) =====
+app.get('/api/episodes/:num/banner', (req, res) => {
+  res.json({ url: getEpisodeBanner(req.params.num) || null });
+});
+
+app.get('/api/episode-banners', (req, res) => { res.json(loadEpisodeBanners()); });
+
+app.post('/api/episodes/:num/banner', uploadFiles.single('banner'), (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+  if (!/image\//.test(req.file.mimetype)) {
+    return res.status(400).json({ error: 'Загрузите изображение (JPG/PNG/WebP)' });
+  }
+  const num = String(req.params.num).trim();
+  if (!num) return res.status(400).json({ error: 'Номер эпизода обязателен' });
+  const banners = loadEpisodeBanners();
+  const prev = banners[num];
+  if (prev && prev.startsWith('/uploads/')) {
+    const prevPath = path.join(uploadsDir, path.basename(prev));
+    fs.unlink(prevPath, () => {});
+  }
+  banners[num] = '/uploads/' + req.file.filename;
+  saveEpisodeBanners(banners);
+  res.json({ success: true, url: banners[num] });
+});
+
+app.delete('/api/episodes/:num/banner', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const num = String(req.params.num);
+  const banners = loadEpisodeBanners();
+  if (banners[num]) {
+    const url = banners[num];
+    if (url && url.startsWith('/uploads/')) {
+      const p = path.join(uploadsDir, path.basename(url));
+      fs.unlink(p, () => {});
+    }
+    delete banners[num];
+    saveEpisodeBanners(banners);
   }
   res.json({ success: true });
 });

@@ -229,6 +229,7 @@ let HIDDEN_ANIMATORS = [];
 let DIRECTORS = [];
 let EPISODE_DIRECTORS = {}; // { "1015": "Megumi Ishitani", ... }
 let ANIMATOR_BANNERS = {}; // { "Vincent Chansard": "/uploads/xxx.jpg" }
+let EPISODE_BANNERS = {}; // { "1015": "/uploads/xxx.jpg" }
 
 async function loadAnimatorsAndFilters() {
   // Cache-bust to make sure we get fresh data after admin edits.
@@ -242,6 +243,7 @@ async function loadAnimatorsAndFilters() {
   try { DIRECTORS = await (await fetch('/api/directors' + bust)).json(); } catch { DIRECTORS = []; }
   try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors' + bust)).json(); } catch { EPISODE_DIRECTORS = {}; }
   try { ANIMATOR_BANNERS = await (await fetch('/api/animator-banners' + bust)).json(); } catch { ANIMATOR_BANNERS = {}; }
+  try { EPISODE_BANNERS = await (await fetch('/api/episode-banners' + bust)).json(); } catch { EPISODE_BANNERS = {}; }
 }
 
 // Case-insensitive lookup of an animator's banner URL
@@ -1526,6 +1528,23 @@ function renderEpisodeProfile(episode) {
   if (animators.length) stats += ` · ${animators.length} ${pluralAnimators(animators.length)}`;
   $('#episodeProfileStats').textContent = stats;
 
+  // === Banner image (admin-uploaded) ===
+  const bannerEl = $('#episodeProfileBanner');
+  const removeBtn = $('#removeEpisodeBannerBtn');
+  const uploadLabel = $('#uploadEpisodeBannerBtnLabel');
+  const bannerUrl = EPISODE_BANNERS[String(episode)] || null;
+  if (bannerEl) {
+    if (bannerUrl) {
+      bannerEl.style.backgroundImage = `url("${bannerUrl}")`;
+      bannerEl.classList.add('has-banner');
+    } else {
+      bannerEl.style.backgroundImage = '';
+      bannerEl.classList.remove('has-banner');
+    }
+  }
+  if (removeBtn) removeBtn.style.display = (isAdmin && bannerUrl) ? '' : 'none';
+  if (uploadLabel) uploadLabel.textContent = bannerUrl ? 'Заменить баннер' : 'Загрузить баннер';
+
   // Render prev/next arrows
   const { prev, next } = getAdjacentEpisodes(episode);
   const navEl = $('#episodeProfileNav');
@@ -1747,10 +1766,65 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
   }
 }
 
+// Episode banner upload — same crop modal, different upload target
+{
+  const epBtn = $('#uploadEpisodeBannerBtn');
+  const epInput = $('#episodeBannerFileInput');
+  const epRemove = $('#removeEpisodeBannerBtn');
+  if (epBtn && epInput) {
+    epBtn.addEventListener('click', () => {
+      if (!isAdmin) { notify('Войдите как админ', true); return; }
+      if (!currentEpisodeProfile) return;
+      epInput.click();
+    });
+    epInput.addEventListener('change', () => {
+      const file = epInput.files && epInput.files[0];
+      if (!file || !currentEpisodeProfile) return;
+      if (!/^image\//.test(file.type)) {
+        notify('Загрузите изображение (JPG/PNG/WebP)', true);
+        epInput.value = '';
+        return;
+      }
+      const ep = currentEpisodeProfile;
+      openBannerCrop(file, {
+        uploadUrl: `/api/episodes/${encodeURIComponent(ep)}/banner`,
+        onSuccess: (data) => {
+          EPISODE_BANNERS[String(ep)] = data.url;
+          renderEpisodeProfile(ep);
+        },
+      });
+      epInput.value = '';
+    });
+  }
+  if (epRemove) {
+    epRemove.addEventListener('click', async () => {
+      if (!isAdmin || !currentEpisodeProfile) return;
+      if (!confirm('Удалить баннер этой серии?')) return;
+      try {
+        const res = await fetch(`/api/episodes/${encodeURIComponent(currentEpisodeProfile)}/banner`, {
+          method: 'DELETE',
+          headers: { 'X-Admin-Token': adminToken },
+        });
+        const data = await res.json();
+        if (data.success) {
+          delete EPISODE_BANNERS[String(currentEpisodeProfile)];
+          renderEpisodeProfile(currentEpisodeProfile);
+          notify('Баннер удалён');
+        }
+      } catch (e) {
+        notify('Ошибка сети', true);
+      }
+    });
+  }
+}
+
 // === Banner crop modal logic ===
 // Loads the file into an <img>, then lets the user pan + zoom inside a 4:1 frame.
 // "Save" rasterizes the visible region to a JPEG and POSTs it as the new banner.
-function openBannerCrop(file) {
+// `target` describes where to upload and how to refresh after success:
+//   { uploadUrl: string, onSuccess: (data) => void }
+// If omitted, defaults to the animator-profile workflow (back-compat).
+function openBannerCrop(file, target) {
   const modal = document.getElementById('bannerCropModal');
   const stage = document.getElementById('bannerCropStage');
   const img = document.getElementById('bannerCropImage');
@@ -1924,15 +1998,22 @@ function openBannerCrop(file) {
       if (!blob) throw new Error('toBlob failed');
       const fd = new FormData();
       fd.append('banner', blob, 'banner.jpg');
-      const r = await fetch(`/api/animators/${encodeURIComponent(currentAnimatorProfile)}/banner`, {
+      // Default target = animator profile workflow (preserve existing behavior)
+      const uploadUrl = target?.uploadUrl
+        || `/api/animators/${encodeURIComponent(currentAnimatorProfile)}/banner`;
+      const r = await fetch(uploadUrl, {
         method: 'POST',
         headers: { 'X-Admin-Token': adminToken },
         body: fd,
       });
       const data = await r.json();
       if (data.success) {
-        ANIMATOR_BANNERS[currentAnimatorProfile] = data.url;
-        renderAnimatorProfile(currentAnimatorProfile);
+        if (target?.onSuccess) {
+          target.onSuccess(data);
+        } else {
+          ANIMATOR_BANNERS[currentAnimatorProfile] = data.url;
+          renderAnimatorProfile(currentAnimatorProfile);
+        }
         notify('Баннер обновлён');
         close();
       } else {
