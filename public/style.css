@@ -274,19 +274,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .episodes-sort-bar{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;max-width:1440px;margin:0 auto;padding:0 1rem 1rem}
 
 /* === Animator profile: compact filter row =================================
-   One-line layout when there's room: type chips (left) | search (center, flex-1)
-   | arc chips with dropdown (right). Wraps gracefully on narrow viewports. */
+   Symmetrical 3-column layout: types (left) — search (center, flex) — arcs (right).
+   Padding matches .grid-container (2rem) so the right edge of arcs lines up with
+   the right edge of the last clip card in the grid below. */
 .animator-profile-filterrow{
   max-width:1440px;
   margin:0 auto;
-  padding:0 1rem 1rem;
-  display:flex;flex-wrap:wrap;align-items:center;gap:.7rem;
+  padding:0 2rem 1.2rem;
+  display:flex;flex-wrap:wrap;align-items:center;
+  gap:1.2rem;
+  justify-content:space-between;
 }
 .animator-profile-types{display:flex;flex-wrap:wrap;gap:.4rem;flex-shrink:0}
 .animator-profile-search-wrap{
   position:relative;
-  flex:1 1 280px;
+  flex:1 1 320px;
   min-width:240px;max-width:520px;
+  /* Center the search horizontally between the side groups */
+  margin:0 auto;
 }
 .animator-profile-search-icon{
   position:absolute;left:.9rem;top:50%;transform:translateY(-50%);
@@ -779,6 +784,8 @@ body.admin-mode .header-socials{display:none}
   .filters{gap:.35rem;padding:.5rem 1rem}
   .filter-chip{font-size:.6rem;padding:.3rem .6rem}
   .grid-container{padding:1rem}
+  .animator-profile-filterrow{padding:0 1rem 1rem;gap:.7rem}
+  .animator-profile-search-wrap{flex:1 1 100%;max-width:none;margin:0}
   .modal{padding:1.5rem;margin:.5rem}
   .form-row{flex-direction:column;gap:0}
 }
