@@ -487,24 +487,45 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
     0 4px 22px rgba(0,0,0,.6),
     0 0 26px rgba(244,162,38,.28);
 }
-/* Stats line ("Wano · 24 clips · 21 animators"): white with outline for readability */
+/* Stats line ("Wano · 24 clips · 21 animators"): same restrained styling as
+   the EPISODE label — small, spaced-out, white-ish, soft shadow only. */
 .episode-profile-header .animator-profile-stats{
-  color:#fff;
-  text-shadow:
-    -1.5px -1.5px 0 #000,
-    1.5px -1.5px 0 #000,
-    -1.5px 1.5px 0 #000,
-    1.5px 1.5px 0 #000,
-    0 0 10px rgba(0,0,0,.85);
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.72);
+  text-shadow:0 1px 4px rgba(0,0,0,.7), 0 0 12px rgba(0,0,0,.5);
 }
-/* "ED:" label and the back-btn / nav buttons stay readable too */
+/* "ED:" label and the back-btn / nav buttons: same restrained styling */
 .episode-profile-header .episode-director-label,
 .episode-profile-header .back-btn span,
 .episode-profile-header .episode-nav-btn span{
-  color:#fff;
-  text-shadow:
-    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
-    0 0 8px rgba(0,0,0,.85);
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.72);
+  text-shadow:0 1px 4px rgba(0,0,0,.7), 0 0 12px rgba(0,0,0,.5);
+}
+/* Director chip — bigger, more visually prominent */
+.episode-profile-header .episode-director-chip{
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:.95rem;
+  font-weight:700;
+  padding:.45rem .9rem;
+  background:rgba(244,162,38,.16);
+  border:1px solid rgba(244,162,38,.55);
+  border-radius:24px;
+  color:var(--gold);
+  letter-spacing:.01em;
+  text-transform:none;
+  box-shadow:0 2px 12px rgba(0,0,0,.5), 0 0 18px rgba(244,162,38,.18);
+}
+.episode-profile-header .episode-director-chip .episode-director-name{
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
 }
 .back-btn{display:inline-flex;align-items:center;gap:.3rem;background:none;border:none;color:var(--text-secondary);font-family:'Space Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:color .2s;margin-bottom:.8rem}
 .back-btn:hover{color:var(--text-primary)}
