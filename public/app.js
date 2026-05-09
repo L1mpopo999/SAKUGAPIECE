@@ -3576,7 +3576,7 @@ function renderClipPage(clip) {
         <!-- Tags right under the meta line (compact YouTube-like layout) -->
         <div class="clip-page-tags">
           ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
-          ${clip.tags.map(tg => `<span class="clip-tag category">${esc(tagLabel(tg))}</span>`).join('')}
+          ${clip.tags.map(tg => `<span class="clip-tag category" data-tag="${esc(tg)}">${esc(tagLabel(tg))}</span>`).join('')}
         </div>
 
         <!-- Action row: like / download / share — like sits on the LEFT of the row -->
@@ -3728,21 +3728,19 @@ function renderClipPage(clip) {
   });
   page.querySelectorAll('.clip-tag.category').forEach(tag => {
     tag.addEventListener('click', () => {
-      const label = tag.textContent.trim();
-      // Find matching filter id by label (handles ru/en label variations)
-      const f = (FILTERS || []).find(ff =>
-        (ff.label || '').toLowerCase() === label.toLowerCase() ||
-        (ff.labelEn || '').toLowerCase() === label.toLowerCase() ||
-        (ff.id || '').toLowerCase() === label.toLowerCase()
-      );
+      const tagId = tag.dataset.tag;
+      if (!tagId) return;
+      // Match by exact id from FILTERS (clip.tags stores ids)
+      const f = (FILTERS || []).find(ff => (ff.id || '').toLowerCase() === tagId.toLowerCase());
       if (f) {
         activeFilter = f.id;
         navigateTo('browse');
       } else {
-        // No matching filter (might be an arc or episode tag) — go home and search
+        // Tag isn't a registered filter (might be an arc or episode number)
+        // — fall back to a search query for it.
         navigateTo('browse');
         const si = document.getElementById('searchInput');
-        if (si) { si.value = label; applyFilters(); }
+        if (si) { si.value = tagId; applyFilters(); }
       }
     });
   });
