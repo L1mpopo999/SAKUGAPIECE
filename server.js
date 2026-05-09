@@ -170,6 +170,24 @@ function loadHiddenAnimators() {
 }
 function saveHiddenAnimators(list) { writeJsonAtomic(HIDDEN_ANIMATORS_FILE, list); }
 
+// ===== ANIMATOR BANNERS =====
+// Map of { animatorName: '/uploads/<file>' }. Stored separately from the main
+// animators list (which is a plain string array) so we don't have to migrate.
+const ANIMATOR_BANNERS_FILE = path.join(dataDir, 'animator_banners.json');
+function loadAnimatorBanners() {
+  if (!fs.existsSync(ANIMATOR_BANNERS_FILE)) { saveAnimatorBanners({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(ANIMATOR_BANNERS_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveAnimatorBanners(data) { writeJsonAtomic(ANIMATOR_BANNERS_FILE, data); }
+// Case-insensitive lookup
+function getAnimatorBanner(name) {
+  if (!name) return null;
+  const banners = loadAnimatorBanners();
+  const key = Object.keys(banners).find(k => k.toLowerCase() === name.toLowerCase());
+  return key ? banners[key] : null;
+}
+
 // ===== DIRECTORS =====
 const DIRECTORS_FILE = path.join(dataDir, 'directors.json');
 const EPISODE_DIRECTORS_FILE = path.join(dataDir, 'episode_directors.json');
@@ -1201,6 +1219,62 @@ app.put('/api/animators/rename', (req, res) => {
 
 // Hidden animators
 app.get('/api/animators/hidden', (req, res) => { res.json(loadHiddenAnimators()); });
+
+// ===== ANIMATOR BANNER (admin only) =====
+// GET — return current banner URL for an animator (public)
+app.get('/api/animators/:name/banner', (req, res) => {
+  res.json({ url: getAnimatorBanner(req.params.name) || null });
+});
+
+// Get all banners at once (used by client to render profile pages without N requests)
+app.get('/api/animator-banners', (req, res) => { res.json(loadAnimatorBanners()); });
+
+// Upload a banner. Reuses the existing single-file uploader; the field is "banner".
+// Replaces any existing banner for that animator.
+app.post('/api/animators/:name/banner', uploadFiles.single('banner'), (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+  if (!/image\//.test(req.file.mimetype)) {
+    return res.status(400).json({ error: 'Загрузите изображение (JPG/PNG/WebP)' });
+  }
+  const name = req.params.name;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Имя аниматора обязательно' });
+  const banners = loadAnimatorBanners();
+
+  // If there's an existing banner file, try to remove it from disk so we don't pile up orphans
+  const prev = getAnimatorBanner(name);
+  if (prev && prev.startsWith('/uploads/')) {
+    const prevPath = path.join(uploadsDir, path.basename(prev));
+    fs.unlink(prevPath, () => {}); // best-effort
+  }
+
+  // Match the canonical name from the animators list if present (preserves case)
+  const list = loadAnimators();
+  const canonical = list.find(a => a.toLowerCase() === name.toLowerCase()) || name.trim();
+  banners[canonical] = '/uploads/' + req.file.filename;
+  // Drop any other key that case-insensitively equals — keep storage clean
+  Object.keys(banners).forEach(k => {
+    if (k !== canonical && k.toLowerCase() === canonical.toLowerCase()) delete banners[k];
+  });
+  saveAnimatorBanners(banners);
+  res.json({ success: true, url: banners[canonical] });
+});
+
+app.delete('/api/animators/:name/banner', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const banners = loadAnimatorBanners();
+  const key = Object.keys(banners).find(k => k.toLowerCase() === req.params.name.toLowerCase());
+  if (key) {
+    const url = banners[key];
+    if (url && url.startsWith('/uploads/')) {
+      const p = path.join(uploadsDir, path.basename(url));
+      fs.unlink(p, () => {});
+    }
+    delete banners[key];
+    saveAnimatorBanners(banners);
+  }
+  res.json({ success: true });
+});
 
 app.post('/api/animators/hide', (req, res) => {
   if (!checkAdmin(req, res)) return;

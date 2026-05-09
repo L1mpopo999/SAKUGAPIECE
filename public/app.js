@@ -228,6 +228,7 @@ let EPISODES_DATA = { hidden: [], renamed: {} };
 let HIDDEN_ANIMATORS = [];
 let DIRECTORS = [];
 let EPISODE_DIRECTORS = {}; // { "1015": "Megumi Ishitani", ... }
+let ANIMATOR_BANNERS = {}; // { "Vincent Chansard": "/uploads/xxx.jpg" }
 
 async function loadAnimatorsAndFilters() {
   // Cache-bust to make sure we get fresh data after admin edits.
@@ -240,6 +241,14 @@ async function loadAnimatorsAndFilters() {
   try { HIDDEN_ANIMATORS = await (await fetch('/api/animators/hidden' + bust)).json(); } catch { HIDDEN_ANIMATORS = []; }
   try { DIRECTORS = await (await fetch('/api/directors' + bust)).json(); } catch { DIRECTORS = []; }
   try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors' + bust)).json(); } catch { EPISODE_DIRECTORS = {}; }
+  try { ANIMATOR_BANNERS = await (await fetch('/api/animator-banners' + bust)).json(); } catch { ANIMATOR_BANNERS = {}; }
+}
+
+// Case-insensitive lookup of an animator's banner URL
+function getAnimatorBanner(name) {
+  if (!name || !ANIMATOR_BANNERS) return null;
+  const key = Object.keys(ANIMATOR_BANNERS).find(k => k.toLowerCase() === name.toLowerCase());
+  return key ? ANIMATOR_BANNERS[key] : null;
 }
 
 // Helper: normalize director value (legacy string or array) to a clean string array.
@@ -1038,6 +1047,23 @@ function renderAnimatorProfile(name) {
   if(arcs.length)stats+=` · ${arcs.join(', ')}`;
   $('#animatorProfileStats').textContent=stats;
 
+  // === Banner image (admin-uploaded) ===
+  const bannerEl = $('#animatorProfileBanner');
+  const removeBtn = $('#removeBannerBtn');
+  const uploadLabel = $('#uploadBannerBtnLabel');
+  const bannerUrl = getAnimatorBanner(name);
+  if (bannerEl) {
+    if (bannerUrl) {
+      bannerEl.style.backgroundImage = `url("${bannerUrl}")`;
+      bannerEl.classList.add('has-banner');
+    } else {
+      bannerEl.style.backgroundImage = '';
+      bannerEl.classList.remove('has-banner');
+    }
+  }
+  if (removeBtn) removeBtn.style.display = (isAdmin && bannerUrl) ? '' : 'none';
+  if (uploadLabel) uploadLabel.textContent = bannerUrl ? 'Заменить баннер' : 'Загрузить баннер';
+
   // Render arc chips dynamically. Three default arcs (WANO / EGGHEAD / ELBAF)
   // are always visible if the animator has clips in them; any other arcs go
   // into a dropdown that opens from the "ALL ARCS ▾" toggle.
@@ -1671,6 +1697,72 @@ function openUploadModal(presetAnimator) {
 function closeUploadModal(){$('#uploadModal').classList.remove('visible');document.body.style.overflow=''}
 $('#openUploadBtn').addEventListener('click',()=>openUploadModal());
 $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('Войдите как админ',true);return}openUploadModal(currentAnimatorProfile)});
+
+// Banner upload — opens hidden file input, then POSTs to /api/animators/:name/banner
+{
+  const bannerBtn = $('#uploadBannerBtn');
+  const bannerInput = $('#bannerFileInput');
+  const removeBannerBtn = $('#removeBannerBtn');
+  if (bannerBtn && bannerInput) {
+    bannerBtn.addEventListener('click', () => {
+      if (!isAdmin) { notify('Войдите как админ', true); return; }
+      if (!currentAnimatorProfile) return;
+      bannerInput.click();
+    });
+    bannerInput.addEventListener('change', async () => {
+      const file = bannerInput.files && bannerInput.files[0];
+      if (!file || !currentAnimatorProfile) return;
+      if (!/^image\//.test(file.type)) {
+        notify('Загрузите изображение (JPG/PNG/WebP)', true);
+        bannerInput.value = '';
+        return;
+      }
+      const fd = new FormData();
+      fd.append('banner', file);
+      try {
+        const res = await fetch(`/api/animators/${encodeURIComponent(currentAnimatorProfile)}/banner`, {
+          method: 'POST',
+          headers: { 'X-Admin-Token': adminToken },
+          body: fd,
+        });
+        const data = await res.json();
+        if (data.success) {
+          ANIMATOR_BANNERS[currentAnimatorProfile] = data.url;
+          renderAnimatorProfile(currentAnimatorProfile);
+          notify('Баннер обновлён');
+        } else {
+          notify(data.error || 'Не удалось загрузить', true);
+        }
+      } catch (e) {
+        notify('Ошибка сети', true);
+      }
+      bannerInput.value = '';
+    });
+  }
+  if (removeBannerBtn) {
+    removeBannerBtn.addEventListener('click', async () => {
+      if (!isAdmin || !currentAnimatorProfile) return;
+      if (!confirm('Удалить баннер этого аниматора?')) return;
+      try {
+        const res = await fetch(`/api/animators/${encodeURIComponent(currentAnimatorProfile)}/banner`, {
+          method: 'DELETE',
+          headers: { 'X-Admin-Token': adminToken },
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Remove any case-variant key from cache
+          Object.keys(ANIMATOR_BANNERS).forEach(k => {
+            if (k.toLowerCase() === currentAnimatorProfile.toLowerCase()) delete ANIMATOR_BANNERS[k];
+          });
+          renderAnimatorProfile(currentAnimatorProfile);
+          notify('Баннер удалён');
+        }
+      } catch (e) {
+        notify('Ошибка сети', true);
+      }
+    });
+  }
+}
 $('#closeUploadBtn').addEventListener('click',closeUploadModal);
 
 // ===== ANIMATOR SELECTOR =====

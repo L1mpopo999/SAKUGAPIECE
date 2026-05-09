@@ -349,7 +349,27 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-arc-dropdown-item.active{background:rgba(244,162,38,.18);color:var(--gold)}
 
 /* Animator Profile */
-.animator-profile-header{padding:1.5rem 1rem .8rem;max-width:1440px;margin:0 auto;position:relative;z-index:1}
+.animator-profile-header{padding:1.5rem 2rem .8rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;overflow:hidden}
+/* Banner: positioned absolutely at the top-right, sized to the header height.
+   On the LEFT it fades into the page background via a horizontal mask, so the
+   text on the left stays readable without a hard edge. */
+.animator-profile-banner{
+  position:absolute;
+  top:0;right:0;bottom:0;
+  width:55%;max-width:720px;
+  background-position:center;background-size:cover;background-repeat:no-repeat;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .35s ease;
+  /* Left fade — image visible only on the right; smoothly disappears toward the text */
+  -webkit-mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,.35) 30%, #000 70%);
+  mask-image:linear-gradient(to right, transparent 0%, rgba(0,0,0,.35) 30%, #000 70%);
+  z-index:0;
+}
+.animator-profile-banner.has-banner{opacity:1}
+/* Make sure header text sits ABOVE the banner */
+.animator-profile-header > *:not(.animator-profile-banner){position:relative;z-index:1}
+
 /* On episode profile, raise the header above the clip grid so the add-director popup
    isn't hidden behind clip cards. */
 .episode-profile-header{z-index:10}
@@ -358,6 +378,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-profile-name{font-family:'Oswald',sans-serif;font-size:clamp(1.8rem,4vw,3.5rem);font-weight:600;letter-spacing:.04em;color:var(--gold);line-height:1.1;margin-bottom:.2rem;text-transform:uppercase}
 .animator-profile-stats{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--text-secondary);margin-bottom:1rem}
 .btn-upload-for-animator{font-size:.65rem;padding:.4rem .8rem}
+.animator-profile-header-actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.4rem}
+.btn-banner-for-animator{
+  font-size:.65rem;padding:.4rem .8rem;
+  background:transparent;color:var(--gold);
+  border:1px solid var(--gold);
+  box-shadow:none;
+}
+.btn-banner-for-animator:hover{background:rgba(244,162,38,.12);color:var(--gold);box-shadow:0 0 12px rgba(244,162,38,.25)}
+.btn-banner-remove{
+  font-size:.85rem;padding:.2rem .55rem;line-height:1;
+  background:transparent;color:var(--text-muted);
+  border:1px solid var(--border);
+  box-shadow:none;
+  width:28px;height:28px;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.btn-banner-remove:hover{background:rgba(230,57,70,.15);border-color:var(--accent);color:var(--accent);box-shadow:none}
 
 /* Episode director block */
 .episode-director-block{margin-top:.5rem;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;font-family:'Space Mono',monospace;font-size:.75rem;color:var(--text-secondary)}
@@ -786,6 +823,9 @@ body.admin-mode .header-socials{display:none}
   .grid-container{padding:1rem}
   .animator-profile-filterrow{padding:0 1rem 1rem;gap:.7rem}
   .animator-profile-search-wrap{flex:1 1 100%;max-width:none;margin:0}
+  .animator-profile-header{padding:1.2rem 1rem .8rem}
+  /* On phones the banner would shrink to a tiny strip — hide it entirely */
+  .animator-profile-banner{display:none}
   .modal{padding:1.5rem;margin:.5rem}
   .form-row{flex-direction:column;gap:0}
 }
