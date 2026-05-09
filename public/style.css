@@ -421,30 +421,30 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 .episode-profile-header .animator-profile-banner{
   left:0;right:0;
   width:100%;max-width:none;
-  /* Pull the bottom edge all the way down to the clip grid — the grid has
-     z-index:1 and will render on top of the banner. */
-  bottom:0;
+  /* Extend further down so the banner reaches into the clip grid area.
+     The grid has its own z-index:1 and renders on top of the banner. */
   top:0;
+  bottom:-90px;
   /* Vignette mask: feather all four sides equally so the image blends into
-     the page background without a hard rectangle. The bottom barely fades
-     so the image meets the clip grid cleanly without a black gap. */
+     the page background without a hard rectangle. The horizontal fade is
+     softer in the middle (where the title sits) so text readability stays high. */
   -webkit-mask-image:
     linear-gradient(to right, transparent 0%, rgba(0,0,0,.5) 8%, #000 22%, #000 78%, rgba(0,0,0,.5) 92%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 10%, #000 22%, #000 100%),
-    radial-gradient(ellipse 80% 80% at 50% 60%, #000 35%, rgba(0,0,0,.7) 75%, rgba(0,0,0,.3) 95%, transparent 100%);
+    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 10%, #000 22%, #000 80%, rgba(0,0,0,.5) 95%, transparent 100%),
+    radial-gradient(ellipse 80% 75% at 50% 55%, #000 32%, rgba(0,0,0,.7) 72%, rgba(0,0,0,.25) 95%, transparent 100%);
   mask-image:
     linear-gradient(to right, transparent 0%, rgba(0,0,0,.5) 8%, #000 22%, #000 78%, rgba(0,0,0,.5) 92%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 10%, #000 22%, #000 100%),
-    radial-gradient(ellipse 80% 80% at 50% 60%, #000 35%, rgba(0,0,0,.7) 75%, rgba(0,0,0,.3) 95%, transparent 100%);
+    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 10%, #000 22%, #000 80%, rgba(0,0,0,.5) 95%, transparent 100%),
+    radial-gradient(ellipse 80% 75% at 50% 55%, #000 32%, rgba(0,0,0,.7) 72%, rgba(0,0,0,.25) 95%, transparent 100%);
 }
 /* Push all header content downward so the title sits over the lower half of
    the banner image. */
 .episode-profile-header .episode-profile-top{margin-top:.5rem}
 .episode-profile-header .animator-profile-name{margin-top:5rem}
 .episode-profile-header .episode-director-block{margin-bottom:1.4rem}
-/* Title: white with a thicker black outline for high contrast over banner */
+/* Title: keep the original gold color, add a thicker black outline for
+   contrast over the banner image. */
 .episode-profile-header .animator-profile-name{
-  color:#fff;
   text-shadow:
     -3px -3px 0 #000,
     3px -3px 0 #000,
@@ -453,7 +453,7 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
     -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
     0 0 22px rgba(0,0,0,.7);
 }
-/* Stats line ("Wano · 24 clips · 21 animators"): also white with outline */
+/* Stats line ("Wano · 24 clips · 21 animators"): white with outline for readability */
 .episode-profile-header .animator-profile-stats{
   color:#fff;
   text-shadow:
