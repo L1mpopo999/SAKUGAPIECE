@@ -446,6 +446,13 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 .episode-profile-header .episode-profile-top{margin-top:.5rem}
 .episode-profile-header .animator-profile-name{margin-top:5rem}
 .episode-profile-header .episode-director-block{margin-bottom:1.4rem}
+/* Stats and director on the same line, vertically centered */
+.episode-profile-header .episode-info-row{
+  display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;
+  margin-bottom:1.2rem;
+}
+.episode-profile-header .episode-info-row .animator-profile-stats{margin:0}
+.episode-profile-header .episode-info-row .episode-director-block{margin:0}
 /* Title: gold color stays. Black outline + warm gold glow to make it pop on
    any banner image without looking flat. */
 .episode-profile-header .animator-profile-name{
