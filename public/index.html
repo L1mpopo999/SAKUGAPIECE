@@ -159,6 +159,15 @@
     <button class="filter-chip" data-animator-filter="video" data-i18n="filter_video">Видео</button>
     <button class="filter-chip" data-animator-filter="photo" data-i18n="filter_photo_arts">Фото / Арты</button>
   </div>
+  <!-- Arc filter chips and search box for the animator's clips -->
+  <div class="animator-profile-search-bar">
+    <div class="animator-profile-search-wrap">
+      <svg class="animator-profile-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="animatorProfileSearch" class="animator-profile-search-input" placeholder="Поиск по названию или эпизоду..." data-i18n-placeholder="animator_search_placeholder" autocomplete="off">
+      <button class="animator-profile-search-clear" id="animatorProfileSearchClear" title="Очистить">×</button>
+    </div>
+    <div class="animator-profile-arcs" id="animatorProfileArcs"></div>
+  </div>
   <div class="grid-container">
     <div class="clip-grid" id="animatorClipGrid"></div>
   </div>
@@ -336,13 +345,15 @@
     <video class="player-video" id="playerVideo" controls></video>
     <div class="timecode-bar" id="timecodeBar"></div>
     <div class="player-frame-controls">
-      <button class="frame-btn" id="playerFramePrev" title="Предыдущий кадр (←)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-      </button>
-      <span class="frame-info" id="playerFrameInfo">Кадр: 0:00.000</span>
-      <button class="frame-btn" id="playerFrameNext" title="Следующий кадр (→)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" transform="scale(-1,1) translate(-24,0)"/></svg>
-      </button>
+      <div class="frame-stepper">
+        <button class="frame-btn" id="playerFramePrev" title="Предыдущий кадр (←)" aria-label="Previous frame">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="frame-info" id="playerFrameInfo"><span class="frame-info-label">Кадр</span><span>—</span></span>
+        <button class="frame-btn" id="playerFrameNext" title="Следующий кадр (→)" aria-label="Next frame">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
       <select class="frame-fps-select" id="playerFpsSelect" title="Частота кадров">
         <option value="24">24 fps</option>
         <option value="12">12 fps</option>

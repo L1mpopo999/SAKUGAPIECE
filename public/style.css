@@ -273,6 +273,46 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .episode-hidden{opacity:.4}
 .episodes-sort-bar{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;max-width:1440px;margin:0 auto;padding:0 1rem 1rem}
 
+/* Search + arc filter bar on the animator profile page */
+.animator-profile-search-bar{
+  max-width:1440px;
+  margin:0 auto;
+  padding:0 1rem .9rem;
+  display:flex;flex-direction:column;gap:.7rem;
+}
+.animator-profile-search-wrap{
+  position:relative;
+  width:100%;max-width:520px;
+}
+.animator-profile-search-icon{
+  position:absolute;left:.9rem;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;color:var(--text-muted);pointer-events:none;
+}
+.animator-profile-search-input{
+  width:100%;
+  padding:.7rem 2.4rem .7rem 2.45rem;
+  background:var(--bg-secondary);
+  border:1px solid var(--border);
+  border-radius:24px;
+  color:var(--text-primary);
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:.88rem;font-weight:500;
+  outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.animator-profile-search-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(244,162,38,.18)}
+.animator-profile-search-input::placeholder{color:var(--text-muted);font-weight:500}
+.animator-profile-search-clear{
+  position:absolute;right:.6rem;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,.06);border:none;color:var(--text-secondary);
+  width:24px;height:24px;border-radius:50%;
+  cursor:pointer;display:none;align-items:center;justify-content:center;
+  font-size:1.1rem;line-height:1;font-weight:600;
+  transition:background .15s,color .15s;
+}
+.animator-profile-search-clear:hover{background:rgba(255,255,255,.14);color:var(--text-primary)}
+.animator-profile-arcs{display:none;flex-wrap:wrap;gap:.4rem;align-items:center}
+
 /* Animator Profile */
 .animator-profile-header{padding:1.5rem 1rem .8rem;max-width:1440px;margin:0 auto;position:relative;z-index:1}
 /* On episode profile, raise the header above the clip grid so the add-director popup
@@ -429,13 +469,61 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .clip-page-video{margin-bottom:1rem}
 .clip-page-player{width:100%;border-radius:var(--radius-lg);background:#000;display:block}
 
-/* Frame controls */
-.frame-controls{display:flex;align-items:center;justify-content:center;gap:.8rem;padding:.6rem 0;background:var(--bg-card);border-radius:0 0 var(--radius-lg) var(--radius-lg);border:1px solid var(--border);border-top:none}
-.frame-btn{background:var(--bg-card-hover);border:1px solid var(--border-light);color:var(--text-primary);width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.frame-btn:hover{background:var(--accent);border-color:var(--accent)}
-.frame-info{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--gold);min-width:140px;text-align:center}
-.frame-fps-select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-family:'Space Mono',monospace;font-size:.7rem;padding:.3rem .5rem;border-radius:var(--radius);cursor:pointer;outline:none}
-.frame-fps-select option{background:var(--bg-card)}
+/* Frame-by-frame stepper. Modern segmented pill: ‹ — info — › on the left,
+   FPS pill on the right. Replaces the old wide gray plate look. */
+.frame-controls{
+  display:flex;align-items:center;justify-content:center;gap:.7rem;
+  padding:.85rem 0;
+  background:transparent;
+  border:none;
+  flex-wrap:wrap;
+}
+/* Segmented control wrapping prev / info / next */
+.frame-controls .frame-stepper{
+  display:inline-flex;align-items:stretch;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:24px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+}
+.frame-btn{
+  background:transparent;border:none;color:var(--text-primary);
+  width:42px;height:38px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;
+}
+.frame-btn:hover{background:rgba(244,162,38,.1);color:var(--gold)}
+.frame-btn:active{background:rgba(244,162,38,.18)}
+.frame-btn svg{width:16px;height:16px}
+.frame-info{
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:.85rem;font-weight:700;
+  color:var(--gold);
+  min-width:148px;text-align:center;
+  display:inline-flex;align-items:center;justify-content:center;gap:.45rem;
+  padding:0 .9rem;
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
+  font-variant-numeric:tabular-nums;letter-spacing:.01em;
+}
+.frame-info-label{color:var(--text-secondary);font-weight:600}
+.frame-info-time{color:var(--text-muted);font-weight:500;font-size:.78rem}
+/* FPS selector — own pill, gold accent on hover */
+.frame-fps-select{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  color:var(--text-primary);
+  font-family:'Manrope',sans-serif;font-size:.78rem;font-weight:600;
+  padding:.45rem 1.8rem .45rem .9rem;border-radius:24px;
+  cursor:pointer;outline:none;
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23f4a226' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+  background-repeat:no-repeat;background-position:right .7rem center;
+  transition:border-color .15s,color .15s;
+}
+.frame-fps-select:hover,.frame-fps-select:focus{border-color:var(--gold);color:var(--gold)}
+.frame-fps-select option{background:var(--bg-card);color:var(--text-primary)}
 .clip-page-info{padding:.5rem 0}
 .clip-page-title{font-family:'Oswald','Bebas Neue',sans-serif;font-size:clamp(1.5rem,3vw,2.2rem);font-weight:600;letter-spacing:.04em;margin-bottom:.3rem}
 .clip-page-current-animator{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--gold);margin-bottom:.5rem;min-height:1.2rem}
@@ -530,11 +618,14 @@ body.owner-mode .users-btn{display:inline-flex;align-items:center;gap:.4rem}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
 /* Player frame controls */
-.player-frame-controls{display:flex;align-items:center;justify-content:center;gap:.8rem;padding:.5rem 0}
-.player-frame-controls .frame-btn{background:none;border:1px solid var(--border);color:var(--text-primary);width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.player-frame-controls .frame-btn:hover{border-color:var(--gold);color:var(--gold)}
-.player-frame-controls .frame-info{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--text-muted);min-width:10rem;text-align:center}
-.player-frame-controls .frame-fps-select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);font-family:'Space Mono',monospace;font-size:.7rem;padding:.2rem .4rem;border-radius:var(--radius);cursor:pointer}
+.player-frame-controls{display:flex;align-items:center;justify-content:center;gap:.7rem;padding:.85rem 0;flex-wrap:wrap}
+.player-frame-controls .frame-stepper{display:inline-flex;align-items:stretch;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.player-frame-controls .frame-btn{background:transparent;border:none;color:var(--text-primary);width:42px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s;border-radius:0}
+.player-frame-controls .frame-btn:hover{background:rgba(244,162,38,.1);color:var(--gold)}
+.player-frame-controls .frame-btn svg{width:16px;height:16px}
+.player-frame-controls .frame-info{font-family:'Manrope','Noto Sans',sans-serif;font-size:.85rem;font-weight:700;color:var(--gold);min-width:148px;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:0 .9rem;border-left:1px solid var(--border);border-right:1px solid var(--border);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.player-frame-controls .frame-fps-select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);font-family:'Manrope',sans-serif;font-size:.78rem;font-weight:600;padding:.45rem 1.8rem .45rem .9rem;border-radius:24px;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23f4a226' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");background-repeat:no-repeat;background-position:right .7rem center;transition:border-color .15s,color .15s}
+.player-frame-controls .frame-fps-select:hover,.player-frame-controls .frame-fps-select:focus{border-color:var(--gold);color:var(--gold)}
 
 /* Filter description — appears under the filter bar when a category is selected.
    Designed as a curator's note: clean card with subtle gold-tinted background,
@@ -753,6 +844,8 @@ body.admin-mode .header-socials{display:none}
 :root[data-theme="light"] .clip-tag.animator{background:rgba(244,162,38,.16);color:#a87015;border-color:rgba(244,162,38,.28)}
 :root[data-theme="light"] .clip-tag.animator:hover{background:rgba(244,162,38,.28);border-color:rgba(244,162,38,.5)}
 :root[data-theme="light"] .clip-info-separator{background:var(--border);opacity:1}
+:root[data-theme="light"] .animator-profile-search-clear{background:rgba(0,0,0,.06)}
+:root[data-theme="light"] .animator-profile-search-clear:hover{background:rgba(0,0,0,.14)}
 :root[data-theme="light"] .player-modal,
 :root[data-theme="light"] .image-viewer{background:rgba(20,20,30,.92)}
 :root[data-theme="light"] body::before{background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(230,57,70,.04) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 90%,rgba(244,162,38,.04) 0%,transparent 60%)}

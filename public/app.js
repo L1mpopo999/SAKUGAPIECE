@@ -48,6 +48,9 @@ const I18N = {
   animators_not_found: { ru: 'Аниматоры не найдены', en: 'No animators found' },
   animators_back: { ru: 'Все аниматоры', en: 'All animators' },
   animators_no_clips: { ru: 'Пока нет клипов с этим аниматором', en: 'No clips with this animator yet' },
+  animator_search_placeholder: { ru: 'Поиск по названию или эпизоду…', en: 'Search by title or episode…' },
+  animator_no_results: { ru: 'Ничего не найдено по этому запросу', en: 'Nothing matches that query' },
+  filter_all_arcs: { ru: 'ВСЕ АРКИ', en: 'ALL ARCS' },
 
   // Director (on episode profile)
   director_label: { ru: 'РЕЖИССЁР:', en: 'DIRECTOR:' },
@@ -81,7 +84,7 @@ const I18N = {
   pagination_next: { ru: 'Вперёд →', en: 'Next →' },
 
   // Player / clip page
-  back_to_browse: { ru: 'На главную', en: 'Back to browse' },
+  back_to_browse: { ru: 'На главную', en: 'Back to main' },
   timecodes_title: { ru: 'Таймкоды аниматоров', en: 'Animator timecodes' },
   player_frame: { ru: 'Кадр', en: 'Frame' },
   comments_title: { ru: 'Комментарии', en: 'Comments' },
@@ -351,7 +354,7 @@ function navigateTo(page, data) {
   if (nav) nav.classList.add('active');
   if (page === 'animator-profile' && data) {
     currentAnimatorProfile = data;
-    animatorProfileFilter = 'all';
+    animatorProfileFilter = 'all'; animatorProfileArc = 'all'; animatorProfileSearch = ''; { const si=document.querySelector('#animatorProfileSearch'); if(si)si.value=''; }
     $(`.nav-link[data-page="animators"]`).classList.add('active');
     renderAnimatorProfile(data);
   }
@@ -417,7 +420,7 @@ function navigateToSilent(page, data) {
   if (nav) nav.classList.add('active');
   if (page === 'animator-profile' && data) {
     currentAnimatorProfile = data;
-    animatorProfileFilter = 'all';
+    animatorProfileFilter = 'all'; animatorProfileArc = 'all'; animatorProfileSearch = ''; { const si=document.querySelector('#animatorProfileSearch'); if(si)si.value=''; }
     $(`.nav-link[data-page="animators"]`).classList.add('active');
     renderAnimatorProfile(data);
   }
@@ -1024,30 +1027,72 @@ $('#animatorSearchInput')?.addEventListener('input', renderAnimatorGrid);
 
 // ===== ANIMATOR PROFILE =====
 let animatorProfileFilter = 'all';
+let animatorProfileArc = 'all';
+let animatorProfileSearch = '';
 
 function renderAnimatorProfile(name) {
   $('#animatorProfileName').textContent=name;
   const allAnimatorClips=allClips.filter(c=>c.animators.some(a=>a.toLowerCase()===name.toLowerCase()));
-  const arcs=[...new Set(allAnimatorClips.map(c=>c.arc))];
-  const videoCount = allAnimatorClips.filter(c => c.videoUrl).length;
-  const photoCount = allAnimatorClips.filter(c => !c.videoUrl).length;
+  const arcs=[...new Set(allAnimatorClips.map(c=>c.arc).filter(Boolean))];
   let stats=`${allAnimatorClips.length} ${pluralClips(allAnimatorClips.length)}`;
   if(arcs.length)stats+=` · ${arcs.join(', ')}`;
   $('#animatorProfileStats').textContent=stats;
 
-  // Apply filter
+  // Render arc chips dynamically (only arcs the animator actually has)
+  const arcsBar = $('#animatorProfileArcs');
+  if (arcsBar) {
+    if (arcs.length > 1) {
+      arcsBar.style.display = 'flex';
+      const allLabel = t('filter_all_arcs');
+      arcsBar.innerHTML = `<button class="filter-chip${animatorProfileArc==='all'?' active':''}" data-animator-arc="all">${allLabel}</button>`
+        + arcs.map(a => `<button class="filter-chip${animatorProfileArc===a?' active':''}" data-animator-arc="${esc(a)}">${esc(a).toUpperCase()}</button>`).join('');
+      arcsBar.querySelectorAll('[data-animator-arc]').forEach(b => {
+        b.addEventListener('click', () => {
+          animatorProfileArc = b.dataset.animatorArc;
+          renderAnimatorProfile(currentAnimatorProfile);
+        });
+      });
+    } else {
+      // Only one arc — no point showing the chip bar
+      arcsBar.style.display = 'none';
+    }
+  }
+
+  // Apply filters: type → arc → search
   let clips = allAnimatorClips;
   if (animatorProfileFilter === 'video') clips = clips.filter(c => c.videoUrl);
   else if (animatorProfileFilter === 'photo') clips = clips.filter(c => !c.videoUrl);
+  if (animatorProfileArc !== 'all') {
+    clips = clips.filter(c => c.arc && c.arc.toLowerCase() === animatorProfileArc.toLowerCase());
+  }
+  const q = animatorProfileSearch.trim().toLowerCase();
+  if (q) {
+    clips = clips.filter(c => {
+      const title = (clipTitle(c) || '').toLowerCase();
+      const titleRu = (c.title || '').toLowerCase();
+      const titleEn = (c.titleEn || '').toLowerCase();
+      const ep = String(c.episode || '').toLowerCase();
+      return title.includes(q) || titleRu.includes(q) || titleEn.includes(q) || ep.includes(q);
+    });
+  }
 
-  // Update filter buttons
+  // Update type filter buttons
   const filterBar = $('#animatorProfileFilters');
   filterBar.querySelectorAll('.filter-chip').forEach(ch => {
     ch.classList.toggle('active', ch.dataset.animatorFilter === animatorProfileFilter);
   });
 
+  // Toggle the "clear" button on the search input
+  const clearBtn = $('#animatorProfileSearchClear');
+  if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+
   const grid=$('#animatorClipGrid');
-  if(!clips.length){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('animators_no_clips')}</p></div>`}
+  if(!clips.length){
+    const msg = q || animatorProfileArc !== 'all'
+      ? t('animator_no_results')
+      : t('animators_no_clips');
+    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${msg}</p></div>`;
+  }
   else{grid.innerHTML=clips.map((c,i)=>renderClipCard(c,i)).join('');attachClipEvents(grid)}
 }
 
@@ -1058,6 +1103,25 @@ document.querySelectorAll('[data-animator-filter]').forEach(btn => {
     if (currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
   });
 });
+
+// Animator profile search input
+{
+  const searchInput = $('#animatorProfileSearch');
+  const clearBtn = $('#animatorProfileSearchClear');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      animatorProfileSearch = searchInput.value;
+      if (currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      animatorProfileSearch = '';
+      if (searchInput) searchInput.value = '';
+      if (currentAnimatorProfile) renderAnimatorProfile(currentAnimatorProfile);
+    });
+  }
+}
 
 // ===== EPISODES PAGE =====
 let episodeSortMode = 'clips';
@@ -1992,7 +2056,11 @@ $('#playerCloseBtn').addEventListener('click',closePlayer);
   let fps=24;
   fpsSelect.addEventListener('change',()=>{fps=parseInt(fpsSelect.value)});
   function fmt(t){const m=Math.floor(t/60),s=Math.floor(t%60),ms=Math.floor((t%1)*1000);return`${m}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`}
-  function updateInfo(){info.textContent=`Кадр: ${fmt(video.currentTime)}`}
+  function updateInfo(){
+    const t=video.currentTime;
+    const frameNum=Math.round(t*fps);
+    info.innerHTML=`<span class="frame-info-label">${LANG==='en'?'Frame':'Кадр'}</span><span>${frameNum}</span><span class="frame-info-time">${fmt(t)}</span>`;
+  }
   $('#playerFramePrev').addEventListener('click',()=>{video.pause();video.currentTime=Math.max(0,video.currentTime-1/fps);updateInfo()});
   $('#playerFrameNext').addEventListener('click',()=>{video.pause();video.currentTime=video.currentTime+1/fps;updateInfo()});
   video.addEventListener('timeupdate',updateInfo);
@@ -3036,13 +3104,15 @@ function renderClipPage(clip) {
           </video>
           <div class="timecode-bar" id="clipPageTimecodeBar"></div>
           <div class="frame-controls">
-            <button class="frame-btn" id="framePrevBtn" title="Предыдущий кадр (←)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="5" width="3" height="14"/><polygon points="20 5 10 12 20 19"/></svg>
-            </button>
-            <span class="frame-info" id="frameInfo">Кадр: 0:00.000</span>
-            <button class="frame-btn" id="frameNextBtn" title="Следующий кадр (→)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="17" y="5" width="3" height="14"/><polygon points="4 5 14 12 4 19"/></svg>
-            </button>
+            <div class="frame-stepper">
+              <button class="frame-btn" id="framePrevBtn" title="Предыдущий кадр (←)" aria-label="Previous frame">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span class="frame-info" id="frameInfo"><span class="frame-info-label">Кадр</span><span>—</span></span>
+              <button class="frame-btn" id="frameNextBtn" title="Следующий кадр (→)" aria-label="Next frame">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
             <select class="frame-fps-select" id="frameFpsSelect" title="Частота кадров">
               <option value="24">24 fps</option>
               <option value="23.976">23.976 fps</option>
@@ -3251,7 +3321,8 @@ function renderClipPage(clip) {
     function updateFrameInfo() {
       const t = frameVideo.currentTime;
       const frameNum = Math.round(t * fps);
-      frameInfo.textContent = `${LANG==='en'?'Frame':'Кадр'} ${frameNum} · ${formatFrameTime(t)}`;
+      // Render with structured spans so CSS can style label/number/time differently
+      frameInfo.innerHTML = `<span class="frame-info-label">${LANG==='en'?'Frame':'Кадр'}</span><span>${frameNum}</span><span class="frame-info-time">${formatFrameTime(t)}</span>`;
     }
 
     function stepFrame(direction) {
