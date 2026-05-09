@@ -444,7 +444,7 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 /* Push all header content downward so the title sits over the lower half of
    the banner image. */
 .episode-profile-header .episode-profile-top{margin-top:.5rem}
-.episode-profile-header .animator-profile-name{margin-top:5rem}
+.episode-profile-header .animator-profile-name{margin-top:3.5rem}
 .episode-profile-header .episode-director-block{margin-bottom:1.4rem}
 /* Stats and director on the same line, vertically centered */
 .episode-profile-header .episode-info-row{
@@ -453,18 +453,39 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 }
 .episode-profile-header .episode-info-row .animator-profile-stats{margin:0}
 .episode-profile-header .episode-info-row .episode-director-block{margin:0}
-/* Title: gold color stays. Black outline + warm gold glow to make it pop on
-   any banner image without looking flat. */
+/* Modern episode title: small grey "EPISODE" label on top, big bold number
+   below in Manrope. Soft shadow only — no chunky outline. */
 .episode-profile-header .animator-profile-name{
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-weight:800;
+  letter-spacing:-.01em;
+  line-height:.95;
+  text-transform:none;
+  display:flex;flex-direction:column;align-items:flex-start;
+  gap:.15rem;
+  /* Reset the heavy outline used by the animator title */
+  text-shadow:none;
+}
+.episode-profile-header .animator-profile-name .ep-prefix{
+  font-family:'Manrope','Noto Sans',sans-serif;
+  font-size:.85rem;
+  font-weight:700;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.72);
+  /* tiny dark base so the label remains readable on bright pixels */
+  text-shadow:0 1px 4px rgba(0,0,0,.7), 0 0 12px rgba(0,0,0,.5);
+}
+.episode-profile-header .animator-profile-name .ep-number{
+  font-size:clamp(3.4rem,7vw,6rem);
+  font-weight:800;
+  color:var(--gold);
+  letter-spacing:-.02em;
+  /* Soft drop shadow + subtle gold glow — premium feel without an outline */
   text-shadow:
-    -3px -3px 0 #000,
-    3px -3px 0 #000,
-    -3px 3px 0 #000,
-    3px 3px 0 #000,
-    -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
-    0 0 14px rgba(244,162,38,.55),
-    0 0 28px rgba(244,162,38,.35),
-    0 0 22px rgba(0,0,0,.5);
+    0 2px 8px rgba(0,0,0,.85),
+    0 4px 22px rgba(0,0,0,.6),
+    0 0 26px rgba(244,162,38,.28);
 }
 /* Stats line ("Wano · 24 clips · 21 animators"): white with outline for readability */
 .episode-profile-header .animator-profile-stats{

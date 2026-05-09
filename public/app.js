@@ -1520,7 +1520,8 @@ function getAdjacentEpisodes(currentEp) {
 }
 
 function renderEpisodeProfile(episode) {
-  $('#episodeProfileName').textContent = `${LANG === 'en' ? 'EPISODE' : 'СЕРИЯ'} ${episode}`;
+  // Two-line format: small "EPISODE" label on top, large number below
+  $('#episodeProfileName').innerHTML = `<span class="ep-prefix">${LANG === 'en' ? 'EPISODE' : 'СЕРИЯ'}</span><span class="ep-number">${esc(String(episode))}</span>`;
   const clips = allClips.filter(c => c.episode.trim() === episode);
   const arc = getEpisodeArc(parseInt(episode) || 0);
   const animators = [...new Set(clips.flatMap(c => c.animators))];
