@@ -96,17 +96,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .director-chip{color:var(--text-primary);display:inline-flex;align-items:center;gap:.45rem;padding-right:.65rem}
 .director-chip:hover{color:var(--text-primary);border-color:var(--text-primary)}
 .director-chip-count{font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;color:var(--gold);background:rgba(244,162,38,.15);padding:.08rem .4rem;border-radius:8px;letter-spacing:.04em;line-height:1}
-/* Active director chip — gold theme to match the active filter-tags-toggle */
-.director-chip.active,
-.tag-filter-chip.active{
-  background:rgba(244,162,38,.18) !important;
-  border-color:var(--gold) !important;
-  color:var(--gold) !important;
-  font-weight:700;
-}
-.director-chip.active:hover,
-.tag-filter-chip.active:hover{background:rgba(244,162,38,.28) !important}
-.director-chip.active .director-chip-count{background:rgba(244,162,38,.3);color:var(--gold)}
+.director-chip.active .director-chip-count{background:rgba(255,255,255,.22);color:#fff}
 .filter-separator{width:1px;height:20px;background:var(--border);margin:0 .3rem}
 .results-count{margin-left:auto;font-size:.8rem;color:var(--text-muted);font-family:'Space Mono',monospace}
 
@@ -197,6 +187,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   opacity:.75;
 }
 .clip-views{font-size:.82rem;opacity:1;display:inline-flex;align-items:center}
+/* Like count in meta row — same shape as views, but accent-red to pop */
+.clip-meta-likes{
+  font-size:.82rem;
+  display:inline-flex;align-items:center;
+  color:var(--accent);
+  font-weight:700;
+}
+.clip-meta-likes .meta-icon{opacity:.95}
 /* Thin separator line between meta and tags */
 .clip-info-separator{
   height:1px;

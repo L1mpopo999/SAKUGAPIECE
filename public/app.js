@@ -506,7 +506,10 @@ function renderClipCard(clip, i) {
       ? `<img src="${clip.images[0].url}" alt="" loading="lazy">`
       : `<div class="clip-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
 
-  const badge = hasVideo ? (clip.quality || '1080p') : (hasImages ? (LANG==='en'?'PHOTO':'ФОТО') : '');
+  // Quality badge (1080P etc.) is hidden — high quality is a given on the site.
+  // Keep the PHOTO/ФОТО marker so users still see at a glance whether a card
+  // is a photo gallery vs a video.
+  const badge = hasVideo ? '' : (hasImages ? (LANG==='en'?'PHOTO':'ФОТО') : '');
   const imgCount = hasImages && clip.images.length > 1 ? `<span class="clip-img-count">${clip.images.length} ${LANG==='en'?'photos':'фото'}</span>` : '';
 
   const shouldOpenNewTab = hasVideo || (hasImages && clip.images.length > 4);
@@ -524,7 +527,6 @@ function renderClipCard(clip, i) {
       ${thumbContent}
       ${clip.duration ? `<span class="clip-duration">${clip.duration}</span>` : ''}
       ${badge ? `<span class="clip-hd-badge">${badge}</span>` : ''}
-      ${likeCounts[clip.id] ? `<span class="clip-like-badge"><span class="clip-like-badge-heart">♥</span> ${likeCounts[clip.id]}</span>` : ''}
       ${imgCount}
       ${hasVideo
         ? `<div class="clip-play-overlay"><div class="play-btn"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21"/></svg></div></div>`
@@ -533,7 +535,7 @@ function renderClipCard(clip, i) {
     <div class="clip-info">
       <div class="clip-title">${esc(clipTitle(clip))}</div>
       <div class="clip-title-bar"></div>
-      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>${clip.views}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>${commentCounts[clip.id]}</span>` : ''}</div>
+      <div class="clip-meta"><span>${LANG==='en'?'Ep.':'Эп.'} ${esc(clip.episode)}</span><span class="clip-meta-divider">·</span><span>${esc(clip.arc)}</span>${clip.views ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>${clip.views}</span>` : ''}${likeCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-meta-likes"><svg class="meta-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.8 8.6 2.5 4.5 6.5 4.5c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3 4 0 5.7 4.1 4 7.5C19 16.5 12 21 12 21z"/></svg>${likeCounts[clip.id]}</span>` : ''}${commentCounts[clip.id] ? `<span class="clip-meta-divider">·</span><span class="clip-views"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>${commentCounts[clip.id]}</span>` : ''}</div>
       <div class="clip-info-separator"></div>
       <div class="clip-tags" data-clip-id="${clip.id}">
         ${clip.animators.map(a => `<span class="clip-tag animator" data-animator="${esc(a)}">${esc(a)}</span>`).join('')}
@@ -3070,7 +3072,6 @@ function renderClipPage(clip) {
           <button class="clip-like-btn ${likedByMe.has(String(clip.id)) ? 'liked' : ''}" data-like-clip="${clip.id}" title="${LANG === 'en' ? 'Like this clip' : 'Поставить лайк'}">
             <span class="like-heart">♥</span>
             <span class="like-count">${likeCounts[clip.id] || 0}</span>
-            <span class="like-label">${LANG === 'en' ? (likedByMe.has(String(clip.id)) ? 'Liked' : 'Like') : (likedByMe.has(String(clip.id)) ? 'Нравится' : 'Лайк')}</span>
           </button>
         </div>
 
