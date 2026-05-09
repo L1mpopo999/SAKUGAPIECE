@@ -387,8 +387,11 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
   mask-composite:intersect;
   z-index:0;
 }
+/* Banner sits BELOW everything — text and buttons render on top of the image,
+   not under its semi-transparent mask (which made letters look faded). */
+.animator-profile-banner{z-index:-1 !important}
 /* Make sure header text sits ABOVE the banner */
-.animator-profile-header > *:not(.animator-profile-banner){position:relative;z-index:1}
+.animator-profile-header > *:not(.animator-profile-banner){position:relative;z-index:10}
 
 /* On episode profile, raise the header above the clip grid so the add-director popup
    isn't hidden behind clip cards. */
