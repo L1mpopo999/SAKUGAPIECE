@@ -1774,22 +1774,48 @@ function openBannerCrop(file) {
   };
 
   const url = URL.createObjectURL(file);
-  img.src = url;
 
-  // Wait for image to load before measuring
-  img.onload = () => {
+  // Show modal FIRST so the stage has real dimensions when we measure.
+  // Reset zoom + position before the image arrives.
+  modal.classList.add('visible');
+  zoomInput.value = '100';
+  state.zoom = 1;
+
+  const onReady = () => {
     state.naturalW = img.naturalWidth;
     state.naturalH = img.naturalHeight;
+    if (!state.naturalW || !state.naturalH) return;
     measureAndFit();
-    modal.classList.add('visible');
-    zoomInput.value = '100';
-    state.zoom = 1;
   };
 
+  img.onload = onReady;
+  // Set src AFTER opening the modal so we can measure correctly.
+  // If the image somehow finishes loading synchronously (cache), onload may
+  // already have run by the time we get here — handle that with `complete`.
+  img.src = url;
+  if (img.complete && img.naturalWidth) {
+    onReady();
+  }
+
   function measureAndFit() {
+    // Defer one frame so display:flex on the modal has applied and the stage
+    // has real width/height. Without this, the first measurement on a freshly
+    // opened modal can return 0×0 and the image stays invisible.
+    requestAnimationFrame(() => {
+      const r = stage.getBoundingClientRect();
+      if (!r.width || !r.height) {
+        // Try once more on next frame in case fonts/layout are still settling
+        requestAnimationFrame(measureAndFitNow);
+        return;
+      }
+      measureAndFitNow();
+    });
+  }
+  function measureAndFitNow() {
     const r = stage.getBoundingClientRect();
     state.stageW = r.width;
     state.stageH = r.height;
+    if (!state.stageW || !state.stageH || !state.naturalW) return;
     // "Cover" scale — fill the stage entirely at zoom=1
     state.baseScale = Math.max(state.stageW / state.naturalW, state.stageH / state.naturalH);
     // Center image
