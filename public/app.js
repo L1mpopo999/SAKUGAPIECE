@@ -3731,13 +3731,16 @@ function renderClipPage(clip) {
       const tagId = tag.dataset.tag;
       if (!tagId) return;
       // Match by exact id from FILTERS (clip.tags stores ids)
-      const f = (FILTERS || []).find(ff => (ff.id || '').toLowerCase() === tagId.toLowerCase());
-      if (f) {
-        activeFilter = f.id;
+      const filter = (FILTERS || []).find(f => (f.id || '').toLowerCase() === tagId.toLowerCase());
+      if (filter) {
+        if (filter.type === 'arc') { currentArcFilter = filter.id; currentTagFilter = null; }
+        else { currentTagFilter = filter.id; }
+        currentTypeFilter = 'all';
         navigateTo('browse');
+        renderFilterChips();
+        applyFilters();
       } else {
-        // Tag isn't a registered filter (might be an arc or episode number)
-        // — fall back to a search query for it.
+        // Tag isn't a registered filter (might be an episode number) — fall back to search
         navigateTo('browse');
         const si = document.getElementById('searchInput');
         if (si) { si.value = tagId; applyFilters(); }
