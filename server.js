@@ -96,7 +96,7 @@ const DEFAULT_FILTERS = [
   { id: "transformation", label: "Трансформация", type: "tag" },
   { id: "Wano", label: "Wano", type: "arc" },
   { id: "Egghead", label: "Egghead", type: "arc" },
-  { id: "Elbaf", label: "Elbaf", type: "arc" },
+  { id: "Elbaph", label: "Elbaph", type: "arc" },
   { id: "Dressrosa", label: "Dressrosa", type: "arc" },
   { id: "Marineford", label: "Marineford", type: "arc" }
 ];
@@ -148,6 +148,41 @@ function loadFilters() {
   catch { return DEFAULT_FILTERS; }
 }
 function saveFilters(list) { writeJsonAtomic(FILTERS_FILE, list); }
+
+// ===== ONE-TIME MIGRATION: Elbaf → Elbaph =====
+// Official spelling (VIZ/Crunchyroll) is "Elbaph"; this rewrites any legacy
+// "Elbaf" entries in stored data on startup. Idempotent — safe to leave in.
+function migrateElbafSpelling() {
+  try {
+    // 1) filters.json — rewrite id/label
+    const filters = loadFilters();
+    let changed = false;
+    for (const f of filters) {
+      if (f.id === 'Elbaf') { f.id = 'Elbaph'; changed = true; }
+      if (f.label === 'Elbaf') { f.label = 'Elbaph'; changed = true; }
+      if (f.labelEn === 'Elbaf') { f.labelEn = 'Elbaph'; changed = true; }
+    }
+    if (changed) saveFilters(filters);
+
+    // 2) clips.json — rewrite tags array entries
+    if (fs.existsSync(DATA_FILE)) {
+      const clips = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+      let clipsChanged = false;
+      for (const clip of clips) {
+        if (Array.isArray(clip.tags)) {
+          const newTags = clip.tags.map(t => t === 'Elbaf' ? 'Elbaph' : t);
+          if (newTags.some((t, i) => t !== clip.tags[i])) {
+            clip.tags = newTags;
+            clipsChanged = true;
+          }
+        }
+      }
+      if (clipsChanged) writeJsonAtomic(DATA_FILE, clips);
+    }
+  } catch (e) {
+    console.warn('[migrateElbafSpelling]', e.message);
+  }
+}
 
 // ===== EPISODES DATA =====
 const EPISODES_FILE = path.join(dataDir, 'episodes.json');
@@ -1887,5 +1922,6 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
+  migrateElbafSpelling();
   console.log(`\n  ⚓ Sakuga Piece запущен: http://localhost:${PORT}\n`);
 });
