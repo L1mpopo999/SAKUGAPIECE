@@ -96,7 +96,7 @@ const DEFAULT_FILTERS = [
   { id: "transformation", label: "Трансформация", type: "tag" },
   { id: "Wano", label: "Wano", type: "arc" },
   { id: "Egghead", label: "Egghead", type: "arc" },
-  { id: "Elbaf", label: "Elbaf", type: "arc" },
+  { id: "Elbaph", label: "Elbaph", type: "arc" },
   { id: "Dressrosa", label: "Dressrosa", type: "arc" },
   { id: "Marineford", label: "Marineford", type: "arc" }
 ];
@@ -148,6 +148,77 @@ function loadFilters() {
   catch { return DEFAULT_FILTERS; }
 }
 function saveFilters(list) { writeJsonAtomic(FILTERS_FILE, list); }
+
+// ===== ONE-TIME MIGRATION: Elbaf → Elbaph =====
+// Official spelling (VIZ/Crunchyroll) is "Elbaph"; this rewrites legacy
+// "Elbaf" entries in stored data on startup. Idempotent — running twice
+// does nothing extra. Logs every change so PM2 logs show what happened.
+function migrateElbafSpelling() {
+  console.log('[migrate] Starting Elbaf → Elbaph migration check...');
+
+  // 1) filters.json — rewrite id/label
+  try {
+    if (fs.existsSync(FILTERS_FILE)) {
+      const raw = fs.readFileSync(FILTERS_FILE, 'utf-8');
+      if (raw.includes('Elbaf') && !raw.includes('Elbaph')) {
+        const filters = JSON.parse(raw);
+        let count = 0;
+        for (const f of filters) {
+          if (f && typeof f === 'object') {
+            if (f.id === 'Elbaf') { f.id = 'Elbaph'; count++; }
+            if (f.label === 'Elbaf') { f.label = 'Elbaph'; count++; }
+            if (f.labelEn === 'Elbaf') { f.labelEn = 'Elbaph'; count++; }
+          }
+        }
+        if (count > 0) {
+          saveFilters(filters);
+          console.log(`[migrate] filters.json: updated ${count} field(s)`);
+        }
+      } else if (raw.includes('Elbaph')) {
+        console.log('[migrate] filters.json: already migrated (Elbaph found)');
+      }
+    }
+  } catch (e) {
+    console.warn('[migrate] filters.json failed:', e.message);
+  }
+
+  // 2) clips.json — rewrite tags array entries
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      if (raw.includes('Elbaf')) {
+        const clips = JSON.parse(raw);
+        let clipsTouched = 0;
+        let tagsRewritten = 0;
+        for (const clip of clips) {
+          if (Array.isArray(clip.tags)) {
+            let touched = false;
+            for (let i = 0; i < clip.tags.length; i++) {
+              if (clip.tags[i] === 'Elbaf') {
+                clip.tags[i] = 'Elbaph';
+                tagsRewritten++;
+                touched = true;
+              }
+            }
+            if (touched) clipsTouched++;
+          }
+        }
+        if (tagsRewritten > 0) {
+          writeJsonAtomic(DATA_FILE, clips);
+          console.log(`[migrate] clips.json: ${tagsRewritten} tag(s) across ${clipsTouched} clip(s) updated`);
+        } else {
+          console.log('[migrate] clips.json: no Elbaf tags found to update');
+        }
+      } else {
+        console.log('[migrate] clips.json: no Elbaf string present');
+      }
+    }
+  } catch (e) {
+    console.warn('[migrate] clips.json failed:', e.message);
+  }
+
+  console.log('[migrate] Done.');
+}
 
 // ===== EPISODES DATA =====
 const EPISODES_FILE = path.join(dataDir, 'episodes.json');
@@ -1885,6 +1956,9 @@ app.use((err, req, res, next) => {
   if (err) return res.status(400).json({ error: err.message });
   next();
 });
+
+// Run one-time data migrations before accepting requests
+migrateElbafSpelling();
 
 app.listen(PORT, () => {
   console.log(`\n  ⚓ Sakuga Piece запущен: http://localhost:${PORT}\n`);

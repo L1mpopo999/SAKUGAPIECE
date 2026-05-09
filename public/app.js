@@ -1066,12 +1066,12 @@ function renderAnimatorProfile(name) {
   if (removeBtn) removeBtn.style.display = (isAdmin && bannerUrl) ? '' : 'none';
   if (uploadLabel) uploadLabel.textContent = bannerUrl ? 'Заменить баннер' : 'Загрузить баннер';
 
-  // Render arc chips dynamically. Three default arcs (WANO / EGGHEAD / ELBAPH)
+  // Render arc chips dynamically. Three default arcs (WANO / EGGHEAD / ELBAF)
   // are always visible if the animator has clips in them; any other arcs go
   // into a dropdown that opens from the "ALL ARCS ▾" toggle.
   const arcsBar = $('#animatorProfileArcs');
   if (arcsBar) {
-    const DEFAULT_ARCS = ['Wano', 'Egghead', 'Elbaf'];
+    const DEFAULT_ARCS = ['Wano', 'Egghead', 'Elbaph'];
     const arcsLower = arcs.map(a => a.toLowerCase());
     const visibleArcs = DEFAULT_ARCS.filter(d => arcsLower.includes(d.toLowerCase()));
     const hiddenArcs = arcs.filter(a => !DEFAULT_ARCS.some(d => d.toLowerCase() === a.toLowerCase()));
@@ -1215,7 +1215,7 @@ let episodeDirectorFilter = 'all'; // 'all' | имя режиссёра
 function getEpisodeArc(num) {
   if (num >= 890 && num <= 1088) return 'Wano';
   if (num >= 1089 && num <= 1155) return 'Egghead';
-  if (num >= 1156) return 'Elbaf';
+  if (num >= 1156) return 'Elbaph';
   return 'Unknown';
 }
 
@@ -1388,7 +1388,7 @@ function refreshEpisodeDirectorDropdown() {
   // Build counts.
   // Counts respect the currently selected arc: when an arc is selected,
   // a director's count = number of THAT-arc episodes they directed.
-  // This way "Elbaf + Nanami Michibata" shows how many Elbaf episodes Nanami directed.
+  // This way "Elbaph + Nanami Michibata" shows how many Elbaph episodes Nanami directed.
   const arcFilter = episodeArcFilter; // 'all' or arc name
   const counts = new Map();
   let totalAssigned = 0;
