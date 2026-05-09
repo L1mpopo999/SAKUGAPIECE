@@ -349,7 +349,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-arc-dropdown-item.active{background:rgba(244,162,38,.18);color:var(--gold)}
 
 /* Animator Profile */
-.animator-profile-header{padding:1.5rem 2rem .8rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;overflow:hidden;min-height:240px}
+.animator-profile-header{padding:1.8rem 2rem 1rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;overflow:hidden;min-height:280px;display:flex;flex-direction:column}
+/* Push the back-btn to the top, name + stats float in the middle, actions stay at the bottom */
+.animator-profile-header .back-btn{align-self:flex-start;margin-bottom:auto}
+body.admin-mode .animator-profile-header{min-height:240px}
+body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 /* Banner: positioned absolutely at the top-right, sized to the header height.
    Multi-layer mask blends the image into the page background on every side,
    with the strongest fade pulling it under the title text on the left.
@@ -384,12 +388,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .episode-profile-header{z-index:10}
 .back-btn{display:inline-flex;align-items:center;gap:.3rem;background:none;border:none;color:var(--text-secondary);font-family:'Space Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:color .2s;margin-bottom:.8rem}
 .back-btn:hover{color:var(--text-primary)}
-.animator-profile-name{font-family:'Oswald',sans-serif;font-size:clamp(2.4rem,5.2vw,4.4rem);font-weight:600;letter-spacing:.04em;color:var(--gold);line-height:1;margin-bottom:.3rem;text-transform:uppercase}
-.animator-profile-stats{font-family:'Space Mono',monospace;font-size:.92rem;color:var(--text-secondary);margin-bottom:1rem}
+.animator-profile-name{font-family:'Oswald',sans-serif;font-size:clamp(3rem,6.4vw,5.4rem);font-weight:700;letter-spacing:.04em;color:var(--gold);line-height:1;margin-bottom:.5rem;text-transform:uppercase}
+.animator-profile-stats{font-family:'Space Mono',monospace;font-size:1.05rem;color:var(--text-secondary);margin-bottom:1rem}
 /* Admin gets a slightly tighter version so the "+ Загрузить клип" / "Заменить
    баннер" buttons don't push the layout. Regular users see the full-size,
    readable header. */
-body.admin-mode .animator-profile-name{font-size:clamp(1.8rem,4vw,3.5rem);margin-bottom:.2rem}
+body.admin-mode .animator-profile-name{font-size:clamp(1.8rem,4vw,3.5rem);font-weight:600;line-height:1.1;margin-bottom:.2rem}
 body.admin-mode .animator-profile-stats{font-size:.75rem;margin-bottom:.6rem}
 .btn-upload-for-animator{font-size:.65rem;padding:.4rem .8rem}
 .animator-profile-header-actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.4rem}
