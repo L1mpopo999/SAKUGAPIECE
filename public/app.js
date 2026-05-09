@@ -1591,10 +1591,10 @@ function renderEpisodeDirectorBlock(episode) {
   if (dirs.length) {
     html += `<span class="episode-director-label">ED:</span>`;
     for (const name of dirs) {
-      html += `<span class="episode-director-chip">
+      html += `<button class="episode-director-chip" data-director-go="${esc(name)}" title="${LANG === 'en' ? 'Show all episodes by this director' : 'Показать все серии этого режиссёра'}">
         <span class="episode-director-name">${esc(name)}</span>
-        ${isAdmin ? `<button class="episode-director-chip-remove" data-remove-director="${esc(name)}" title="Убрать">×</button>` : ''}
-      </span>`;
+        ${isAdmin ? `<span class="episode-director-chip-remove" data-remove-director="${esc(name)}" title="Убрать">×</span>` : ''}
+      </button>`;
     }
   } else if (isAdmin) {
     html += `<span class="episode-director-label">ED:</span>`;
@@ -1612,12 +1612,26 @@ function renderEpisodeDirectorBlock(episode) {
 
   block.innerHTML = html;
 
-  // Remove chip handlers
+  // Remove chip handlers — stop propagation so the chip itself doesn't navigate
   block.querySelectorAll('[data-remove-director]').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
       const name = btn.dataset.removeDirector;
       const next = dirs.filter(d => d.toLowerCase() !== name.toLowerCase());
       await setEpisodeDirectors(episode, next);
+    });
+  });
+
+  // Clicking the chip itself jumps to the episodes list filtered by this director
+  block.querySelectorAll('[data-director-go]').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      // If the click came from inside the remove × button, the handler above
+      // will have already called stopPropagation. We still guard here.
+      if (e.target.closest('[data-remove-director]')) return;
+      const name = chip.dataset.directorGo;
+      episodeDirectorFilter = name;
+      navigateTo('episodes');
     });
   });
 

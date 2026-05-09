@@ -510,7 +510,8 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
   color:rgba(255,255,255,.72);
   text-shadow:0 1px 4px rgba(0,0,0,.7), 0 0 12px rgba(0,0,0,.5);
 }
-/* Director chip — bigger, more visually prominent */
+/* Director chip — bigger, more visually prominent. Now a <button> so it's
+   keyboard-focusable and obviously clickable. */
 .episode-profile-header .episode-director-chip{
   font-family:'Manrope','Noto Sans',sans-serif;
   font-size:.95rem;
@@ -523,9 +524,29 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
   letter-spacing:.01em;
   text-transform:none;
   box-shadow:0 2px 12px rgba(0,0,0,.5), 0 0 18px rgba(244,162,38,.18);
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:.4rem;
+  transition:background .15s,border-color .15s,transform .15s,box-shadow .15s;
+}
+.episode-profile-header .episode-director-chip:hover{
+  background:rgba(244,162,38,.28);
+  border-color:var(--gold);
+  transform:translateY(-1px);
+  box-shadow:0 4px 18px rgba(0,0,0,.55), 0 0 26px rgba(244,162,38,.35);
 }
 .episode-profile-header .episode-director-chip .episode-director-name{
   text-shadow:0 1px 3px rgba(0,0,0,.6);
+}
+.episode-profile-header .episode-director-chip .episode-director-chip-remove{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:50%;
+  background:rgba(0,0,0,.3);
+  color:#fff;
+  font-size:.85rem;line-height:1;
+  cursor:pointer;
+}
+.episode-profile-header .episode-director-chip .episode-director-chip-remove:hover{
+  background:var(--accent);
 }
 .back-btn{display:inline-flex;align-items:center;gap:.3rem;background:none;border:none;color:var(--text-secondary);font-family:'Space Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:color .2s;margin-bottom:.8rem}
 .back-btn:hover{color:var(--text-primary)}
