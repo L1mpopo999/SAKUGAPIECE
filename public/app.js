@@ -3719,10 +3719,31 @@ function renderClipPage(clip) {
     }
   }
 
-  // Animator tag clicks
+  // Tag click handlers — animator tags jump to the animator profile,
+  // category tags jump to the main grid filtered by that category.
   page.querySelectorAll('.clip-tag.animator').forEach(tag => {
     tag.addEventListener('click', () => {
-      window.location.href = '/?animator=' + encodeURIComponent(tag.dataset.animator);
+      navigateTo('animator-profile', tag.dataset.animator);
+    });
+  });
+  page.querySelectorAll('.clip-tag.category').forEach(tag => {
+    tag.addEventListener('click', () => {
+      const label = tag.textContent.trim();
+      // Find matching filter id by label (handles ru/en label variations)
+      const f = (FILTERS || []).find(ff =>
+        (ff.label || '').toLowerCase() === label.toLowerCase() ||
+        (ff.labelEn || '').toLowerCase() === label.toLowerCase() ||
+        (ff.id || '').toLowerCase() === label.toLowerCase()
+      );
+      if (f) {
+        activeFilter = f.id;
+        navigateTo('browse');
+      } else {
+        // No matching filter (might be an arc or episode tag) — go home and search
+        navigateTo('browse');
+        const si = document.getElementById('searchInput');
+        if (si) { si.value = label; applyFilters(); }
+      }
     });
   });
 
