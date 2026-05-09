@@ -145,47 +145,39 @@
 
 <!-- PAGE: ANIMATOR PROFILE -->
 <div id="page-animator-profile" class="page">
-  <!-- Top section wraps both the header AND the filter row so the banner can
-       sit behind both. The banner is a sibling, positioned absolutely. -->
-  <div class="animator-profile-top">
+  <section class="animator-profile-header">
     <!-- Banner image — fades into the page background on every side.
          Only visible when an admin has uploaded one (set in JS). -->
     <div class="animator-profile-banner" id="animatorProfileBanner" aria-hidden="true"></div>
-    <!-- Frosted overlay sits over the lower part of the banner where the filter
-         row goes, so chips/search remain readable on top of any image. -->
-    <div class="animator-profile-banner-blur" aria-hidden="true"></div>
-
-    <section class="animator-profile-header">
-      <button class="back-btn" id="backToAnimatorsBtn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        <span data-i18n="animators_back">Все аниматоры</span>
+    <button class="back-btn" id="backToAnimatorsBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <span data-i18n="animators_back">Все аниматоры</span>
+    </button>
+    <h1 class="animator-profile-name" id="animatorProfileName"></h1>
+    <p class="animator-profile-stats" id="animatorProfileStats"></p>
+    <div class="animator-profile-header-actions">
+      <button class="btn-upload btn-upload-for-animator admin-only" id="uploadForAnimatorBtn">+ Загрузить клип для этого аниматора</button>
+      <button class="btn-upload btn-banner-for-animator admin-only" id="uploadBannerBtn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span id="uploadBannerBtnLabel">Загрузить баннер</span>
       </button>
-      <h1 class="animator-profile-name" id="animatorProfileName"></h1>
-      <p class="animator-profile-stats" id="animatorProfileStats"></p>
-      <div class="animator-profile-header-actions">
-        <button class="btn-upload btn-upload-for-animator admin-only" id="uploadForAnimatorBtn">+ Загрузить клип для этого аниматора</button>
-        <button class="btn-upload btn-banner-for-animator admin-only" id="uploadBannerBtn" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <span id="uploadBannerBtnLabel">Загрузить баннер</span>
-        </button>
-        <button class="btn-upload btn-banner-remove admin-only" id="removeBannerBtn" type="button" style="display:none">×</button>
-        <input type="file" id="bannerFileInput" accept="image/*" style="display:none">
-      </div>
-    </section>
-    <!-- Compact filter row: type chips (left), search (center), arc chips with dropdown (right) -->
-    <div class="animator-profile-filterrow">
-      <div class="animator-profile-types" id="animatorProfileFilters">
-        <button class="filter-chip active" data-animator-filter="all" data-i18n="filter_all">Все</button>
-        <button class="filter-chip" data-animator-filter="video" data-i18n="filter_video">Видео</button>
-        <button class="filter-chip" data-animator-filter="photo" data-i18n="filter_photo_arts">Фото / Арты</button>
-      </div>
-      <div class="animator-profile-search-wrap">
-        <svg class="animator-profile-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="animatorProfileSearch" class="animator-profile-search-input" placeholder="Поиск по названию или эпизоду..." data-i18n-placeholder="animator_search_placeholder" autocomplete="off">
-        <button class="animator-profile-search-clear" id="animatorProfileSearchClear" title="Очистить">×</button>
-      </div>
-      <div class="animator-profile-arcs" id="animatorProfileArcs"></div>
+      <button class="btn-upload btn-banner-remove admin-only" id="removeBannerBtn" type="button" style="display:none">×</button>
+      <input type="file" id="bannerFileInput" accept="image/*" style="display:none">
     </div>
+  </section>
+  <!-- Compact filter row: type chips (left), search (center), arc chips with dropdown (right) -->
+  <div class="animator-profile-filterrow">
+    <div class="animator-profile-types" id="animatorProfileFilters">
+      <button class="filter-chip active" data-animator-filter="all" data-i18n="filter_all">Все</button>
+      <button class="filter-chip" data-animator-filter="video" data-i18n="filter_video">Видео</button>
+      <button class="filter-chip" data-animator-filter="photo" data-i18n="filter_photo_arts">Фото / Арты</button>
+    </div>
+    <div class="animator-profile-search-wrap">
+      <svg class="animator-profile-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="animatorProfileSearch" class="animator-profile-search-input" placeholder="Поиск по названию или эпизоду..." data-i18n-placeholder="animator_search_placeholder" autocomplete="off">
+      <button class="animator-profile-search-clear" id="animatorProfileSearchClear" title="Очистить">×</button>
+    </div>
+    <div class="animator-profile-arcs" id="animatorProfileArcs"></div>
   </div>
   <div class="grid-container">
     <div class="clip-grid" id="animatorClipGrid"></div>

@@ -348,32 +348,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-arc-dropdown-item:hover{background:var(--bg-card-hover);color:var(--gold)}
 .animator-arc-dropdown-item.active{background:rgba(244,162,38,.18);color:var(--gold)}
 
-/* === Animator profile top section ========================================
-   Wraps both the header (title + actions) AND the filter row, so the banner
-   image can sit behind everything as one continuous backdrop. */
-.animator-profile-top{
-  position:relative;
-  max-width:1440px;
-  margin:0 auto;
-  isolation:isolate; /* keep the banner mask local so it doesn't bleed onto the page */
-  /* Fixed banner aspect — keeps the visual identical regardless of admin buttons.
-     Approximately 1440 / 320 ≈ 4.5:1 — wide cinematic strip. */
-  min-height:320px;
-  display:flex;
-  flex-direction:column;
-}
-/* Push the filter row to the bottom of the top section so the layout looks
-   the same whether or not admin buttons inflate the header. */
-.animator-profile-top > .animator-profile-header{flex:1 1 auto}
-.animator-profile-top > .animator-profile-filterrow{margin-top:auto}
-/* Banner image: fills the whole top section, behind everything else.
-   Multi-mask gives an oval feathered fade on every side so the image
-   never reads as a hard rectangle. */
+/* Animator Profile */
+.animator-profile-header{padding:1.5rem 2rem .8rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;overflow:hidden;min-height:240px}
+/* Banner: positioned absolutely at the top-right, sized to the header height.
+   Multi-layer mask blends the image into the page background on every side,
+   with the strongest fade pulling it under the title text on the left.
+   A radial vignette also softens the corners so the rectangle never reads
+   as a hard cut. */
 .animator-profile-banner{
   position:absolute;
   top:0;right:0;bottom:0;
-  /* Cover ~70% of the top from the right */
-  width:70%;max-width:920px;
+  width:70%;max-width:880px;
   background-position:center center;background-size:cover;background-repeat:no-repeat;
   pointer-events:none;
   opacity:0;
@@ -391,41 +376,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   z-index:0;
 }
 .animator-profile-banner.has-banner{opacity:1}
-/* Blur layer over the bottom portion (where the filter row lives). Adds a
-   slight backdrop-blur and gradient darkening so chips/inputs stay readable
-   on top of any banner image. Only visible when a banner is set. */
-.animator-profile-banner-blur{
-  position:absolute;
-  left:0;right:0;bottom:0;
-  height:80px;
-  z-index:1;
-  pointer-events:none;
-  opacity:0;
-  transition:opacity .35s ease;
-  background:linear-gradient(to bottom, transparent 0%, rgba(10,10,15,.55) 60%, rgba(10,10,15,.85) 100%);
-  -webkit-backdrop-filter:blur(6px);
-  backdrop-filter:blur(6px);
-}
-.animator-profile-top:has(.animator-profile-banner.has-banner) .animator-profile-banner-blur{opacity:1}
-/* Make all interactive content sit above the banner + blur layers */
-.animator-profile-header,
-.animator-profile-filterrow{position:relative;z-index:2}
-
-/* Header itself — text and admin actions on the left.
-   Padding is the same regardless of whether admin buttons are present so
-   the layout looks identical for users and admins. */
-.animator-profile-header{padding:1.5rem 2rem .8rem;max-width:1440px;margin:0 auto}
-/* When the header sits inside the new top wrapper (animator profile only),
-   the wrapper handles the max-width — strip it so we don't double-constrain. */
-.animator-profile-top .animator-profile-header{max-width:none;margin:0}
+/* Make sure header text sits ABOVE the banner */
+.animator-profile-header > *:not(.animator-profile-banner){position:relative;z-index:1}
 
 /* On episode profile, raise the header above the clip grid so the add-director popup
    isn't hidden behind clip cards. */
 .episode-profile-header{z-index:10}
 .back-btn{display:inline-flex;align-items:center;gap:.3rem;background:none;border:none;color:var(--text-secondary);font-family:'Space Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:color .2s;margin-bottom:.8rem}
 .back-btn:hover{color:var(--text-primary)}
-.animator-profile-name{font-family:'Oswald',sans-serif;font-size:clamp(1.8rem,4vw,3.5rem);font-weight:600;letter-spacing:.04em;color:var(--gold);line-height:1.1;margin-bottom:.2rem;text-transform:uppercase}
-.animator-profile-stats{font-family:'Space Mono',monospace;font-size:.75rem;color:var(--text-secondary);margin-bottom:1rem}
+.animator-profile-name{font-family:'Oswald',sans-serif;font-size:clamp(2.4rem,5.2vw,4.4rem);font-weight:600;letter-spacing:.04em;color:var(--gold);line-height:1;margin-bottom:.3rem;text-transform:uppercase}
+.animator-profile-stats{font-family:'Space Mono',monospace;font-size:.92rem;color:var(--text-secondary);margin-bottom:1rem}
+/* Admin gets a slightly tighter version so the "+ Загрузить клип" / "Заменить
+   баннер" buttons don't push the layout. Regular users see the full-size,
+   readable header. */
+body.admin-mode .animator-profile-name{font-size:clamp(1.8rem,4vw,3.5rem);margin-bottom:.2rem}
+body.admin-mode .animator-profile-stats{font-size:.75rem;margin-bottom:.6rem}
 .btn-upload-for-animator{font-size:.65rem;padding:.4rem .8rem}
 .animator-profile-header-actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.4rem}
 .btn-banner-for-animator{
@@ -923,13 +888,11 @@ body.admin-mode .header-socials{display:none}
   .filters{gap:.35rem;padding:.5rem 1rem}
   .filter-chip{font-size:.6rem;padding:.3rem .6rem}
   .grid-container{padding:1rem}
-  .animator-profile-top{min-height:0}
   .animator-profile-filterrow{padding:0 1rem 1rem;gap:.7rem}
   .animator-profile-search-wrap{flex:1 1 100%;max-width:none;margin:0}
-  .animator-profile-header{padding:1.2rem 1rem .8rem}
+  .animator-profile-header{padding:1.2rem 1rem .8rem;min-height:0}
   /* On phones the banner would shrink to a tiny strip — hide it entirely */
-  .animator-profile-banner,
-  .animator-profile-banner-blur{display:none}
+  .animator-profile-banner{display:none}
   .modal{padding:1.5rem;margin:.5rem}
   .form-row{flex-direction:column;gap:0}
 }
