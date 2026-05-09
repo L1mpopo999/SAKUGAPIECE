@@ -46,7 +46,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .hero{position:relative;z-index:10;text-align:center;padding:4rem 2rem 2rem}
 .hero-title{font-family:'Oswald','Bebas Neue',sans-serif;font-size:clamp(2.5rem,6vw,4.5rem);font-weight:700;letter-spacing:.06em;line-height:1.05;margin-bottom:.6rem;text-transform:uppercase}
 .hero-title .hl{color:var(--accent)}
-.hero-sub{font-size:.95rem;color:var(--text-secondary);margin-bottom:2.5rem;font-weight:300;padding:0 .5rem}
+.hero-sub{font-size:.95rem;color:var(--text-secondary);margin-bottom:2.5rem;font-weight:500;padding:0 .5rem;font-family:'Manrope','Noto Sans',sans-serif}
 
 /* Search */
 .search-wrapper{max-width:640px;margin:0 auto;position:relative;z-index:20}
@@ -696,3 +696,61 @@ body.admin-mode .header-socials{display:none}
 :root[data-theme="light"] .player-modal,
 :root[data-theme="light"] .image-viewer{background:rgba(20,20,30,.92)}
 :root[data-theme="light"] body::before{background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(230,57,70,.04) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 90%,rgba(244,162,38,.04) 0%,transparent 60%)}
+
+/* === Typography pass: replace thin Space Mono with denser Manrope on UI ===
+   Space Mono is kept for places where a monospace look is genuinely useful:
+   timecodes, frame counters, FPS dropdown, file sizes, kbd shortcuts, image
+   counters, progress text. Everything else (nav, filter chips, buttons, form
+   labels, animator names, comments) gets Manrope so the site stops looking
+   AI-generated. */
+.nav-link,
+.btn-upload,
+.filter-chip,
+.suggestion-type,
+.suggestion-count,
+.results-count,
+.pagination-btn,
+.director-chip-count,
+.director-dropdown-empty,
+.back-btn,
+.animator-profile-stats,
+.animator-card-count,
+.episode-director-block,
+.episode-director-edit,
+.modal-close-hint,
+.form-label,
+.btn-submit,
+.upload-source-tab,
+.url-fetch-status,
+.player-current-animator,
+.player-notes-label,
+.clip-page-current-animator,
+.clip-page-meta,
+.animator-chip,
+.comment-nickname,
+.comment-submit,
+.clip-action-btn,
+.clip-like-btn .like-label,
+.backup-btn,
+.users-btn,
+.user-row-role,
+.user-row-btn,
+.footer-text,
+.header-socials-name{
+  font-family:'Manrope','Noto Sans',sans-serif !important;
+  font-weight:600;
+}
+/* Buttons / labels that were uppercase + heavy in the original — bump weight
+   slightly so they read as confident UI, not whisper-thin. */
+.nav-link,
+.btn-upload,
+.filter-chip,
+.btn-submit,
+.upload-source-tab,
+.clip-action-btn,
+.comment-submit,
+.user-row-role,
+.backup-btn,
+.users-btn{
+  font-weight:700;
+}
