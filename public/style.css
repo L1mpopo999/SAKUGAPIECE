@@ -352,7 +352,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .animator-arc-dropdown-item.active{background:rgba(244,162,38,.18);color:var(--gold)}
 
 /* Animator Profile */
-.animator-profile-header{padding:1.8rem 2rem 1rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;min-height:280px;display:flex;flex-direction:column}
+.animator-profile-header{padding:1.8rem 2rem 1rem;max-width:1440px;margin:0 auto;position:relative;z-index:1;overflow:hidden;min-height:280px;display:flex;flex-direction:column}
 /* Push the back-btn to the top, name + stats float in the middle, actions stay at the bottom */
 .animator-profile-header .back-btn{align-self:flex-start;margin-bottom:auto}
 body.admin-mode .animator-profile-header{min-height:240px}
@@ -364,11 +364,7 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
    as a hard cut. */
 .animator-profile-banner{
   position:absolute;
-  top:0;right:0;
-  /* Extend below the header so the image fades down under the filter row
-     (which sits ~70px tall right after the header). The mask handles the fade
-     at the bottom so it never reaches the clip grid. */
-  bottom:-72px;
+  top:0;right:0;bottom:0;
   width:70%;max-width:880px;
   background-position:center center;background-size:cover;background-repeat:no-repeat;
   pointer-events:none;
@@ -376,12 +372,12 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
   transition:opacity .35s ease;
   -webkit-mask-image:
     linear-gradient(to right, transparent 0%, rgba(0,0,0,.25) 12%, rgba(0,0,0,.7) 30%, #000 50%, rgba(0,0,0,.85) 72%, rgba(0,0,0,.5) 84%, rgba(0,0,0,.2) 94%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 10%, #000 20%, #000 78%, rgba(0,0,0,.5) 90%, transparent 100%),
-    radial-gradient(ellipse 70% 80% at 58% 50%, #000 25%, rgba(0,0,0,.7) 60%, rgba(0,0,0,.2) 90%, transparent 100%);
+    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 14%, #000 26%, #000 74%, rgba(0,0,0,.6) 86%, transparent 100%),
+    radial-gradient(ellipse 70% 80% at 60% 50%, #000 25%, rgba(0,0,0,.7) 60%, rgba(0,0,0,.2) 90%, transparent 100%);
   mask-image:
     linear-gradient(to right, transparent 0%, rgba(0,0,0,.25) 12%, rgba(0,0,0,.7) 30%, #000 50%, rgba(0,0,0,.85) 72%, rgba(0,0,0,.5) 84%, rgba(0,0,0,.2) 94%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 10%, #000 20%, #000 78%, rgba(0,0,0,.5) 90%, transparent 100%),
-    radial-gradient(ellipse 70% 80% at 58% 50%, #000 25%, rgba(0,0,0,.7) 60%, rgba(0,0,0,.2) 90%, transparent 100%);
+    linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 14%, #000 26%, #000 74%, rgba(0,0,0,.6) 86%, transparent 100%),
+    radial-gradient(ellipse 70% 80% at 60% 50%, #000 25%, rgba(0,0,0,.7) 60%, rgba(0,0,0,.2) 90%, transparent 100%);
   -webkit-mask-composite:source-in;
   mask-composite:intersect;
   z-index:0;
