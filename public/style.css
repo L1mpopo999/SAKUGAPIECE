@@ -414,20 +414,24 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 
 /* On episode profile, raise the header above the clip grid so the add-director popup
    isn't hidden behind clip cards. */
-.episode-profile-header{z-index:10;padding-bottom:0}
+/* On episode profile, the header used to have z-index:10 so the add-director
+   popup wouldn't be hidden behind clip cards. That created a stacking context
+   that trapped the banner (z-index:-1) above the clip grid below. Now we keep
+   the header at the default z-index:1, lift the clip grid for episode pages
+   slightly, and rely on the popup's own positioning to stay on top. */
+#page-episode-profile .grid-container{z-index:2}
+.episode-profile-header{padding-bottom:0}
 /* Episode banner: span the full width of the header (centered) instead of
    sticking to the right side. Episodes have short titles ("EPISODE 1015")
    so a centered wide banner reads better than a side image. */
 .episode-profile-header .animator-profile-banner{
   left:0;right:0;
   width:100%;max-width:none;
-  /* Extend further down so the banner reaches into the clip grid area.
-     The grid has its own z-index:1 and renders on top of the banner. */
+  /* Banner reaches exactly the bottom edge of the header, which is the top
+     edge of the clip grid below. The grid sits above the banner thanks to
+     the higher z-index above. */
   top:0;
-  bottom:-90px;
-  /* Vignette mask: feather all four sides equally so the image blends into
-     the page background without a hard rectangle. The horizontal fade is
-     softer in the middle (where the title sits) so text readability stays high. */
+  bottom:0;
   -webkit-mask-image:
     linear-gradient(to right, transparent 0%, rgba(0,0,0,.5) 8%, #000 22%, #000 78%, rgba(0,0,0,.5) 92%, transparent 100%),
     linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.6) 10%, #000 22%, #000 80%, rgba(0,0,0,.5) 95%, transparent 100%),
@@ -442,8 +446,8 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 .episode-profile-header .episode-profile-top{margin-top:.5rem}
 .episode-profile-header .animator-profile-name{margin-top:5rem}
 .episode-profile-header .episode-director-block{margin-bottom:1.4rem}
-/* Title: keep the original gold color, add a thicker black outline for
-   contrast over the banner image. */
+/* Title: gold color stays. Black outline + warm gold glow to make it pop on
+   any banner image without looking flat. */
 .episode-profile-header .animator-profile-name{
   text-shadow:
     -3px -3px 0 #000,
@@ -451,7 +455,9 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
     -3px 3px 0 #000,
     3px 3px 0 #000,
     -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
-    0 0 22px rgba(0,0,0,.7);
+    0 0 14px rgba(244,162,38,.55),
+    0 0 28px rgba(244,162,38,.35),
+    0 0 22px rgba(0,0,0,.5);
 }
 /* Stats line ("Wano · 24 clips · 21 animators"): white with outline for readability */
 .episode-profile-header .animator-profile-stats{
