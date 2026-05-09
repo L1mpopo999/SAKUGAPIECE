@@ -154,13 +154,13 @@
     <p class="animator-profile-stats" id="animatorProfileStats"></p>
     <button class="btn-upload btn-upload-for-animator admin-only" id="uploadForAnimatorBtn">+ Загрузить клип для этого аниматора</button>
   </section>
-  <div class="episodes-sort-bar" id="animatorProfileFilters">
-    <button class="filter-chip active" data-animator-filter="all" data-i18n="filter_all">Все</button>
-    <button class="filter-chip" data-animator-filter="video" data-i18n="filter_video">Видео</button>
-    <button class="filter-chip" data-animator-filter="photo" data-i18n="filter_photo_arts">Фото / Арты</button>
-  </div>
-  <!-- Arc filter chips and search box for the animator's clips -->
-  <div class="animator-profile-search-bar">
+  <!-- Compact filter row: type chips (left), search (center), arc chips with dropdown (right) -->
+  <div class="animator-profile-filterrow">
+    <div class="animator-profile-types" id="animatorProfileFilters">
+      <button class="filter-chip active" data-animator-filter="all" data-i18n="filter_all">Все</button>
+      <button class="filter-chip" data-animator-filter="video" data-i18n="filter_video">Видео</button>
+      <button class="filter-chip" data-animator-filter="photo" data-i18n="filter_photo_arts">Фото / Арты</button>
+    </div>
     <div class="animator-profile-search-wrap">
       <svg class="animator-profile-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" id="animatorProfileSearch" class="animator-profile-search-input" placeholder="Поиск по названию или эпизоду..." data-i18n-placeholder="animator_search_placeholder" autocomplete="off">

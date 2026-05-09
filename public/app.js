@@ -1038,20 +1038,76 @@ function renderAnimatorProfile(name) {
   if(arcs.length)stats+=` · ${arcs.join(', ')}`;
   $('#animatorProfileStats').textContent=stats;
 
-  // Render arc chips dynamically (only arcs the animator actually has)
+  // Render arc chips dynamically. Three default arcs (WANO / EGGHEAD / ELBAF)
+  // are always visible if the animator has clips in them; any other arcs go
+  // into a dropdown that opens from the "ALL ARCS ▾" toggle.
   const arcsBar = $('#animatorProfileArcs');
   if (arcsBar) {
-    if (arcs.length > 1) {
-      arcsBar.style.display = 'flex';
+    const DEFAULT_ARCS = ['Wano', 'Egghead', 'Elbaf'];
+    const arcsLower = arcs.map(a => a.toLowerCase());
+    const visibleArcs = DEFAULT_ARCS.filter(d => arcsLower.includes(d.toLowerCase()));
+    const hiddenArcs = arcs.filter(a => !DEFAULT_ARCS.some(d => d.toLowerCase() === a.toLowerCase()));
+
+    if (arcs.length > 1 || animatorProfileArc !== 'all') {
+      arcsBar.style.display = '';
+      // The "ALL ARCS" button is also a toggle for the hidden-arcs dropdown
+      const isAllActive = animatorProfileArc === 'all';
       const allLabel = t('filter_all_arcs');
-      arcsBar.innerHTML = `<button class="filter-chip${animatorProfileArc==='all'?' active':''}" data-animator-arc="all">${allLabel}</button>`
-        + arcs.map(a => `<button class="filter-chip${animatorProfileArc===a?' active':''}" data-animator-arc="${esc(a)}">${esc(a).toUpperCase()}</button>`).join('');
+      let html = `<div class="animator-arcs-allwrap">
+          <button class="filter-chip animator-arc-all${isAllActive?' active':''}${hiddenArcs.length?' has-dropdown':''}" data-animator-arc="all">${allLabel}${hiddenArcs.length ? '<span class="animator-arc-caret">▾</span>' : ''}</button>`;
+      if (hiddenArcs.length) {
+        html += `<div class="animator-arc-dropdown" id="animatorArcDropdown">`;
+        // Inside dropdown: hidden arcs
+        html += hiddenArcs.map(a => `<button class="animator-arc-dropdown-item${animatorProfileArc===a?' active':''}" data-animator-arc="${esc(a)}">${esc(a).toUpperCase()}</button>`).join('');
+        html += `</div>`;
+      }
+      html += `</div>`;
+      // Default visible arcs
+      html += visibleArcs.map(a => `<button class="filter-chip${animatorProfileArc.toLowerCase()===a.toLowerCase()?' active':''}" data-animator-arc="${esc(a)}">${esc(a).toUpperCase()}</button>`).join('');
+
+      // If a hidden arc is currently selected, show it as a chip too (so the user sees it active)
+      if (!isAllActive && !visibleArcs.some(v => v.toLowerCase() === animatorProfileArc.toLowerCase())) {
+        const sel = arcs.find(a => a.toLowerCase() === animatorProfileArc.toLowerCase());
+        if (sel) {
+          html += `<button class="filter-chip active" data-animator-arc="${esc(sel)}">${esc(sel).toUpperCase()}</button>`;
+        }
+      }
+
+      arcsBar.innerHTML = html;
+
+      // Wire chip clicks
       arcsBar.querySelectorAll('[data-animator-arc]').forEach(b => {
-        b.addEventListener('click', () => {
+        b.addEventListener('click', (e) => {
+          // Special: clicking the ALL-ARCS button when there's a dropdown toggles the dropdown,
+          // not the filter (unless we're already in 'all' state — then it stays 'all').
+          if (b.classList.contains('animator-arc-all') && hiddenArcs.length) {
+            e.stopPropagation();
+            const dd = document.getElementById('animatorArcDropdown');
+            // If user is currently filtering by something else, switch back to 'all' and close
+            if (animatorProfileArc !== 'all') {
+              animatorProfileArc = 'all';
+              renderAnimatorProfile(currentAnimatorProfile);
+              return;
+            }
+            // Otherwise just toggle dropdown
+            if (dd) dd.classList.toggle('open');
+            return;
+          }
           animatorProfileArc = b.dataset.animatorArc;
           renderAnimatorProfile(currentAnimatorProfile);
         });
       });
+      // Close dropdown on outside click
+      const dd = document.getElementById('animatorArcDropdown');
+      if (dd) {
+        const closeOnOutside = (e) => {
+          if (!arcsBar.contains(e.target)) {
+            dd.classList.remove('open');
+            document.removeEventListener('click', closeOnOutside);
+          }
+        };
+        document.addEventListener('click', closeOnOutside);
+      }
     } else {
       // Only one arc — no point showing the chip bar
       arcsBar.style.display = 'none';

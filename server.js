@@ -1566,8 +1566,13 @@ app.post('/api/clips/:id/comments', commentLimiter, (req, res) => {
   const nick = nickname.trim().toLowerCase();
   const nicknames = loadNicknames();
 
-  // Only check nickname ownership if userToken is provided
-  if (userToken) {
+  // Admins skip the nickname-uniqueness check entirely — they should be able to
+  // comment under any nickname (including ones they've used from other browsers).
+  const reqAdminToken = req.headers['x-admin-token'];
+  const isAdminReq = reqAdminToken && sessionTokens.has(reqAdminToken);
+
+  // Only check nickname ownership if userToken is provided AND requester is not admin
+  if (userToken && !isAdminReq) {
     if (nicknames[nick] && nicknames[nick] !== userToken) {
       return res.status(400).json({ error: 'Такой никнейм уже существует' });
     }
