@@ -288,6 +288,27 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   position:relative;
   z-index:10;
 }
+/* Make non-active chips inside the animator filter row clearly visible
+   on top of the banner image — semi-opaque dark fill + slightly stronger
+   border, plus a small blur to soften any bright pixels behind. */
+.animator-profile-filterrow .filter-chip:not(.active){
+  background:rgba(18,18,28,.7);
+  border-color:rgba(255,255,255,.18);
+  color:var(--text-primary);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
+}
+.animator-profile-filterrow .filter-chip:not(.active):hover{
+  background:rgba(28,28,42,.85);
+  border-color:var(--gold);
+  color:var(--gold);
+}
+/* Search input also gets a more opaque background so it reads cleanly */
+.animator-profile-search-input{
+  background:rgba(18,18,28,.7);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
+}
 .animator-profile-types{display:flex;flex-wrap:wrap;gap:.4rem;flex-shrink:0}
 .animator-profile-search-wrap{
   position:relative;
