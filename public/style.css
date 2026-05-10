@@ -446,10 +446,15 @@ body.admin-mode .animator-profile-header .back-btn{margin-bottom:.8rem}
 .episode-profile-header .episode-profile-top{margin-top:.5rem}
 .episode-profile-header .animator-profile-name{margin-top:3.5rem}
 .episode-profile-header .episode-director-block{margin-bottom:1.4rem}
-/* Stats and director on the same line, vertically centered */
+/* Stats and director on the same line, vertically centered.
+   position:relative + z-index:5 lifts the row (which contains the
+   "+ Add director" popup) above the clip grid (z-index:2) without
+   raising the whole header — the banner stays at z-index:-1 and the
+   clip grid still sits over it as intended. */
 .episode-profile-header .episode-info-row{
   display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;
   margin-bottom:1.2rem;
+  position:relative;z-index:5;
 }
 .episode-profile-header .episode-info-row .animator-profile-stats{margin:0}
 .episode-profile-header .episode-info-row .episode-director-block{margin:0}
