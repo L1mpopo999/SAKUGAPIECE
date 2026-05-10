@@ -60,23 +60,10 @@
     </div>
   </section>
 
-  <div class="filters">
-    <button class="filter-chip active" data-filter="all" data-i18n="filter_all">Все</button>
-    <button class="filter-chip" data-filter="type:video" data-i18n="filter_video">Видео</button>
-    <button class="filter-chip" data-filter="type:images" data-i18n="filter_photo">Фото</button>
-    <span class="filter-separator"></span>
-    <button class="filter-chip" data-filter="fighting">Бои</button>
-    <button class="filter-chip" data-filter="effects">Эффекты</button>
-    <button class="filter-chip" data-filter="character_acting">Эктинг</button>
-    <button class="filter-chip" data-filter="transformation">Трансформация</button>
-    <span class="filter-separator"></span>
-    <button class="filter-chip" data-filter="Wano">Wano</button>
-    <button class="filter-chip" data-filter="Egghead">Egghead</button>
-    <button class="filter-chip" data-filter="Elbaph">Elbaph</button>
-    <button class="filter-chip" data-filter="Dressrosa">Dressrosa</button>
-    <button class="filter-chip" data-filter="Marineford">Marineford</button>
-    <span class="results-count" id="resultsCount"></span>
-  </div>
+  <!-- Filter chips and results count are rendered by renderFilterChips() in
+       app.js on startup. Kept empty here to avoid a flash of stale chips
+       (Dressrosa/Marineford etc. that no longer exist) before JS hydrates. -->
+  <div class="filters"></div>
 
   <div class="filter-description" id="filterDescription"></div>
   <div class="grid-container">
