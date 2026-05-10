@@ -1692,7 +1692,21 @@ function renderEpisodeDirectorBlock(episode) {
       if (btn.contains(ev.target)) return; // re-clicking the button shouldn't double-toggle
       closeForm();
     };
-    const onScrollOrResize = () => closeForm();
+    // On scroll/resize, follow the button instead of closing the popup —
+    // closing on every wheel tick was annoying. Only close if the button
+    // has scrolled fully out of the viewport.
+    const onScrollOrResize = () => {
+      const r = btn.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) {
+        closeForm();
+        return;
+      }
+      form.style.left = r.left + 'px';
+      form.style.top = (r.bottom + 6) + 'px';
+      const fr = form.getBoundingClientRect();
+      const overflow = fr.right - window.innerWidth + 8;
+      if (overflow > 0) form.style.left = (r.left - overflow) + 'px';
+    };
     setTimeout(() => {
       document.addEventListener('click', onOutside);
       window.addEventListener('scroll', onScrollOrResize, true);
