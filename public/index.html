@@ -233,6 +233,7 @@
           <input type="file" id="fileInput" name="video" accept="video/*" hidden>
           <div class="upload-video-preview" id="uploadVideoPreview" style="display:none;">
             <video class="upload-preview-player" id="uploadPreviewPlayer" controls muted></video>
+            <div id="uploadFrameStepper"></div>
           </div>
         </div>
 
@@ -412,6 +413,7 @@
     <!-- Video preview (shown only for clips that have a video). Source set in JS. -->
     <div class="form-group edit-video-preview" id="editVideoPreviewWrap" style="display:none">
       <video class="edit-video-player" id="editClipVideo" controls preload="metadata"></video>
+      <div id="editFrameStepper"></div>
     </div>
     <!-- Photo preview (shown only for clips that have images). Filled in JS. -->
     <div class="form-group edit-photos-preview" id="editPhotosPreviewWrap" style="display:none">

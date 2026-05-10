@@ -1799,7 +1799,10 @@ function openUploadModal(presetAnimator) {
   selectedAnimators=[];selectedImages=[];renderAnimatorChips();renderImagePreviews();
   if(presetAnimator){selectedAnimators.push(presetAnimator);renderAnimatorChips()}
 }
-function closeUploadModal(){$('#uploadModal').classList.remove('visible');document.body.style.overflow=''}
+function closeUploadModal(){
+  $('#uploadModal').classList.remove('visible');document.body.style.overflow='';
+  if (window._uploadFrameStepper) { window._uploadFrameStepper.destroy(); window._uploadFrameStepper = null; }
+}
 $('#openUploadBtn').addEventListener('click',()=>openUploadModal());
 $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('Войдите как админ',true);return}openUploadModal(currentAnimatorProfile)});
 
@@ -2238,9 +2241,13 @@ function handleVideoFile(f) {
   const preview=$('#uploadPreviewPlayer');
   preview.src=URL.createObjectURL(f);
   $('#uploadVideoPreview').style.display='block';
+  // Attach frame-by-frame stepper so admins can set precise timecodes
+  if (window._uploadFrameStepper) window._uploadFrameStepper.destroy();
+  window._uploadFrameStepper = attachFrameStepper(preview, $('#uploadFrameStepper'));
 }
 function removeVideoFile(){
   const preview=$('#uploadPreviewPlayer');
+  if (window._uploadFrameStepper) { window._uploadFrameStepper.destroy(); window._uploadFrameStepper = null; }
   if(preview.src){preview.pause();URL.revokeObjectURL(preview.src);preview.removeAttribute('src')}
   $('#uploadVideoPreview').style.display='none';
   selectedFile=null;fileInput.value='';$('#fileInfo').classList.remove('visible');
@@ -2357,6 +2364,94 @@ function removeThumbnail(){
 }
 
 function formatBytes(b){if(b<1024)return b+' Б';if(b<1048576)return(b/1024).toFixed(1)+' КБ';return(b/1048576).toFixed(1)+' МБ'}
+
+// Reusable frame-stepper for any <video>. Renders prev/next buttons + frame
+// info + fps selector into `container` and wires keyboard (,/.) shortcuts.
+// Used in upload modal preview and edit modal preview so admins can set
+// precise timecodes at upload time.
+// Returns { destroy } to detach listeners and clean up the DOM.
+function attachFrameStepper(videoEl, container) {
+  if (!videoEl || !container) return { destroy(){} };
+
+  // Render the same markup the clip page uses (CSS already styles .frame-controls)
+  container.innerHTML = `
+    <div class="frame-controls">
+      <div class="frame-stepper">
+        <button type="button" class="frame-btn" data-frame-prev title="${LANG==='en'?'Previous frame (←)':'Предыдущий кадр (←)'}" aria-label="Previous frame">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="frame-info" data-frame-info><span class="frame-info-label">${LANG==='en'?'Frame':'Кадр'}</span><span>—</span></span>
+        <button type="button" class="frame-btn" data-frame-next title="${LANG==='en'?'Next frame (→)':'Следующий кадр (→)'}" aria-label="Next frame">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <select class="frame-fps-select" data-frame-fps title="${LANG==='en'?'Frame rate':'Частота кадров'}">
+        <option value="24">24 fps</option>
+        <option value="23.976">23.976 fps</option>
+        <option value="30">30 fps</option>
+        <option value="25">25 fps</option>
+        <option value="12">12 fps (2s)</option>
+        <option value="8">8 fps (3s)</option>
+      </select>
+    </div>
+  `;
+
+  const info = container.querySelector('[data-frame-info]');
+  const prevBtn = container.querySelector('[data-frame-prev]');
+  const nextBtn = container.querySelector('[data-frame-next]');
+  const fpsSelect = container.querySelector('[data-frame-fps]');
+  let fps = 24;
+
+  function formatFrameTime(t) {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    const ms = Math.floor((t % 1) * 1000);
+    return `${m}:${s.toString().padStart(2,'0')}.${ms.toString().padStart(3,'0')}`;
+  }
+  function updateInfo() {
+    const t = videoEl.currentTime || 0;
+    const frameNum = Math.round(t * fps);
+    info.innerHTML = `<span class="frame-info-label">${LANG==='en'?'Frame':'Кадр'}</span><span>${frameNum}</span><span class="frame-info-time">${formatFrameTime(t)}</span>`;
+  }
+  function stepFrame(direction) {
+    videoEl.pause();
+    videoEl.currentTime = Math.max(0, videoEl.currentTime + (direction / fps));
+    updateInfo();
+  }
+
+  const onPrev = () => stepFrame(-1);
+  const onNext = () => stepFrame(1);
+  const onFpsChange = () => { fps = parseFloat(fpsSelect.value); updateInfo(); };
+  const onKey = (e) => {
+    // Only react when video is in the DOM and visible (modal open).
+    if (!document.body.contains(videoEl) || videoEl.offsetParent === null) return;
+    if (e.target.closest('input, textarea, select')) return;
+    if (e.key === ',' || (e.key === 'ArrowLeft' && videoEl.paused)) { e.preventDefault(); stepFrame(-1); }
+    if (e.key === '.' || (e.key === 'ArrowRight' && videoEl.paused)) { e.preventDefault(); stepFrame(1); }
+  };
+
+  prevBtn.addEventListener('click', onPrev);
+  nextBtn.addEventListener('click', onNext);
+  fpsSelect.addEventListener('change', onFpsChange);
+  videoEl.addEventListener('timeupdate', updateInfo);
+  videoEl.addEventListener('seeked', updateInfo);
+  videoEl.addEventListener('loadedmetadata', updateInfo);
+  document.addEventListener('keydown', onKey);
+  updateInfo();
+
+  return {
+    destroy() {
+      prevBtn.removeEventListener('click', onPrev);
+      nextBtn.removeEventListener('click', onNext);
+      fpsSelect.removeEventListener('change', onFpsChange);
+      videoEl.removeEventListener('timeupdate', updateInfo);
+      videoEl.removeEventListener('seeked', updateInfo);
+      videoEl.removeEventListener('loadedmetadata', updateInfo);
+      document.removeEventListener('keydown', onKey);
+      container.innerHTML = '';
+    }
+  };
+}
 
 // ===== UPLOAD SUBMIT =====
 $('#uploadForm').addEventListener('submit',async e=>{
@@ -3030,9 +3125,12 @@ function openEditModal(id) {
   $('#editDirectorOverrideInput').value = clip.directorOverride || '';
   // Big video preview at the top of the modal (read-only — only for watching while editing)
   const cv = $('#editClipVideo'), cvWrap = $('#editVideoPreviewWrap');
+  // Tear down any previous stepper before re-attaching (admin re-opening modal)
+  if (window._editFrameStepper) { window._editFrameStepper.destroy(); window._editFrameStepper = null; }
   if (clip.videoUrl) {
     cv.src = clip.videoUrl;
     cvWrap.style.display = '';
+    window._editFrameStepper = attachFrameStepper(cv, $('#editFrameStepper'));
   } else {
     cv.removeAttribute('src');
     cvWrap.style.display = 'none';
@@ -3067,6 +3165,8 @@ function closeEditModal() {
   // Stop video playback so it doesn't keep playing in the background
   const cv = $('#editClipVideo');
   if (cv) { try { cv.pause(); } catch {} cv.removeAttribute('src'); cv.load(); }
+  // Tear down frame stepper to remove its keyboard listener
+  if (window._editFrameStepper) { window._editFrameStepper.destroy(); window._editFrameStepper = null; }
 }
 
 $('#closeEditBtn').addEventListener('click', closeEditModal);
