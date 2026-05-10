@@ -643,10 +643,10 @@ body.admin-mode .animator-profile-stats{font-size:.75rem;margin-bottom:.6rem}
 .episode-director-chip-remove{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;line-height:1;padding:0 .15rem}
 .episode-director-chip-remove:hover{color:var(--accent)}
 /* Inline add-director form below the chips */
-.episode-director-add-wrap{position:relative;display:inline-flex;align-items:center}
-.episode-director-add-form{position:absolute;top:calc(100% + .3rem);left:0;width:280px;z-index:50;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.4rem;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.episode-director-add-wrap{position:relative;display:inline-flex;align-items:center;z-index:50}
+.episode-director-add-form{position:absolute;top:calc(100% + .3rem);left:0;width:280px;z-index:1000;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.4rem;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .episode-director-add-form .form-input{width:100%;font-size:.85rem}
-.episode-director-add-form .animator-dropdown{position:relative;top:.3rem;width:100%;z-index:51;max-height:240px;overflow-y:auto}
+.episode-director-add-form .animator-dropdown{position:relative;top:.3rem;width:100%;z-index:1001;max-height:240px;overflow-y:auto}
 
 /* About */
 .about-content{max-width:720px;margin:0 auto;padding:0 1rem 3rem;position:relative;z-index:1}

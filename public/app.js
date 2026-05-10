@@ -1636,13 +1636,27 @@ function renderEpisodeDirectorBlock(episode) {
   });
 
   // Open the add-director input
-  block.querySelector('[data-action="open-add-director"]')?.addEventListener('click', () => {
+  block.querySelector('[data-action="open-add-director"]')?.addEventListener('click', (e) => {
     const form = block.querySelector('#episodeDirectorAddForm');
     const input = block.querySelector('#episodeDirectorAddInput');
     if (!form || !input) return;
+    e.stopPropagation();
     form.style.display = 'block';
     input.value = '';
     input.focus();
+
+    // Close on outside click (one-shot, removes itself after firing)
+    setTimeout(() => {
+      const onOutside = (ev) => {
+        if (form.contains(ev.target)) return;
+        // Click was outside the form — close it
+        form.style.display = 'none';
+        const dd = block.querySelector('#episodeDirectorAddDropdown');
+        if (dd) dd.classList.remove('visible');
+        document.removeEventListener('click', onOutside);
+      };
+      document.addEventListener('click', onOutside);
+    }, 0);
   });
 
   // Wire up autocomplete on the add input (admin only)
