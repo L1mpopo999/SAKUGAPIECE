@@ -365,8 +365,15 @@ app.use(compression({
   // filter: skip already-compressed content (videos/images served from /uploads).
   // Express's static middleware already sets the right Content-Type, so the
   // default filter handles this — but we can be explicit too.
+  // CRITICAL: also bail out on /uploads. compression() wraps res.write before
+  // Content-Type is known; on video Range requests this can break HTTP 206
+  // Partial Content streaming, forcing the browser to download the whole file
+  // sequentially. Result: the buffer bar fills slowly and playback stalls
+  // when it catches up to the playhead. Skipping /uploads entirely lets
+  // express.static handle Range requests cleanly.
   filter: (req, res) => {
     if (req.headers['x-no-compression']) return false;
+    if (req.path.startsWith('/uploads')) return false;
     return compression.filter(req, res);
   }
 }));
@@ -514,7 +521,18 @@ Sitemap: ${SITE_BASE_URL}/sitemap.xml
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(uploadsDir));
+// /uploads serves user-uploaded videos and images. Files are immutable once
+// uploaded (we never overwrite them — new uploads get a new filename), so
+// browsers can cache them aggressively. maxAge:30d cuts repeat-visit traffic
+// dramatically and helps video playback stay smooth on revisits.
+app.use('/uploads', express.static(uploadsDir, {
+  maxAge: '30d',
+  immutable: true,
+  // express.static handles Range requests automatically via the `send` package,
+  // but only when Accept-Ranges is advertised. acceptRanges:true is the default;
+  // we set it explicitly so it can't be silently disabled by future config tweaks.
+  acceptRanges: true,
+}));
 
 // ===== API =====
 const crypto = require('crypto');
