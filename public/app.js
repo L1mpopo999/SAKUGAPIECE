@@ -1585,6 +1585,11 @@ function renderEpisodeProfile(episode) {
 function renderEpisodeDirectorBlock(episode) {
   const block = $('#episodeDirectorBlock');
   if (!block) return;
+  // The add-director popup may have been re-parented to <body> while open.
+  // If we're re-rendering the block (e.g. after saving a director), make sure
+  // any orphaned form in <body> is removed before we recreate it inside block.
+  const orphan = document.body.querySelector(':scope > #episodeDirectorAddForm');
+  if (orphan) orphan.remove();
   const dirs = getEpisodeDirector(episode); // always an array
 
   let html = '';
@@ -1637,25 +1642,61 @@ function renderEpisodeDirectorBlock(episode) {
 
   // Open the add-director input
   block.querySelector('[data-action="open-add-director"]')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget;
     const form = block.querySelector('#episodeDirectorAddForm');
     const input = block.querySelector('#episodeDirectorAddInput');
     if (!form || !input) return;
     e.stopPropagation();
+
+    // CRITICAL: move the form to <body> so it escapes EVERY ancestor stacking
+    // context (header z-index:1, info-row z-index:5, add-wrap z-index:50, etc).
+    // position:fixed alone is not enough — a fixed child of a stacking context
+    // is still painted within that context's slot, so the clip grid (z-index:2)
+    // could intercept clicks even with z-index:10000 on the popup. Reparenting
+    // to <body> puts the popup in the root stacking context. We remember the
+    // original parent so we can put it back when closing.
+    const originalParent = form.parentNode;
+    document.body.appendChild(form);
+
+    // Position the fixed-positioned popup right under the button (viewport coords).
+    const rect = btn.getBoundingClientRect();
+    form.style.left = rect.left + 'px';
+    form.style.top = (rect.bottom + 6) + 'px';
     form.style.display = 'block';
+
+    // Clamp to viewport right edge if the popup would overflow
+    const formRect = form.getBoundingClientRect();
+    const overflowRight = formRect.right - window.innerWidth + 8;
+    if (overflowRight > 0) form.style.left = (rect.left - overflowRight) + 'px';
+
     input.value = '';
     input.focus();
 
-    // Close on outside click (one-shot, removes itself after firing)
+    const closeForm = () => {
+      form.style.display = 'none';
+      // Look up the dropdown inside the form (not the block) since the form
+      // has been moved to <body> and `block` no longer contains it.
+      const dd = form.querySelector('#episodeDirectorAddDropdown');
+      if (dd) dd.classList.remove('visible');
+      // Return the form to its original parent so re-rendering the director
+      // block doesn't leave an orphan in <body> or create a duplicate.
+      if (originalParent && originalParent.isConnected && form.parentNode === document.body) {
+        originalParent.appendChild(form);
+      }
+      document.removeEventListener('click', onOutside);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+    const onOutside = (ev) => {
+      if (form.contains(ev.target)) return;
+      if (btn.contains(ev.target)) return; // re-clicking the button shouldn't double-toggle
+      closeForm();
+    };
+    const onScrollOrResize = () => closeForm();
     setTimeout(() => {
-      const onOutside = (ev) => {
-        if (form.contains(ev.target)) return;
-        // Click was outside the form — close it
-        form.style.display = 'none';
-        const dd = block.querySelector('#episodeDirectorAddDropdown');
-        if (dd) dd.classList.remove('visible');
-        document.removeEventListener('click', onOutside);
-      };
       document.addEventListener('click', onOutside);
+      window.addEventListener('scroll', onScrollOrResize, true);
+      window.addEventListener('resize', onScrollOrResize);
     }, 0);
   });
 
@@ -1702,7 +1743,9 @@ function renderEpisodeDirectorBlock(episode) {
         await setEpisodeDirectors(episode, [...dirs, v]);
       } else if (e.key === 'Escape') {
         dropdown.classList.remove('visible');
-        block.querySelector('#episodeDirectorAddForm').style.display = 'none';
+        // Form may have been re-parented to <body>, so look it up globally.
+        const f = document.getElementById('episodeDirectorAddForm');
+        if (f) f.style.display = 'none';
       }
     });
   }
