@@ -913,7 +913,74 @@ app.get('/clip/:id', (req, res) => {
 // be video/*, hard 60s timeout.
 const http = require('http');
 const https = require('https');
+const dns = require('dns');
+const net = require('net');
 const URL = require('url').URL;
+
+// SSRF guard: reject IPs that point inside our own server, private networks,
+// cloud metadata endpoints, etc. Without this, an admin (or whoever steals
+// admin creds) could feed the URL fetcher URLs like:
+//   http://127.0.0.1:3000/api/admin-only   → server fetches its own internal API
+//   http://169.254.169.254/latest/meta-data → cloud provider metadata + creds
+//   http://192.168.0.1/admin                → internal LAN devices
+// This function returns true for any address we consider unsafe.
+function isPrivateOrLoopbackIp(ip) {
+  if (!ip) return true;
+  const family = net.isIP(ip);
+  if (family === 0) return true; // not an IP at all
+  if (family === 4) {
+    const p = ip.split('.').map(Number);
+    if (p[0] === 10) return true;
+    if (p[0] === 127) return true;                      // loopback
+    if (p[0] === 169 && p[1] === 254) return true;       // link-local + AWS/GCP/Azure metadata
+    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+    if (p[0] === 192 && p[1] === 168) return true;
+    if (p[0] === 100 && p[1] >= 64 && p[1] <= 127) return true; // CGNAT
+    if (p[0] === 0) return true;                         // 0.0.0.0/8
+    if (p[0] >= 224) return true;                        // multicast / reserved
+    return false;
+  }
+  // IPv6
+  const lower = ip.toLowerCase();
+  if (lower === '::1' || lower === '::') return true;    // loopback / unspecified
+  if (lower.startsWith('fe80:') || lower.startsWith('fe8') || lower.startsWith('fe9') ||
+      lower.startsWith('fea') || lower.startsWith('feb')) return true; // link-local
+  if (lower.startsWith('fc') || lower.startsWith('fd')) return true;   // unique-local
+  if (lower.startsWith('::ffff:')) {
+    // IPv4-mapped IPv6: re-check as IPv4
+    const v4 = lower.replace('::ffff:', '');
+    if (net.isIPv4(v4)) return isPrivateOrLoopbackIp(v4);
+  }
+  return false;
+}
+
+// Resolve a hostname to IPs and reject if any of them is private/loopback.
+// Returns the first safe IP. Throws on unsafe or unresolvable hosts.
+async function resolveAndGuard(hostname) {
+  // If the hostname is already a literal IP, just check it.
+  if (net.isIP(hostname)) {
+    if (isPrivateOrLoopbackIp(hostname)) {
+      throw new Error('Ссылка ведёт на приватный/внутренний адрес');
+    }
+    return hostname;
+  }
+  // Reject special hostnames that resolve to loopback
+  const lowerHost = hostname.toLowerCase();
+  if (lowerHost === 'localhost' || lowerHost.endsWith('.localhost') ||
+      lowerHost === 'metadata.google.internal') {
+    throw new Error('Ссылка ведёт на приватный/внутренний адрес');
+  }
+  const addrs = await new Promise((resolve, reject) => {
+    dns.lookup(hostname, { all: true, family: 0 }, (err, res) => err ? reject(err) : resolve(res));
+  });
+  if (!addrs.length) throw new Error('Не удалось разрезолвить хост');
+  for (const a of addrs) {
+    if (isPrivateOrLoopbackIp(a.address)) {
+      throw new Error('Ссылка ведёт на приватный/внутренний адрес');
+    }
+  }
+  return addrs[0].address;
+}
 
 app.post('/api/clips/from-url', express.json(), async (req, res) => {
   if (!checkAdmin(req, res)) return;
@@ -934,10 +1001,28 @@ app.post('/api/clips/from-url', express.json(), async (req, res) => {
   const destPath = path.join(uploadsDir, filename);
   const MAX_SIZE = 200 * 1024 * 1024; // 200 MB
 
-  // Helper: download with redirect following (max 5 redirects)
+  // Helper: download with redirect following (max 5 redirects).
+  // SSRF guard runs on every hop, not just the first URL — without re-checking
+  // redirects, an attacker hosts a public 302 that points at 127.0.0.1 and the
+  // server happily follows.
   function download(targetUrl, redirectsLeft) {
-    return new Promise((resolve, reject) => {
-      const lib = targetUrl.startsWith('https:') ? https : http;
+    return new Promise(async (resolve, reject) => {
+      let u;
+      try { u = new URL(targetUrl); }
+      catch { return reject(new Error('Некорректный URL после редиректа')); }
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+        return reject(new Error('Только http/https после редиректа'));
+      }
+      // Resolve and reject private/loopback IPs BEFORE making the request.
+      // (We don't pin the request to the resolved IP because that breaks
+      //  HTTPS hostname verification — but the small DNS-rebinding window is
+      //  acceptable here since requests are admin-initiated and one-shot.)
+      try {
+        await resolveAndGuard(u.hostname);
+      } catch (e) {
+        return reject(e);
+      }
+      const lib = u.protocol === 'https:' ? https : http;
       const request = lib.get(targetUrl, { timeout: 60000 }, response => {
         // Handle redirects
         if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
