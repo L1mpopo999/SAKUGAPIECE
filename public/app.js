@@ -1231,17 +1231,26 @@ function renderEpisodeGrid() {
   const q = ($('#episodeSearchInput')?.value || '').trim();
   const grid = $('#episodeGrid');
 
-  // Count clips per episode
+  // Count clips per episode. We keep two counters:
+  //   - count:      total clips (video + photo). Used for the "X клипов" label
+  //                 on the card so the displayed number matches what the user
+  //                 actually sees on the episode page.
+  //   - videoCount: only clips with a video. Used as the PRIMARY sort key so
+  //                 episodes with lots of real video sakuga rise above episodes
+  //                 that are padded with photo-only entries (genga, art).
   const counts = new Map();
+  const videoCounts = new Map();
   allClips.forEach(c => {
     const ep = c.episode.trim();
     counts.set(ep, (counts.get(ep) || 0) + 1);
+    if (c.type === 'video') videoCounts.set(ep, (videoCounts.get(ep) || 0) + 1);
   });
 
   let list = getEpisodeList().map(ep => ({
     episode: ep,
     num: parseInt(ep) || 0,
     count: counts.get(ep) || 0,
+    videoCount: videoCounts.get(ep) || 0,
     arc: getEpisodeArc(parseInt(ep) || 0),
     director: getEpisodeDirector(ep)
   }));
@@ -1259,7 +1268,16 @@ function renderEpisodeGrid() {
 
   // Sort
   if (episodeSortMode === 'clips') {
-    list.sort((a, b) => b.count !== a.count ? b.count - a.count : b.num - a.num);
+    // Primary:   number of VIDEO clips desc (so episodes with real sakuga win
+    //            over episodes padded with photo-only entries like genga/art)
+    // Tie 1:     total clips desc (if same video count, the one with more
+    //            extras still ranks higher)
+    // Tie 2:     episode number desc (newer first as a final fallback)
+    list.sort((a, b) => {
+      if (b.videoCount !== a.videoCount) return b.videoCount - a.videoCount;
+      if (b.count !== a.count) return b.count - a.count;
+      return b.num - a.num;
+    });
   } else {
     list.sort((a, b) => b.num - a.num);
   }
