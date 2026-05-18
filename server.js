@@ -1,5 +1,12 @@
 const express = require('express');
 const multer = require('multer');
+// sharp is used to convert uploaded images (PNGs/JPGs/etc) into webp on the fly.
+// webp typically cuts file size 60-80% at visually identical quality for anime
+// frames, which is what most of our images are. Before this, a single clip
+// thumbnail could be 2-3 MB; with webp it's 400-700 KB. This drastically
+// reduces bandwidth usage when many clips are visible on screen at once
+// (browse page especially) and frees up bandwidth for video streaming.
+const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
@@ -64,6 +71,64 @@ const uploadFiles = multer({
     }
   }
 });
+
+// Convert an image file on disk to webp, replacing the original.
+// After this runs, `file.filename`, `file.path`, and `file.size` are updated
+// to point at the new webp file. Original is deleted. Already-webp files are
+// left untouched. On any failure we keep the original so the clip isn't
+// half-broken. Quality 82 is the sweet spot for anime frames — visually
+// indistinguishable from lossless, but ~70% smaller than PNG.
+async function convertImageToWebp(file) {
+  if (!file || !file.path) return;
+  // Skip non-images (videos go through multer too)
+  if (!/^image\//.test(file.mimetype || '')) return;
+  // Already webp? Nothing to do.
+  if (file.mimetype === 'image/webp' || /\.webp$/i.test(file.filename)) return;
+
+  const oldPath = file.path;
+  const newFilename = file.filename.replace(/\.[^.]+$/, '') + '.webp';
+  const newPath = path.join(uploadsDir, newFilename);
+
+  try {
+    // .rotate() respects EXIF orientation so phone photos don't end up sideways.
+    // .webp({ quality: 82 }) is lossy but visually identical for typical content.
+    await sharp(oldPath).rotate().webp({ quality: 82 }).toFile(newPath);
+    // Sanity check: new file must exist and be non-empty
+    const stat = fs.statSync(newPath);
+    if (!stat.size) throw new Error('webp output empty');
+    // Delete the original now that webp is on disk
+    try { fs.unlinkSync(oldPath); } catch {}
+    // Update the multer file object so downstream code uses the new path
+    file.filename = newFilename;
+    file.path = newPath;
+    file.size = stat.size;
+    file.mimetype = 'image/webp';
+  } catch (e) {
+    console.error('webp convert failed for', oldPath, e.message);
+    // Cleanup partial webp if it exists; keep original
+    try { if (fs.existsSync(newPath)) fs.unlinkSync(newPath); } catch {}
+    // Don't throw — fall back to serving the original. Better a big image
+    // than a broken clip.
+  }
+}
+
+// Helper: convert all image files from a multer req.files structure in parallel.
+// Handles both single (.single → req.file) and fields (.fields → req.files[name]).
+async function convertAllImagesToWebp(reqFiles) {
+  const allFiles = [];
+  if (!reqFiles) return;
+  // Flatten arrays from .fields() result, or wrap single file
+  if (Array.isArray(reqFiles)) allFiles.push(...reqFiles);
+  else if (reqFiles.path) allFiles.push(reqFiles);
+  else {
+    for (const k of Object.keys(reqFiles)) {
+      const v = reqFiles[k];
+      if (Array.isArray(v)) allFiles.push(...v);
+      else if (v && v.path) allFiles.push(v);
+    }
+  }
+  await Promise.all(allFiles.map(convertImageToWebp));
+}
 
 // Multiple fields: 1 video + up to 20 images
 const uploadHandler = uploadFiles.fields([
@@ -1075,7 +1140,7 @@ app.post('/api/clips/from-url', express.json(), async (req, res) => {
   }
 });
 
-app.post('/api/clips', uploadHandler, (req, res) => {
+app.post('/api/clips', uploadHandler, async (req, res) => {
   if (!checkAdmin(req, res)) {
     // Clean up uploaded files
     if (req.files) {
@@ -1085,6 +1150,10 @@ app.post('/api/clips', uploadHandler, (req, res) => {
     }
     return;
   }
+  // Convert thumbnail + images to webp on disk (mutates req.files entries).
+  // Done BEFORE we read filenames so the saved clip points at webp paths.
+  // Videos are not affected (mimetype check inside convertImageToWebp).
+  await convertAllImagesToWebp(req.files);
 
   const videoFile = req.files?.video?.[0];
   const thumbnailFile = req.files?.thumbnail?.[0];
@@ -1207,7 +1276,7 @@ app.put('/api/clips/:id', express.json(), (req, res) => {
 
 // Upload thumbnail for existing clip (admin only)
 const thumbnailUpload = uploadFiles.single('thumbnail');
-app.post('/api/clips/:id/thumbnail', thumbnailUpload, (req, res) => {
+app.post('/api/clips/:id/thumbnail', thumbnailUpload, async (req, res) => {
   if (!checkAdmin(req, res)) {
     if (req.file) fs.unlinkSync(req.file.path);
     return;
@@ -1217,6 +1286,9 @@ app.post('/api/clips/:id/thumbnail', thumbnailUpload, (req, res) => {
   const clip = clips.find(c => c.id === id);
   if (!clip) { if (req.file) fs.unlinkSync(req.file.path); return res.status(404).json({ error: 'Клип не найден' }); }
   if (!req.file) return res.status(400).json({ error: 'Файл обязателен' });
+
+  // Convert to webp to save bandwidth (mutates req.file.filename/path)
+  await convertImageToWebp(req.file);
 
   // Remove old thumbnail if exists
   if (clip.thumbnailUrl) {
@@ -1259,7 +1331,7 @@ app.post('/api/clips/:id/video', videoUpload, (req, res) => {
 
 // Add images to existing clip (admin only)
 const imagesUpload = uploadFiles.array('images', 20);
-app.post('/api/clips/:id/images', imagesUpload, (req, res) => {
+app.post('/api/clips/:id/images', imagesUpload, async (req, res) => {
   if (!checkAdmin(req, res)) {
     if (req.files) req.files.forEach(f => { if (fs.existsSync(f.path)) fs.unlinkSync(f.path); });
     return;
@@ -1269,6 +1341,9 @@ app.post('/api/clips/:id/images', imagesUpload, (req, res) => {
   const clip = clips.find(c => c.id === id);
   if (!clip) { if (req.files) req.files.forEach(f => fs.unlinkSync(f.path)); return res.status(404).json({ error: 'Клип не найден' }); }
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'Файлы обязательны' });
+
+  // Convert all images to webp before saving paths (mutates req.files entries)
+  await convertAllImagesToWebp(req.files);
 
   if (!clip.images) clip.images = [];
   req.files.forEach(f => {
@@ -1403,12 +1478,14 @@ app.get('/api/animator-banners', (req, res) => { res.json(loadAnimatorBanners())
 
 // Upload a banner. Reuses the existing single-file uploader; the field is "banner".
 // Replaces any existing banner for that animator.
-app.post('/api/animators/:name/banner', uploadFiles.single('banner'), (req, res) => {
+app.post('/api/animators/:name/banner', uploadFiles.single('banner'), async (req, res) => {
   if (!checkAdmin(req, res)) return;
   if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
   if (!/image\//.test(req.file.mimetype)) {
     return res.status(400).json({ error: 'Загрузите изображение (JPG/PNG/WebP)' });
   }
+  // Convert to webp to keep banner downloads small
+  await convertImageToWebp(req.file);
   const name = req.params.name;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Имя аниматора обязательно' });
   const banners = loadAnimatorBanners();
@@ -1455,12 +1532,14 @@ app.get('/api/episodes/:num/banner', (req, res) => {
 
 app.get('/api/episode-banners', (req, res) => { res.json(loadEpisodeBanners()); });
 
-app.post('/api/episodes/:num/banner', uploadFiles.single('banner'), (req, res) => {
+app.post('/api/episodes/:num/banner', uploadFiles.single('banner'), async (req, res) => {
   if (!checkAdmin(req, res)) return;
   if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
   if (!/image\//.test(req.file.mimetype)) {
     return res.status(400).json({ error: 'Загрузите изображение (JPG/PNG/WebP)' });
   }
+  // Convert to webp to keep banner downloads small
+  await convertImageToWebp(req.file);
   const num = String(req.params.num).trim();
   if (!num) return res.status(400).json({ error: 'Номер эпизода обязателен' });
   const banners = loadEpisodeBanners();
