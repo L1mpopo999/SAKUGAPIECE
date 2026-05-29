@@ -745,17 +745,27 @@ function applyFilters() {
     clips = clips.filter(c => !c.videoUrl && c.images && c.images.length > 0);
   }
   
-  // Tag filter
+  // Tag filter — case-insensitive so legacy clips with inconsistent casing
+  // ("fan letter" vs "FAN LETTER") all match the same chip.
   if (currentTagFilter) {
-    clips = clips.filter(c => c.tags.includes(currentTagFilter));
+    const tagLower = currentTagFilter.toLowerCase();
+    clips = clips.filter(c => c.tags.some(t => t.toLowerCase() === tagLower));
   }
-  
-  // Arc filter
+
+  // Arc filter — guard against clips with null/undefined arc (special episodes
+  // like FAN LETTER don't always have an arc set).
   if (currentArcFilter) {
-    clips = clips.filter(c => c.arc.toLowerCase() === currentArcFilter.toLowerCase());
+    clips = clips.filter(c => (c.arc || '').toLowerCase() === currentArcFilter.toLowerCase());
   }
   
-  if (q) clips = clips.filter(c => c.title.toLowerCase().includes(q) || (c.titleEn && c.titleEn.toLowerCase().includes(q)) || c.animators.some(a=>a.toLowerCase().includes(q)) || c.tags.some(t=>t.toLowerCase().includes(q)) || c.arc.toLowerCase().includes(q) || c.episode.includes(q));
+  if (q) clips = clips.filter(c =>
+    c.title.toLowerCase().includes(q)
+    || (c.titleEn && c.titleEn.toLowerCase().includes(q))
+    || c.animators.some(a => a.toLowerCase().includes(q))
+    || c.tags.some(t => t.toLowerCase().includes(q))
+    || (c.arc || '').toLowerCase().includes(q)
+    || (c.episode || '').toLowerCase().includes(q)
+  );
   
   // Sort
   if (currentSort === 'views') {
@@ -2488,6 +2498,15 @@ $('#uploadForm').addEventListener('submit',async e=>{
   fd.append('title',title);fd.append('titleEn',titleEn);fd.append('animators',selectedAnimators.join(', '));fd.append('episode',episode);fd.append('arc',arc);fd.append('tags',tags);fd.append('notes',notes);fd.append('notesEn',notesEn);
   fd.append('timecodes', $('#timecodesInput').value.trim());
   fd.append('clipOrder', $('#clipOrderInput').value.trim() || '0');
+  // Pull video duration from the <video> preview element (it has loaded
+  // metadata by the time the admin clicks Submit, since the preview has been
+  // visible since the file was picked). Server validates the format.
+  const previewVid = $('#uploadPreviewPlayer');
+  if (previewVid && Number.isFinite(previewVid.duration) && previewVid.duration > 0) {
+    const m = Math.floor(previewVid.duration / 60);
+    const s = Math.floor(previewVid.duration % 60);
+    fd.append('duration', `${m}:${s.toString().padStart(2, '0')}`);
+  }
 
   $('#submitBtn').disabled=true;$('#uploadProgress').classList.add('visible');
 
@@ -3235,8 +3254,30 @@ $('#editVideoInput').addEventListener('change', async () => {
   if (!f || !editingClipId) return;
   if (!f.type.startsWith('video/')) { notify('Выберите видеофайл', true); return; }
   if (f.size > 200*1024*1024) { notify('Видео слишком большое (макс 200 МБ)', true); return; }
+
+  // Read duration from the file via a throwaway <video> element. Resolves to
+  // a "M:SS" string or null if the browser can't read metadata in 5s.
+  const duration = await new Promise(resolve => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    const url = URL.createObjectURL(f);
+    const cleanup = () => { try { URL.revokeObjectURL(url); } catch {} };
+    const timer = setTimeout(() => { cleanup(); resolve(null); }, 5000);
+    v.onloadedmetadata = () => {
+      clearTimeout(timer); cleanup();
+      if (!Number.isFinite(v.duration) || v.duration <= 0) return resolve(null);
+      const m = Math.floor(v.duration / 60);
+      const s = Math.floor(v.duration % 60);
+      resolve(`${m}:${s.toString().padStart(2, '0')}`);
+    };
+    v.onerror = () => { clearTimeout(timer); cleanup(); resolve(null); };
+    v.src = url;
+  });
+
   const fd = new FormData();
   fd.append('video', f);
+  if (duration) fd.append('duration', duration);
   try {
     notify('Загрузка видео...');
     const res = await fetch(`/api/clips/${editingClipId}/video`, {
