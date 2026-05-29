@@ -2415,9 +2415,6 @@ function attachFrameStepper(videoEl, container) {
       </div>
       <select class="frame-fps-select" data-frame-fps title="${LANG==='en'?'Frame rate':'Частота кадров'}">
         <option value="24">24 fps</option>
-        <option value="23.976">23.976 fps</option>
-        <option value="30">30 fps</option>
-        <option value="25">25 fps</option>
         <option value="12">12 fps (2s)</option>
         <option value="8">8 fps (3s)</option>
       </select>
@@ -3772,9 +3769,6 @@ function renderClipPage(clip) {
             </div>
             <select class="frame-fps-select" id="frameFpsSelect" title="Частота кадров">
               <option value="24">24 fps</option>
-              <option value="23.976">23.976 fps</option>
-              <option value="30">30 fps</option>
-              <option value="25">25 fps</option>
               <option value="12">12 fps (2s)</option>
               <option value="8">8 fps (3s)</option>
             </select>
