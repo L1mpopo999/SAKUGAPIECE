@@ -1184,6 +1184,16 @@ app.post('/api/clips', uploadHandler, async (req, res) => {
   const effectiveVideoName = videoFile ? videoFile.filename : (preloadedExists ? preloadedFilename : null);
   const effectiveVideoSize = videoFile ? videoFile.size : (preloadedExists ? fs.statSync(path.join(uploadsDir, preloadedFilename)).size : 0);
 
+  // Duration is measured client-side (from the <video> element in the upload
+  // form) and sent as a formatted "M:SS" string. We validate the format here
+  // rather than trusting raw input — a malformed value just gets dropped, the
+  // clip still saves without a duration badge.
+  let videoDuration = null;
+  if (effectiveVideoName) {
+    const raw = String(req.body?.duration || '').trim();
+    if (/^\d{1,3}:\d{2}$/.test(raw)) videoDuration = raw;
+  }
+
   const clips = loadClips();
 
   const newClip = {
@@ -1203,6 +1213,7 @@ app.post('/api/clips', uploadHandler, async (req, res) => {
     // Video (either uploaded or downloaded-from-URL)
     filename: effectiveVideoName,
     videoUrl: effectiveVideoName ? '/uploads/' + effectiveVideoName : null,
+    duration: videoDuration,
     // Images
     images: imageFiles.map(f => ({
       filename: f.filename,
@@ -1325,8 +1336,31 @@ app.post('/api/clips/:id/video', videoUpload, (req, res) => {
   clip.type = 'video';
   clip.quality = '1080p';
   clip.size = req.file.size;
+  // Client-measured duration ("M:SS"). Validate format; ignore bad values.
+  const raw = String(req.body?.duration || '').trim();
+  if (/^\d{1,3}:\d{2}$/.test(raw)) clip.duration = raw;
   saveClips(clips);
   res.json({ success: true, videoUrl: clip.videoUrl });
+});
+
+// Backfill-only endpoint: set duration on an existing clip without touching
+// the video file. Used by the one-time admin-side migration script that walks
+// every clip without a `duration`, reads metadata from the <video> element in
+// the browser, and PUTs the result here. Heavily rate-limited usage in
+// practice (one admin doing it once) so we don't add a dedicated limiter.
+app.put('/api/clips/:id/duration', express.json(), (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const raw = String(req.body?.duration || '').trim();
+  if (!/^\d{1,3}:\d{2}$/.test(raw)) {
+    return res.status(400).json({ error: 'Bad duration format, expected M:SS' });
+  }
+  const clips = loadClips();
+  const id = parseInt(req.params.id);
+  const clip = clips.find(c => c.id === id);
+  if (!clip) return res.status(404).json({ error: 'Клип не найден' });
+  clip.duration = raw;
+  saveClips(clips);
+  res.json({ success: true });
 });
 
 // Add images to existing clip (admin only)

@@ -143,6 +143,38 @@ function pluralAnimators(n) {
   return t('unit_animators_many');
 }
 
+// Convert a stored "M:SS" duration string back into seconds. Returns 0 for
+// missing / malformed values so the caller can just .reduce() without checks.
+function durationToSeconds(durationStr) {
+  if (typeof durationStr !== 'string') return 0;
+  const m = durationStr.match(/^(\d+):(\d{2})$/);
+  if (!m) return 0;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+function sumClipDurations(clips) {
+  let total = 0;
+  for (const c of clips) total += durationToSeconds(c.duration);
+  return total;
+}
+// "5:42" -> "5 мин 42 сек". For longer runtimes (≥1 hour) we use "h:mm:ss".
+// Used only for the episode-page total — short and compact. The per-clip
+// badge in the corner still uses the raw "M:SS" form.
+function formatTotalRuntime(totalSecs) {
+  if (totalSecs < 60) {
+    return LANG === 'en' ? `${totalSecs} sec` : `${totalSecs} сек`;
+  }
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  if (LANG === 'en') {
+    return s ? `${m} min ${s} sec` : `${m} min`;
+  }
+  return s ? `${m} мин ${s} сек` : `${m} мин`;
+}
+
 // Apply translations to all DOM elements with data-i18n / data-i18n-html / data-i18n-placeholder / data-i18n-title
 function applyI18n() {
   document.documentElement.lang = LANG;
@@ -457,6 +489,103 @@ async function loadClips() {
   // local cache makes the heart show as filled on re-visit without an extra API roundtrip)
   try { likedByMe = new Set(JSON.parse(localStorage.getItem('sp_liked') || '[]')); } catch { likedByMe = new Set(); }
   applyFilters();
+  // Kick off the duration backfill for legacy clips (admin only). Doesn't
+  // await — runs in the background so it doesn't block the UI.
+  backfillDurationsInBackground();
+}
+
+// One-time backfill of `duration` on legacy video clips. New uploads already
+// get a duration set at create time (read from the <video> preview element);
+// this fills the gap for everything uploaded before that feature shipped.
+//
+// How it works: we walk clips with a video and no duration, and for each one
+// we spin up a hidden <video preload="metadata"> element pointing at the clip.
+// The browser fetches only the first 50-200 KB of the mp4 (the moov atom),
+// reads the duration from its metadata, and fires `loadedmetadata`. We then
+// PUT the formatted duration back to the server and move on.
+//
+// Only the admin who is logged in runs this — regular visitors never trigger
+// the work, so it doesn't waste their bandwidth. A small floating indicator
+// in the bottom-right shows progress so the admin knows it's happening.
+async function backfillDurationsInBackground() {
+  if (!isAdmin) return;
+  // If someone else already kicked off the backfill in another tab, skip.
+  if (window._durationBackfillRunning) return;
+  window._durationBackfillRunning = true;
+
+  // Filter: only video clips that still need a duration. Skip photo-only
+  // entries (no videoUrl) and anything already populated.
+  const pending = allClips.filter(c => c.videoUrl && !c.duration);
+  if (!pending.length) { window._durationBackfillRunning = false; return; }
+
+  // Tiny floating indicator — gives feedback without nagging
+  const badge = document.createElement('div');
+  badge.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(20,22,30,.95);color:#e7e7ea;font:600 .75rem/1 "Manrope",sans-serif;padding:.55rem .85rem;border-radius:8px;border:1px solid rgba(244,162,38,.4);z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.6)';
+  badge.textContent = `Длительности: 0 / ${pending.length}`;
+  document.body.appendChild(badge);
+
+  let done = 0, failed = 0;
+
+  // Reads one clip's duration via a hidden <video>. 8s timeout per clip so a
+  // bad/missing file can't stall the whole batch.
+  function probeDuration(videoUrl) {
+    return new Promise(resolve => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      v.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px';
+      const cleanup = () => { try { v.src = ''; v.remove(); } catch {} };
+      const timer = setTimeout(() => { cleanup(); resolve(null); }, 8000);
+      v.onloadedmetadata = () => {
+        clearTimeout(timer);
+        const d = v.duration;
+        cleanup();
+        if (!Number.isFinite(d) || d <= 0) return resolve(null);
+        const m = Math.floor(d / 60);
+        const s = Math.floor(d % 60);
+        resolve(`${m}:${s.toString().padStart(2, '0')}`);
+      };
+      v.onerror = () => { clearTimeout(timer); cleanup(); resolve(null); };
+      v.src = videoUrl;
+      document.body.appendChild(v);
+    });
+  }
+
+  // Process clips one at a time. Sequential is fine — total network is small
+  // (a few hundred clips × ~100KB metadata fetch) and serial is gentler on
+  // both the browser and the server than parallel.
+  for (const clip of pending) {
+    try {
+      const dur = await probeDuration(clip.videoUrl);
+      if (dur) {
+        const r = await fetch(`/api/clips/${clip.id}/duration`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+          body: JSON.stringify({ duration: dur })
+        });
+        if (r.ok) {
+          clip.duration = dur; // keep in-memory copy in sync so UI updates on next render
+          done++;
+        } else {
+          failed++;
+        }
+      } else {
+        failed++;
+      }
+    } catch {
+      failed++;
+    }
+    badge.textContent = `Длительности: ${done} / ${pending.length}${failed ? ` (✗${failed})` : ''}`;
+  }
+
+  // Final state — short message, then fade out
+  badge.textContent = `Длительности готовы: ${done}${failed ? ` (пропущено ${failed})` : ''}`;
+  setTimeout(() => {
+    badge.style.transition = 'opacity .8s';
+    badge.style.opacity = '0';
+    setTimeout(() => badge.remove(), 900);
+  }, 4000);
+  window._durationBackfillRunning = false;
 }
 
 // Toggle a like on the server. Optimistically updates local state and re-renders
@@ -1555,6 +1684,11 @@ function renderEpisodeProfile(episode) {
   const animators = [...new Set(clips.flatMap(c => c.animators))];
   let stats = `${arc} · ${clips.length} ${pluralClips(clips.length)}`;
   if (animators.length) stats += ` · ${animators.length} ${pluralAnimators(animators.length)}`;
+  // Total sakuga runtime — sum of every video clip's duration. We only show
+  // this if at least one clip in the episode actually has a duration set,
+  // otherwise the label would just say "0 sec" which looks broken.
+  const totalSecs = sumClipDurations(clips);
+  if (totalSecs > 0) stats += ` · ${formatTotalRuntime(totalSecs)}`;
   $('#episodeProfileStats').textContent = stats;
 
   // === Banner image (admin-uploaded) ===
