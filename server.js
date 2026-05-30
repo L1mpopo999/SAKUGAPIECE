@@ -486,6 +486,18 @@ const commentLimiter = rateLimit({
   message: { error: 'Слишком много комментариев. Подождите.' }
 });
 
+// Rate limit for likes. A real person clicks at most a handful of hearts per
+// minute while browsing; 30/min is *very* generous and only kicks in on
+// automated/scripted abuse (e.g. someone running a curl loop after the site
+// gets attention on social media — which has already happened once).
+const likeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Слишком много лайков. Подождите.' }
+});
+
 app.use(express.json());
 
 // SEO / OpenGraph: when a /clip/:id URL is loaded directly (or fetched by a
@@ -886,8 +898,11 @@ function loadViews() {
 }
 function saveViews(data) { writeJsonAtomic(VIEWS_FILE, data); }
 
-// Likes — stored per-clip as an array of user tokens (one like per user max).
-// Same shape as views.json for consistency: { "clipId": ["tok1", "tok2", ...] }
+// Likes — stored per-clip as an array of user records.
+// Legacy entries (pre-IP-binding) are plain strings: just the userToken.
+// New entries are objects: { userToken, ip }. Both forms are handled by
+// the like / unlike / status endpoints below. Count = array length, regardless.
+// Shape: { "clipId": ["legacyToken1", { userToken, ip }, ...] }
 const LIKES_FILE = path.join(dataDir, 'likes.json');
 function loadLikes() {
   if (!fs.existsSync(LIKES_FILE)) { saveLikes({}); return {}; }
@@ -905,20 +920,49 @@ app.get('/api/likes/counts', (req, res) => {
 });
 
 // Toggle like for a clip (anonymous via userToken in body)
-app.post('/api/clips/:id/like', (req, res) => {
+app.post('/api/clips/:id/like', likeLimiter, (req, res) => {
   const { userToken } = req.body || {};
   if (!userToken) return res.status(400).json({ error: 'Нет userToken' });
   const id = parseInt(req.params.id);
   const clips = loadClips();
   if (!clips.find(c => c.id === id)) return res.status(404).json({ error: 'Клип не найден' });
 
+  // IP comes from req.ip (trustworthy due to `app.set('trust proxy', 1)`).
+  // We use it as a second uniqueness key on top of userToken — without this,
+  // anyone could spam likes by sending arbitrary userToken strings from a
+  // single curl loop. Now even with rotating tokens, one IP can only like
+  // each clip once.
+  const ip = req.ip || '';
+
   const likes = loadLikes();
   const key = String(id);
   if (!likes[key]) likes[key] = [];
-  const idx = likes[key].indexOf(userToken);
+
+  // Legacy entries are plain strings (just userToken). New entries are objects
+  // { userToken, ip }. We have to handle both when checking membership.
+  const getToken = e => (typeof e === 'string' ? e : e?.userToken);
+  const getIp = e => (typeof e === 'string' ? null : e?.ip);
+
+  // Already liked? Match by EITHER userToken (same person on same device) OR
+  // same IP (same household / same attacker behind one address). Both close
+  // the typical abuse paths.
+  const existingIdx = likes[key].findIndex(e => {
+    const tok = getToken(e);
+    const eip = getIp(e);
+    if (tok === userToken) return true;
+    if (ip && eip && eip === ip) return true;
+    return false;
+  });
+
   let liked;
-  if (idx === -1) { likes[key].push(userToken); liked = true; }
-  else { likes[key].splice(idx, 1); liked = false; }
+  if (existingIdx === -1) {
+    likes[key].push({ userToken, ip });
+    liked = true;
+  } else {
+    // Unlike — remove the entry (works for both legacy strings and new objects)
+    likes[key].splice(existingIdx, 1);
+    liked = false;
+  }
   saveLikes(likes);
   res.json({ success: true, liked, count: likes[key].length });
 });
@@ -929,7 +973,11 @@ app.get('/api/clips/:id/like-status', (req, res) => {
   const id = String(parseInt(req.params.id));
   const likes = loadLikes();
   const list = likes[id] || [];
-  res.json({ liked: !!userToken && list.includes(userToken), count: list.length });
+  // Same legacy-aware matching as above.
+  const liked = !!userToken && list.some(e =>
+    (typeof e === 'string' ? e : e?.userToken) === userToken
+  );
+  res.json({ liked, count: list.length });
 });
 
 app.post('/api/clips/:id/view', viewLimiter, (req, res) => {
