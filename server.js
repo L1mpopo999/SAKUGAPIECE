@@ -60,7 +60,7 @@ const storage = multer.diskStorage({
 // Allow both video and image files
 const uploadFiles = multer({
   storage,
-  limits: { fileSize: 200 * 1024 * 1024 },
+  limits: { fileSize: 300 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const videoTypes = /video\/(mp4|webm|quicktime|x-msvideo|x-matroska)/;
     const imageTypes = /image\/(jpeg|jpg|png|gif|webp|bmp)/;
@@ -1022,7 +1022,7 @@ app.get('/clip/:id', (req, res) => {
 // resulting filename so the upload form can submit it like a regular file.
 // This saves the admin from having to download → re-upload manually for each clip.
 //
-// Limits: 200 MB max (matches multer config), https/http only, content-type must
+// Limits: 300 MB max (matches multer config), https/http only, content-type must
 // be video/*, hard 60s timeout.
 const http = require('http');
 const https = require('https');
@@ -1112,7 +1112,7 @@ app.post('/api/clips/from-url', express.json(), async (req, res) => {
   const safeExt = /^\.[a-z0-9]+$/.test(ext) ? ext : '.mp4';
   const filename = `${Date.now()}-from-url${safeExt}`;
   const destPath = path.join(uploadsDir, filename);
-  const MAX_SIZE = 200 * 1024 * 1024; // 200 MB
+  const MAX_SIZE = 300 * 1024 * 1024; // 300 MB
 
   // Helper: download with redirect following (max 5 redirects).
   // SSRF guard runs on every hop, not just the first URL — without re-checking
@@ -1156,7 +1156,7 @@ app.post('/api/clips/from-url', express.json(), async (req, res) => {
         const declaredSize = parseInt(response.headers['content-length']) || 0;
         if (declaredSize && declaredSize > MAX_SIZE) {
           response.resume();
-          return reject(new Error(`Файл слишком большой: ${(declaredSize / 1024 / 1024).toFixed(1)} МБ (макс 200)`));
+          return reject(new Error(`Файл слишком большой: ${(declaredSize / 1024 / 1024).toFixed(1)} МБ (макс 300)`));
         }
 
         let received = 0;
@@ -1167,7 +1167,7 @@ app.post('/api/clips/from-url', express.json(), async (req, res) => {
             request.destroy();
             file.destroy();
             try { fs.unlinkSync(destPath); } catch {}
-            reject(new Error('Файл превысил лимит 200 МБ'));
+            reject(new Error('Файл превысил лимит 300 МБ'));
           }
         });
         response.pipe(file);
@@ -2196,7 +2196,7 @@ app.get('/api/backup', (req, res) => {
 // ===== ERROR HANDLING =====
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Файл слишком большой (максимум 200 МБ)' });
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Файл слишком большой (максимум 300 МБ)' });
     return res.status(400).json({ error: err.message });
   }
   if (err) return res.status(400).json({ error: err.message });

@@ -117,7 +117,97 @@ const I18N = {
   admin_login_btn: { ru: 'Войти', en: 'Sign in' },
   admin_modal_error: { ru: 'Неверный логин или пароль', en: 'Invalid login or password' },
   login_username_label: { ru: 'Логин', en: 'Username' },
-  login_password_label: { ru: 'Пароль', en: 'Password' }
+  login_password_label: { ru: 'Пароль', en: 'Password' },
+
+  // Admin: upload clip form ------------------------------------------------
+  upload_title: { ru: 'Загрузить клип', en: 'Upload clip' },
+  upload_video_label: { ru: 'Видеофайл (необязательно если есть фото)', en: 'Video file (optional if photos)' },
+  upload_tab_file: { ru: '📁 Файл', en: '📁 File' },
+  upload_tab_url: { ru: '🔗 По ссылке', en: '🔗 From URL' },
+  upload_drop_video: { ru: 'Перетащите видео или нажмите', en: 'Drop a video or click' },
+  upload_video_hint: { ru: 'MP4, WebM, MOV — до 300 МБ', en: 'MP4, WebM, MOV — up to 300 MB' },
+  upload_url_placeholder: { ru: 'https://пример.com/видео.mp4', en: 'https://example.com/video.mp4' },
+  upload_url_fetch: { ru: 'Скачать', en: 'Fetch' },
+  upload_url_fetching: { ru: 'Скачиваю...', en: 'Downloading...' },
+  upload_url_error: { ru: 'Не удалось скачать', en: 'Failed to download' },
+  upload_url_done: { ru: 'Файл скачан. Заполните остальные поля и нажмите "Загрузить".', en: 'File downloaded. Fill in the rest and press "Upload".' },
+  upload_thumb_label: { ru: 'Обложка (необязательно)', en: 'Thumbnail (optional)' },
+  upload_thumb_drop: { ru: 'Выберите обложку', en: 'Choose a thumbnail' },
+  upload_thumb_hint: { ru: 'JPG, PNG, WebP', en: 'JPG, PNG, WebP' },
+  upload_photos_label: { ru: 'Фотографии / раскадровка (до 20 штук)', en: 'Photos / storyboards (up to 20)' },
+  upload_photos_drop: { ru: 'Перетащите фото или нажмите', en: 'Drop photos or click' },
+  upload_photos_hint: { ru: 'JPG, PNG, GIF, WebP — до 20 файлов', en: 'JPG, PNG, GIF, WebP — up to 20 files' },
+  upload_title_ru_label: { ru: 'Название (RU)', en: 'Title (RU)' },
+  upload_title_ru_placeholder: { ru: 'напр. Луффи врывается на крышу', en: 'e.g. Луффи врывается на крышу' },
+  upload_title_en_label: { ru: 'Название (EN, опционально)', en: 'Title (EN, optional)' },
+  upload_title_en_placeholder: { ru: 'e.g. Luffy bursts through the roof', en: 'e.g. Luffy bursts through the roof' },
+  upload_title_en_hint: { ru: 'Если пусто — на английской версии будет показано русское название', en: 'If empty, the English version shows the Russian title' },
+  upload_animators_label: { ru: 'Аниматор(ы)', en: 'Animator(s)' },
+  upload_animators_placeholder: { ru: 'Начните вводить имя...', en: 'Start typing a name...' },
+  upload_episode_label: { ru: 'Эпизод', en: 'Episode' },
+  upload_arc_label: { ru: 'Арка', en: 'Arc' },
+  upload_order_label: { ru: 'Порядок', en: 'Order' },
+  upload_tags_label: { ru: 'Теги', en: 'Tags' },
+  upload_tags_placeholder: { ru: 'Начните вводить тег...', en: 'Start typing a tag...' },
+  upload_notes_ru_label: { ru: 'Заметки (RU, опционально)', en: 'Notes (RU, optional)' },
+  upload_notes_en_label: { ru: 'Заметки (EN, опционально)', en: 'Notes (EN, optional)' },
+  upload_timecodes_label: { ru: 'Таймкоды аниматоров (опционально)', en: 'Animator timecodes (optional)' },
+  upload_timecodes_placeholder: { ru: 'напр.\nMasami Mori 0:00-0:08\nNaoki Tate 0:08-0:14', en: 'e.g.\nMasami Mori 0:00-0:08\nNaoki Tate 0:08-0:14' },
+  upload_submit: { ru: 'Загрузить', en: 'Upload' },
+  upload_submitting: { ru: 'Загружаю...', en: 'Uploading...' },
+
+  // Admin: edit clip form --------------------------------------------------
+  edit_title: { ru: 'Редактировать клип', en: 'Edit clip' },
+  edit_video_replace: { ru: 'Заменить видео', en: 'Replace video' },
+  edit_thumb_replace: { ru: 'Заменить обложку', en: 'Replace thumbnail' },
+  edit_thumb_remove: { ru: 'Удалить обложку', en: 'Remove thumbnail' },
+  edit_photo_add: { ru: 'Добавить фото', en: 'Add photos' },
+  edit_photos_label: { ru: 'Фото', en: 'Photos' },
+  edit_save: { ru: 'Сохранить', en: 'Save' },
+  edit_cancel: { ru: 'Отмена', en: 'Cancel' },
+  edit_saving: { ru: 'Сохраняю...', en: 'Saving...' },
+
+  // Notify messages (shown via notify())
+  msg_video_too_big: { ru: 'Видео слишком большое (макс 300 МБ)', en: 'Video too large (max 300 MB)' },
+  msg_video_uploaded: { ru: 'Клип загружен', en: 'Clip uploaded' },
+  msg_clip_saved: { ru: 'Клип сохранён', en: 'Clip saved' },
+  msg_clip_updated: { ru: 'Клип обновлён', en: 'Clip updated' },
+  msg_clip_deleted: { ru: 'Клип удалён', en: 'Clip deleted' },
+  msg_thumb_saved: { ru: 'Обложка обновлена', en: 'Thumbnail updated' },
+  msg_video_saved: { ru: 'Видео обновлено', en: 'Video updated' },
+  msg_photo_added: { ru: 'Фото добавлены', en: 'Photos added' },
+  msg_photo_deleted: { ru: 'Фото удалено', en: 'Photo deleted' },
+  msg_need_video_or_photo: { ru: 'Загрузите видео или хотя бы одно фото', en: 'Upload a video or at least one photo' },
+  msg_need_title: { ru: 'Заполните название', en: 'Title is required' },
+  msg_need_title_animator_ep: { ru: 'Заполните название, аниматора и эпизод', en: 'Title, animator and episode are required' },
+  msg_need_episode: { ru: 'Укажите номер эпизода', en: 'Episode number is required' },
+  msg_need_animator: { ru: 'Укажите хотя бы одного аниматора', en: 'At least one animator is required' },
+  msg_upload_error: { ru: 'Ошибка загрузки', en: 'Upload failed' },
+  msg_network_error: { ru: 'Ошибка сети', en: 'Network error' },
+  msg_admin_only: { ru: 'Войдите как админ', en: 'Sign in as admin' },
+  msg_admin_only_upload: { ru: 'Войдите как админ чтобы загружать клипы', en: 'Sign in as admin to upload clips' },
+  msg_admin_required: { ru: 'Доступ запрещён. Войдите как админ.', en: 'Access denied. Sign in as admin.' },
+  msg_select_video: { ru: 'Выберите видеофайл', en: 'Please select a video file' },
+  msg_select_image: { ru: 'Загрузите изображение (JPG/PNG/WebP)', en: 'Please upload an image (JPG/PNG/WebP)' },
+  msg_clip_not_found: { ru: 'Клип не найден', en: 'Clip not found' },
+  msg_file_required: { ru: 'Файл обязателен', en: 'File is required' },
+  msg_banner_replaced: { ru: 'Баннер заменён', en: 'Banner replaced' },
+  msg_banner_removed: { ru: 'Баннер удалён', en: 'Banner removed' },
+
+  // Confirmation dialogs (window.confirm)
+  confirm_delete_clip: { ru: 'Удалить этот клип навсегда?', en: 'Permanently delete this clip?' },
+  confirm_delete_banner_animator: { ru: 'Удалить баннер этого аниматора?', en: 'Delete this animator\'s banner?' },
+  confirm_delete_banner_episode: { ru: 'Удалить баннер этой серии?', en: 'Delete this episode\'s banner?' },
+  confirm_delete_photo: { ru: 'Удалить это фото?', en: 'Delete this photo?' },
+  confirm_delete_director: { ru: 'Убрать этого режиссёра?', en: 'Remove this director?' },
+
+  // Inline admin button tooltips
+  tooltip_edit: { ru: 'Редактировать', en: 'Edit' },
+  tooltip_delete: { ru: 'Удалить', en: 'Delete' },
+  tooltip_remove: { ru: 'Убрать', en: 'Remove' },
+  tooltip_replace_banner: { ru: 'Заменить баннер', en: 'Replace banner' },
+  tooltip_remove_banner: { ru: 'Удалить баннер', en: 'Remove banner' },
+  tooltip_upload_for: { ru: '+ Загрузить клип', en: '+ Upload clip' }
 };
 
 function t(key) {
@@ -1018,7 +1108,7 @@ async function editFilterDescription(filterId) {
         close();
       }
       else notify(data.error, true);
-    } catch (e) { console.error('[filter-desc] save failed:', e); notify('Ошибка сети', true); }
+    } catch (e) { console.error('[filter-desc] save failed:', e); notify(t('msg_network_error'), true); }
   };
 }
 // Filter chips are rendered dynamically in renderFilterChips()
@@ -1107,7 +1197,7 @@ function renderAnimatorGrid() {
         const data = await res.json();
         if (data.success) { HIDDEN_ANIMATORS = data.hidden; renderAnimatorGrid(); notify(hidden ? `${name} показан` : `${name} скрыт`); }
         else notify(data.error, true);
-      } catch { notify('Ошибка сети', true); }
+      } catch { notify(t('msg_network_error'), true); }
     });
   });
 
@@ -1479,7 +1569,7 @@ function renderEpisodeGrid() {
         const data = await res.json();
         if (data.success) { await loadAnimatorsAndFilters(); await loadClips(); renderEpisodeGrid(); notify(`Серия «${oldEp}» → «${newEp.trim()}»`); }
         else notify(data.error, true);
-      } catch { notify('Ошибка сети', true); }
+      } catch { notify(t('msg_network_error'), true); }
     });
   });
 
@@ -1495,7 +1585,7 @@ function renderEpisodeGrid() {
         const data = await res.json();
         if (data.success) { EPISODES_DATA = data.episodes; renderEpisodeGrid(); notify(hidden ? `Серия ${ep} показана` : `Серия ${ep} скрыта`); }
         else notify(data.error, true);
-      } catch { notify('Ошибка сети', true); }
+      } catch { notify(t('msg_network_error'), true); }
     });
   });
 
@@ -1943,7 +2033,7 @@ async function setEpisodeDirectors(episode, directors) {
     renderEpisodeDirectorBlock(episode);
     if (!directors.length) notify(`Режиссёры серии ${episode} убраны`);
     else notify(`Серия ${episode}: ${directors.join(' / ')}`);
-  } catch { notify('Ошибка сети', true); }
+  } catch { notify(t('msg_network_error'), true); }
 }
 
 // Backwards-compatible single-director helper (still used elsewhere — converts to array).
@@ -1956,7 +2046,7 @@ $('#backToEpisodesBtn').addEventListener('click', () => navigateTo('episodes'));
 
 // ===== UPLOAD MODAL =====
 function openUploadModal(presetAnimator) {
-  if(!isAdmin){notify('Войдите как админ чтобы загружать клипы',true);return}
+  if(!isAdmin){notify(t('msg_admin_only_upload'),true);return}
   $('#uploadModal').classList.add('visible');document.body.style.overflow='hidden';
   selectedAnimators=[];selectedImages=[];renderAnimatorChips();renderImagePreviews();
   if(presetAnimator){selectedAnimators.push(presetAnimator);renderAnimatorChips()}
@@ -1966,7 +2056,7 @@ function closeUploadModal(){
   if (window._uploadFrameStepper) { window._uploadFrameStepper.destroy(); window._uploadFrameStepper = null; }
 }
 $('#openUploadBtn').addEventListener('click',()=>openUploadModal());
-$('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('Войдите как админ',true);return}openUploadModal(currentAnimatorProfile)});
+$('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify(t('msg_admin_only'),true);return}openUploadModal(currentAnimatorProfile)});
 
 // Banner upload — opens hidden file input → crop modal → POST cropped result
 {
@@ -1975,7 +2065,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
   const removeBannerBtn = $('#removeBannerBtn');
   if (bannerBtn && bannerInput) {
     bannerBtn.addEventListener('click', () => {
-      if (!isAdmin) { notify('Войдите как админ', true); return; }
+      if (!isAdmin) { notify(t('msg_admin_only'), true); return; }
       if (!currentAnimatorProfile) return;
       bannerInput.click();
     });
@@ -1983,7 +2073,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
       const file = bannerInput.files && bannerInput.files[0];
       if (!file || !currentAnimatorProfile) return;
       if (!/^image\//.test(file.type)) {
-        notify('Загрузите изображение (JPG/PNG/WebP)', true);
+        notify(t('msg_select_image'), true);
         bannerInput.value = '';
         return;
       }
@@ -1995,7 +2085,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
   if (removeBannerBtn) {
     removeBannerBtn.addEventListener('click', async () => {
       if (!isAdmin || !currentAnimatorProfile) return;
-      if (!confirm('Удалить баннер этого аниматора?')) return;
+      if (!confirm(t('confirm_delete_banner_animator'))) return;
       try {
         const res = await fetch(`/api/animators/${encodeURIComponent(currentAnimatorProfile)}/banner`, {
           method: 'DELETE',
@@ -2011,7 +2101,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
           notify('Баннер удалён');
         }
       } catch (e) {
-        notify('Ошибка сети', true);
+        notify(t('msg_network_error'), true);
       }
     });
   }
@@ -2024,7 +2114,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
   const epRemove = $('#removeEpisodeBannerBtn');
   if (epBtn && epInput) {
     epBtn.addEventListener('click', () => {
-      if (!isAdmin) { notify('Войдите как админ', true); return; }
+      if (!isAdmin) { notify(t('msg_admin_only'), true); return; }
       if (!currentEpisodeProfile) return;
       epInput.click();
     });
@@ -2032,7 +2122,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
       const file = epInput.files && epInput.files[0];
       if (!file || !currentEpisodeProfile) return;
       if (!/^image\//.test(file.type)) {
-        notify('Загрузите изображение (JPG/PNG/WebP)', true);
+        notify(t('msg_select_image'), true);
         epInput.value = '';
         return;
       }
@@ -2050,7 +2140,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
   if (epRemove) {
     epRemove.addEventListener('click', async () => {
       if (!isAdmin || !currentEpisodeProfile) return;
-      if (!confirm('Удалить баннер этой серии?')) return;
+      if (!confirm(t('confirm_delete_banner_episode'))) return;
       try {
         const res = await fetch(`/api/episodes/${encodeURIComponent(currentEpisodeProfile)}/banner`, {
           method: 'DELETE',
@@ -2063,7 +2153,7 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify('В
           notify('Баннер удалён');
         }
       } catch (e) {
-        notify('Ошибка сети', true);
+        notify(t('msg_network_error'), true);
       }
     });
   }
@@ -2271,7 +2361,7 @@ function openBannerCrop(file, target) {
         notify(data.error || 'Не удалось загрузить', true);
       }
     } catch (e) {
-      notify('Ошибка сети', true);
+      notify(t('msg_network_error'), true);
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = 'Сохранить';
@@ -2396,8 +2486,8 @@ fileInput.addEventListener('change',()=>{if(fileInput.files.length)handleVideoFi
 $('#removeFileBtn').addEventListener('click',removeVideoFile);
 
 function handleVideoFile(f) {
-  if(!f.type.startsWith('video/')){notify('Выберите видеофайл',true);return}
-  if(f.size>200*1024*1024){notify('Видео слишком большое (макс 200 МБ)',true);return}
+  if(!f.type.startsWith('video/')){notify(t('msg_select_video'),true);return}
+  if(f.size>300*1024*1024){notify(t('msg_video_too_big'),true);return}
   selectedFile=f;$('#fileName').textContent=f.name;$('#fileSize').textContent=formatBytes(f.size);$('#fileInfo').classList.add('visible');
   // Show video preview
   const preview=$('#uploadPreviewPlayer');
@@ -2443,8 +2533,8 @@ document.querySelectorAll('.upload-source-tab').forEach(tab => {
 $('#fetchVideoUrlBtn')?.addEventListener('click', async () => {
   const url = $('#videoUrlInput').value.trim();
   const status = $('#urlFetchStatus');
-  if (!url) { status.textContent = 'Введите URL'; status.className = 'url-fetch-status error'; return; }
-  status.textContent = 'Скачиваем... это может занять до минуты';
+  if (!url) { status.textContent = LANG === 'en' ? 'Enter a URL' : 'Введите URL'; status.className = 'url-fetch-status error'; return; }
+  status.textContent = t('upload_url_fetching');
   status.className = 'url-fetch-status';
   $('#fetchVideoUrlBtn').disabled = true;
   try {
@@ -2457,14 +2547,14 @@ $('#fetchVideoUrlBtn')?.addEventListener('click', async () => {
     if (d.success) {
       preloadedVideoFilename = d.filename;
       const sizeMb = (d.size / 1024 / 1024).toFixed(1);
-      status.textContent = `✓ Файл скачан (${sizeMb} МБ). Заполните остальные поля и нажмите "Загрузить".`;
+      status.textContent = `✓ ${LANG === 'en' ? 'Downloaded' : 'Скачано'} (${sizeMb} ${LANG === 'en' ? 'MB' : 'МБ'}). ${t('upload_url_done')}`;
       status.className = 'url-fetch-status success';
     } else {
-      status.textContent = '✕ ' + (d.error || 'Не удалось скачать');
+      status.textContent = '✕ ' + (d.error || t('upload_url_error'));
       status.className = 'url-fetch-status error';
     }
   } catch (err) {
-    status.textContent = '✕ Ошибка сети';
+    status.textContent = '✕ ' + t('msg_network_error');
     status.className = 'url-fetch-status error';
   } finally {
     $('#fetchVideoUrlBtn').disabled = false;
@@ -2616,7 +2706,7 @@ function attachFrameStepper(videoEl, container) {
 $('#uploadForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const title=$('#clipTitleInput').value.trim(), titleEn=$('#clipTitleEnInput')?.value.trim()||'', episode=$('#episodeInput').value.trim(), arc=$('#arcSelect').value, tags=selectedTags.join(','), notes=$('#notesInput').value.trim(), notesEn=$('#notesEnInput')?.value.trim()||'';
-  if(!selectedFile&&!selectedImages.length&&!preloadedVideoFilename){notify('Загрузите видео или хотя бы одно фото',true);return}
+  if(!selectedFile&&!selectedImages.length&&!preloadedVideoFilename){notify(t('msg_need_video_or_photo'),true);return}
   if(!title){notify('Введите название',true);return}
   if(!selectedAnimators.length){notify('Выберите аниматора',true);return}
   if(!episode){notify('Введите номер эпизода',true);return}
@@ -2643,7 +2733,7 @@ $('#uploadForm').addEventListener('submit',async e=>{
 
   try{
     const xhr=new XMLHttpRequest();
-    xhr.upload.addEventListener('progress',e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);$('#progressBarFill').style.width=p+'%';$('#progressText').textContent=`Загрузка... ${p}%`}});
+    xhr.upload.addEventListener('progress',e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);$('#progressBarFill').style.width=p+'%';$('#progressText').textContent=`${t('upload_submitting')} ${p}%`}});
     await new Promise((ok,no)=>{
       xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300)ok(JSON.parse(xhr.responseText));else{try{no(new Error(JSON.parse(xhr.responseText).error))}catch{no(new Error('Ошибка'))}}};
       xhr.onerror=()=>no(new Error('Ошибка сети'));
@@ -2873,7 +2963,7 @@ function renderComments(comments, clipId) {
 
   list.querySelectorAll('.comment-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Удалить комментарий?')) return;
+      if (!confirm(LANG === 'en' ? 'Delete this comment?' : 'Удалить комментарий?')) return;
       try {
         const headers = {};
         if (isAdmin) headers['X-Admin-Token'] = adminToken;
@@ -2884,7 +2974,7 @@ function renderComments(comments, clipId) {
         const d = await res.json();
         if (d.success) loadClipComments(parseInt(btn.dataset.clipId));
         else notify(d.error, true);
-      } catch { notify('Ошибка сети', true); }
+      } catch { notify(t('msg_network_error'), true); }
     });
   });
 
@@ -2901,7 +2991,7 @@ function renderComments(comments, clipId) {
         const d = await res.json();
         if (d.success) loadClipComments(parseInt(btn.dataset.clipId));
         else notify(d.error, true);
-      } catch { notify('Ошибка сети', true); }
+      } catch { notify(t('msg_network_error'), true); }
     });
   });
 
@@ -2919,7 +3009,7 @@ function renderComments(comments, clipId) {
         const d = await res.json();
         if (d.success) notify(`${nick} забанен`);
         else notify(d.error, true);
-      } catch { notify('Ошибка сети', true); }
+      } catch { notify(t('msg_network_error'), true); }
     });
   });
 }
@@ -2952,7 +3042,7 @@ $('#commentSubmitBtn').addEventListener('click', async () => {
       $('#commentText').value = '';
       loadClipComments(currentCommentClipId);
     } else notify(d.error, true);
-  } catch { notify('Ошибка сети', true); }
+  } catch { notify(t('msg_network_error'), true); }
 });
 
 $('#commentText').addEventListener('keydown', e => {
@@ -3075,7 +3165,7 @@ async function refreshUsersList() {
           const d = await res.json();
           if (d.success) { notify(`Админ «${username}» удалён`); refreshUsersList(); refreshAuditLog(); }
           else notify(d.error || 'Ошибка', true);
-        } catch { notify('Ошибка сети', true); }
+        } catch { notify(t('msg_network_error'), true); }
       });
     });
     list.querySelectorAll('[data-action="reset-pwd"]').forEach(btn => {
@@ -3092,7 +3182,7 @@ async function refreshUsersList() {
           const d = await res.json();
           if (d.success) { notify(`Пароль изменён. Передайте его «${username}»`); refreshAuditLog(); }
           else notify(d.error || 'Ошибка', true);
-        } catch { notify('Ошибка сети', true); }
+        } catch { notify(t('msg_network_error'), true); }
       });
     });
     // Toggle backup permission
@@ -3117,7 +3207,7 @@ async function refreshUsersList() {
             refreshUsersList();
             refreshAuditLog();
           } else notify(d.error || 'Ошибка', true);
-        } catch { notify('Ошибка сети', true); }
+        } catch { notify(t('msg_network_error'), true); }
       });
     });
   } catch {
@@ -3167,12 +3257,12 @@ $('#createUserBtn')?.addEventListener('click', async () => {
     } else {
       notify(d.error || 'Ошибка', true);
     }
-  } catch { notify('Ошибка сети', true); }
+  } catch { notify(t('msg_network_error'), true); }
 });
 
 // Backup button — downloads a zip with all data
 $('#backupBtn')?.addEventListener('click', async () => {
-  if (!isAdmin || !adminToken) { notify('Войдите как админ', true); return; }
+  if (!isAdmin || !adminToken) { notify(t('msg_admin_only'), true); return; }
   const btn = $('#backupBtn');
   const originalText = btn.textContent;
   btn.disabled = true;
@@ -3383,8 +3473,8 @@ $('#editVideoBtn').addEventListener('click', () => $('#editVideoInput').click())
 $('#editVideoInput').addEventListener('change', async () => {
   const f = $('#editVideoInput').files[0];
   if (!f || !editingClipId) return;
-  if (!f.type.startsWith('video/')) { notify('Выберите видеофайл', true); return; }
-  if (f.size > 200*1024*1024) { notify('Видео слишком большое (макс 200 МБ)', true); return; }
+  if (!f.type.startsWith('video/')) { notify(t('msg_select_video'), true); return; }
+  if (f.size > 300*1024*1024) { notify(t('msg_video_too_big'), true); return; }
 
   // Read duration from the file via a throwaway <video> element. Resolves to
   // a "M:SS" string or null if the browser can't read metadata in 5s.
@@ -3420,10 +3510,10 @@ $('#editVideoInput').addEventListener('change', async () => {
     if (data.success) {
       $('#editVideoPreview').src = data.videoUrl;
       $('#editVideoPreview').style.display = 'block';
-      notify('Видео обновлено');
+      notify(t('msg_video_saved'));
       await loadClips();
     } else notify(data.error, true);
-  } catch { notify('Ошибка сети', true); }
+  } catch { notify(t('msg_network_error'), true); }
   $('#editVideoInput').value = '';
 });
 
@@ -3445,10 +3535,10 @@ $('#editThumbnailInput').addEventListener('change', async () => {
       $('#editThumbnailPreview').src = data.thumbnailUrl;
       $('#editThumbnailPreview').style.display = 'block';
       $('#editThumbnailRemoveBtn').style.display = '';
-      notify('Обложка обновлена');
+      notify(t('msg_thumb_saved'));
       await loadClips();
     } else notify(data.error, true);
-  } catch { notify('Ошибка сети', true); }
+  } catch { notify(t('msg_network_error'), true); }
   $('#editThumbnailInput').value = '';
 });
 
@@ -3472,7 +3562,7 @@ $('#editImagesInput').addEventListener('change', async () => {
       renderEditImagesGrid();
       notify(`Добавлено ${files.length} фото`);
     } else notify(data.error, true);
-  } catch { notify('Ошибка сети', true); }
+  } catch { notify(t('msg_network_error'), true); }
   $('#editImagesInput').value = '';
 });
 
@@ -3493,9 +3583,9 @@ function renderEditImagesGrid() {
           headers: { 'X-Admin-Token': adminToken }
         });
         const data = await res.json();
-        if (data.success) { await loadClips(); renderEditImagesGrid(); notify('Фото удалено'); }
+        if (data.success) { await loadClips(); renderEditImagesGrid(); notify(t('msg_photo_deleted')); }
         else notify(data.error, true);
-      } catch { notify('Ошибка сети', true); }
+      } catch { notify(t('msg_network_error'), true); }
     });
   });
 }
@@ -3523,7 +3613,7 @@ $('#editSaveBtn').addEventListener('click', async () => {
     directorOverride: $('#editDirectorOverrideInput').value.trim()
   };
   if (!body.title || !body.animators || !body.episode) {
-    notify('Заполните название, аниматора и эпизод', true);
+    notify(t('msg_need_title_animator_ep'), true);
     return;
   }
   try {
@@ -3534,7 +3624,7 @@ $('#editSaveBtn').addEventListener('click', async () => {
     });
     const data = await res.json();
     if (data.success) {
-      notify('Клип обновлён');
+      notify(t('msg_clip_updated'));
       const editedId = editingClipId;
       const updatedClip = data.clip;
       closeEditModal();
@@ -3571,7 +3661,7 @@ $('#editSaveBtn').addEventListener('click', async () => {
     } else {
       notify(data.error || 'Ошибка', true);
     }
-  } catch { notify('Ошибка сети', true); }
+  } catch { notify(t('msg_network_error'), true); }
 });
 
 function confirmDeleteClip(id){
@@ -3586,9 +3676,9 @@ $('#deleteConfirmModal').addEventListener('click',e=>{if(e.target===$('#deleteCo
 $('#deleteConfirmBtn').addEventListener('click',async()=>{
   if(!clipToDelete)return;const id=clipToDelete;closeDeleteModal();
   try{const r=await fetch(`/api/clips/${id}`,{method:'DELETE',headers:{'X-Admin-Token':adminToken}});const d=await r.json();
-    if(d.success){notify('Клип удалён');await loadClips();if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile)}
+    if(d.success){notify(t('msg_clip_deleted'));await loadClips();if(currentPage==='animator-profile'&&currentAnimatorProfile)renderAnimatorProfile(currentAnimatorProfile)}
     else notify(d.error||'Ошибка',true)}
-  catch{notify('Ошибка сети',true)}
+  catch{notify(t('msg_network_error'),true)}
 });
 
 // ===== NOTIFICATION =====
@@ -3838,7 +3928,7 @@ function openFilterManager() {
             renderFilterChips();
             notify(newVal.trim() ? `EN-перевод сохранён` : 'EN-перевод убран');
           } else notify(data.error || 'Ошибка', true);
-        } catch { notify('Ошибка сети', true); }
+        } catch { notify(t('msg_network_error'), true); }
       });
     });
   }
@@ -4200,7 +4290,7 @@ function renderClipPage(clip) {
       const d = await res.json();
       if (d.success) { $('#clipPageCommentText').value = ''; loadClipPageComments(clip.id); }
       else notify(d.error, true);
-    } catch { notify('Ошибка сети', true); }
+    } catch { notify(t('msg_network_error'), true); }
   });
   
   $('#clipPageCommentText').addEventListener('keydown', e => {
@@ -4248,13 +4338,13 @@ function renderClipPageComments(comments, clipId) {
     btn.addEventListener('click', async () => {
       if (!confirm(LANG === 'en' ? 'Delete this comment?' : 'Удалить комментарий?')) return;
       const headers = {}; if (isAdmin) headers['X-Admin-Token'] = adminToken; headers['X-User-Token'] = getUserToken();
-      try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'DELETE',headers}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify('Ошибка сети',true); }
+      try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'DELETE',headers}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify(t('msg_network_error'),true); }
     });
   });
   list.querySelectorAll('.comment-edit-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const newText = prompt(LANG === 'en' ? 'Edit your comment:' : 'Редактировать:', btn.dataset.text); if(!newText||!newText.trim()) return;
-      try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-User-Token':getUserToken()},body:JSON.stringify({text:newText.trim()})}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify('Ошибка сети',true); }
+      try { const r = await fetch(`/api/clips/${btn.dataset.clipId}/comments/${btn.dataset.commentId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-User-Token':getUserToken()},body:JSON.stringify({text:newText.trim()})}); const d = await r.json(); if(d.success) loadClipPageComments(parseInt(btn.dataset.clipId)); else notify(d.error,true); } catch { notify(t('msg_network_error'),true); }
     });
   });
 }
