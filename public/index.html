@@ -40,7 +40,7 @@
       <button class="nav-link" data-page="animators" data-i18n="nav_animators">Аниматоры</button>
       <button class="nav-link" data-page="about" data-i18n="nav_about">О сайте</button>
       <button class="btn-upload admin-only" id="openUploadBtn" data-i18n="nav_upload">+ Загрузить</button>
-      <button class="nav-link nav-icon-btn" id="randomClipBtn" title="Random clip">🎲</button>
+      <button class="nav-link nav-random-btn" id="randomClipBtn" title="Random clip"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="currentColor" opacity=".16"/><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.3" cy="8.3" r="1.55" fill="currentColor"/><circle cx="15.7" cy="8.3" r="1.55" fill="currentColor"/><circle cx="12" cy="12" r="1.55" fill="currentColor"/><circle cx="8.3" cy="15.7" r="1.55" fill="currentColor"/><circle cx="15.7" cy="15.7" r="1.55" fill="currentColor"/></svg><span class="nav-random-label"><span class="ru">Наугад</span><span class="en">Random</span></span></button>
       <button class="nav-link nav-icon-btn" id="themeToggleBtn" title="Toggle theme">🌙</button>
       <button class="nav-link nav-lang-btn" id="langToggleBtn" title="Switch language">EN</button>
       <button class="nav-link" id="adminToggleBtn" title="Админ">🔒</button>
@@ -587,6 +587,7 @@
 
 <footer class="footer">
   <p class="footer-text" data-i18n="footer_text">SAKUGA PIECE — Архив анимации One Piece — Не аффилирован с Toei Animation или Эйитиро Одой</p>
+  <div class="footer-admin"><button type="button" class="footer-admin-link" onclick="document.getElementById('adminToggleBtn').click()">Вход для админов</button></div>
 </footer>
 
 <!-- Floating admin backup button (visible only in admin mode) -->
