@@ -105,7 +105,7 @@ img{max-width:100%}
 .logo-sakuga,.logo-piece{font-family:var(--font-display);font-weight:800;font-size:1.12rem;letter-spacing:-.04em;line-height:1;color:var(--paper)}
 .logo:hover .logo-sakuga,.logo:hover .logo-piece{color:var(--gold)}
 .logo-dot{display:none}
-.header-socials{display:flex;align-items:center;gap:.85rem;position:absolute;left:50%;transform:translateX(-50%)}
+.header-socials{display:flex;align-items:center;gap:.85rem;margin-left:1.75rem;margin-right:auto}
 .header-socials-name{font-size:.8125rem;font-weight:500;color:var(--text-3);white-space:nowrap}
 .nav-links{display:flex;align-items:center;gap:.25rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .nav-links::-webkit-scrollbar{display:none}
@@ -151,10 +151,21 @@ body.admin-mode #adminToggleBtn::before{width:17px;height:17px}
 body.admin-mode #adminToggleBtn::after{content:'Выйти';font-size:.8125rem;font-weight:600;line-height:1}
 html[lang="en"] body.admin-mode #adminToggleBtn::after{content:'Log out'}
 body.admin-mode #adminToggleBtn:hover{color:var(--red);background:var(--red-soft)}
-.footer-admin{max-width:1440px;margin:.35rem auto 0}
+.footer-admin{max-width:1440px;margin:.5rem auto 0;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap}
 .footer-admin-link{background:none;border:none;padding:0;font:inherit;font-size:.8125rem;color:var(--text-3);cursor:pointer;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;transition:color .15s}
 .footer-admin-link:hover{color:var(--paper)}
-body.admin-mode .footer-admin{display:none}
+body.admin-mode .footer-admin-link{display:none}
+
+/* Support (DonationAlerts): header pill, clip page action, footer link */
+html[lang="en"] .i-ru,html:not([lang="en"]) .i-en{display:none}
+.support-heart{width:15px;height:15px;flex-shrink:0}
+.support-btn{display:inline-flex;align-items:center;gap:.4rem;height:30px;padding:0 .8rem 0 .65rem;margin-left:.15rem;border-radius:999px;background:var(--red-soft);color:var(--red);font-size:.8125rem;font-weight:600;text-decoration:none;white-space:nowrap;transition:background-color .15s,color .15s}
+.support-btn:hover{background:var(--red);color:#fff}
+.support-btn:hover .support-heart{animation:heartPop .45s ease}
+.clip-action-btn.clip-support-btn{color:var(--red)}
+.clip-action-btn.clip-support-btn:hover{background:var(--red-soft);border-color:transparent}
+.footer-support{display:inline-flex;align-items:center;gap:.35rem;font-size:.8125rem;font-weight:600;color:var(--red);text-decoration:none}
+.footer-support:hover{text-decoration:underline;text-underline-offset:3px}
 
 /* Primary yellow button — header "+ Upload" and other admin actions */
 .btn-upload{font-family:var(--font-ui);font-size:.875rem;font-weight:600;background:var(--straw);color:var(--straw-ink);border:none;padding:.5rem .95rem;border-radius:10px;cursor:pointer;white-space:nowrap;transition:filter .15s,background-color .15s;margin:0 .35rem;line-height:1.2}

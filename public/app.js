@@ -4302,6 +4302,10 @@ function renderClipPage(clip) {
               </button>
             </div>
           </div>
+          <a class="clip-action-btn clip-support-btn" href="https://www.donationalerts.com/r/j3f999" target="_blank" rel="noopener" title="${LANG === 'en' ? 'Support the site on DonationAlerts' : 'Поддержать сайт на DonationAlerts'}">
+            <svg class="action-icon support-heart" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4h2c.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>
+            <span>${LANG === 'en' ? 'Support' : 'Поддержать'}</span>
+          </a>
         </div>
 
         ${clipNotes(clip) ? `<div class="clip-page-notes">${esc(clipNotes(clip)).replace(/\n/g, '<br>')}</div>` : ''}
