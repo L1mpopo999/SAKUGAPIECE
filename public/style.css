@@ -266,6 +266,28 @@ body.admin-mode .admin-only{display:inline-flex !important}
 .animator-add-card span{font-family:var(--font-ui) !important;font-size:.9375rem !important;font-weight:600}
 .animator-card-edit,.animator-card-delete,.anim-hide-btn,.ep-hide-btn{border-radius:6px}
 .episode-hidden{opacity:.45}
+/* Episode named with words (e.g. "FAN LETTER") instead of a number: smaller, wraps,
+   so the director/arc info next to it still fits */
+.episode-card .animator-avatar.ep-avatar-text{font-size:1rem;line-height:1.1;letter-spacing:0;width:94px;min-width:94px;white-space:normal;overflow-wrap:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.episode-profile-header .animator-profile-name .ep-number.ep-number-text{font-size:clamp(2.2rem,5.5vw,4.5rem);line-height:1}
+
+/* Animator card picture (uploaded by admins). Fixed 21:10 area on the right that fades
+   into the card; the crop modal uses the same 21:10 frame, so admins see exactly this. */
+.animator-card-big{height:112px;min-height:0;overflow:hidden;isolation:isolate}
+.animator-card-img{position:absolute;top:0;right:0;height:100%;width:auto;aspect-ratio:21/10;max-width:78%;object-fit:cover;z-index:0;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.4) 30%,#000 70%);mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.4) 30%,#000 70%)}
+.animator-card-big > :not(.animator-card-img){position:relative;z-index:1}
+.animator-card-big.has-img .animator-card-name,.animator-card-big.has-img .animator-card-count{text-shadow:0 1px 10px rgba(0,0,0,.65)}
+:root[data-theme="light"] .animator-card-big.has-img .animator-card-name,:root[data-theme="light"] .animator-card-big.has-img .animator-card-count{text-shadow:0 0 10px rgba(255,255,255,.95),0 0 2px rgba(255,255,255,.9)}
+/* Admin tools on an animator card: compact toolbar in the bottom-right corner,
+   so the name keeps its width (buttons come with inline styles from app.js) */
+.animator-card-big > .animator-card-admin{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:2}
+.animator-card-admin > button{width:26px !important;height:26px !important;margin:0 !important;padding:0 !important;border-radius:7px !important;border:1px solid var(--line-strong) !important;background:var(--glass) !important;display:inline-flex !important;align-items:center;justify-content:center;font-size:.8rem !important;line-height:1;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:border-color .15s,color .15s}
+.animator-card-admin > button:hover{border-color:var(--straw-line) !important}
+.animator-card-admin svg{width:14px;height:14px}
+.animator-card-img-btn{color:var(--gold)}
+.animator-card-img-del{color:var(--text-2)}
+.animator-card-admin > .animator-card-img-del:hover,.animator-card-admin > .animator-card-delete:hover{border-color:var(--red) !important;color:var(--red)}
 .episodes-sort-bar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;max-width:1440px;margin:0 auto;padding:.25rem 2rem .75rem}
 .episodes-sort-bar .filter-tags-dropdown{left:2rem;right:2rem}
 
@@ -366,6 +388,10 @@ body.admin-mode .animator-profile-stats{font-size:.9375rem;margin-bottom:.6rem}
 .banner-crop-controls{margin-top:1rem;display:flex;flex-direction:column;gap:.9rem}
 .banner-crop-zoom-label{display:flex;align-items:center;gap:.75rem;font-size:.875rem;font-weight:500;color:var(--text-2)}
 #bannerCropZoom{flex:1;accent-color:var(--straw)}
+/* Crop modal in card-picture mode: same 21:10 shape as the picture area on the card,
+   with the card's left-side fade drawn on top */
+.banner-crop-stage.is-card{aspect-ratio:21 / 10;max-width:520px;margin:0 auto}
+.banner-crop-stage.is-card .banner-crop-mask{background:linear-gradient(to right,var(--ink-1) 0%,color-mix(in srgb,var(--ink-1) 60%,transparent) 30%,transparent 70%)}
 .banner-crop-actions{display:flex;gap:.6rem;justify-content:flex-end}
 .banner-crop-actions .btn-submit{flex:0 0 auto;width:auto;padding:0 1.2rem;margin-top:0}
 
@@ -687,6 +713,8 @@ body.admin-mode .header-socials{display:none}
   .animator-card,.animator-card-big{padding:.85rem 1rem;gap:.85rem;min-height:auto}
   .animator-card-big .animator-card-name{font-size:1rem}
   .episode-card .animator-avatar{font-size:1.5rem;min-width:70px}
+  .episode-card .animator-avatar.ep-avatar-text{font-size:.875rem;width:74px;min-width:74px}
+  .animator-card-big{height:100px}
   .animator-profile-header{padding:1rem 1rem .75rem;min-height:0}
   .animator-profile-banner{display:none}
   .episode-profile-header .animator-profile-name{margin-top:1.5rem}

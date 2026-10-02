@@ -340,6 +340,18 @@ function getEpisodeBanner(num) {
   return banners[String(num)] || null;
 }
 
+// ===== ANIMATOR CARD IMAGES =====
+// Small picture shown on the animator's card in the /animators grid, so visitors
+// see what kind of scenes the animator did before opening the profile.
+// Map of { animatorName: '/uploads/<file>' } — same pattern as animator banners.
+const ANIMATOR_CARDS_FILE = path.join(dataDir, 'animator_cards.json');
+function loadAnimatorCards() {
+  if (!fs.existsSync(ANIMATOR_CARDS_FILE)) { saveAnimatorCards({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(ANIMATOR_CARDS_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveAnimatorCards(data) { writeJsonAtomic(ANIMATOR_CARDS_FILE, data); }
+
 // ===== DIRECTORS =====
 const DIRECTORS_FILE = path.join(dataDir, 'directors.json');
 const EPISODE_DIRECTORS_FILE = path.join(dataDir, 'episode_directors.json');
@@ -1543,6 +1555,19 @@ app.put('/api/animators/rename', (req, res) => {
   });
   if (changed) saveClips(clips);
 
+  // Carry the banner and the card image over to the new name
+  const moveKey = (map) => {
+    const key = Object.keys(map).find(k => k.toLowerCase() === oldName.toLowerCase());
+    if (!key || key === newName.trim()) return false;
+    map[newName.trim()] = map[key];
+    delete map[key];
+    return true;
+  };
+  const banners = loadAnimatorBanners();
+  if (moveKey(banners)) saveAnimatorBanners(banners);
+  const cards = loadAnimatorCards();
+  if (moveKey(cards)) saveAnimatorCards(cards);
+
   res.json({ success: true, renamed: changed });
 });
 
@@ -1603,6 +1628,51 @@ app.delete('/api/animators/:name/banner', (req, res) => {
     }
     delete banners[key];
     saveAnimatorBanners(banners);
+  }
+  res.json({ success: true });
+});
+
+// ===== ANIMATOR CARD IMAGE (admin only) =====
+// All card images at once — the animators grid renders them without N requests.
+app.get('/api/animator-cards', (req, res) => { res.json(loadAnimatorCards()); });
+
+// Upload / replace the card image. The client crops it in the banner crop modal,
+// so the multipart field is also called "banner".
+app.post('/api/animators/:name/card', uploadFiles.single('banner'), async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+  if (!/image\//.test(req.file.mimetype)) {
+    return res.status(400).json({ error: 'Загрузите изображение (JPG/PNG/WebP)' });
+  }
+  const name = req.params.name;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Имя аниматора обязательно' });
+  await convertImageToWebp(req.file);
+  const cards = loadAnimatorCards();
+
+  // Remove the previous file so replaced images don't pile up in uploads/
+  const prevKey = Object.keys(cards).find(k => k.toLowerCase() === name.toLowerCase());
+  const prev = prevKey ? cards[prevKey] : null;
+  if (prev && prev.startsWith('/uploads/')) {
+    fs.unlink(path.join(uploadsDir, path.basename(prev)), () => {}); // best-effort
+  }
+
+  const list = loadAnimators();
+  const canonical = list.find(a => a.toLowerCase() === name.toLowerCase()) || name.trim();
+  Object.keys(cards).forEach(k => { if (k.toLowerCase() === canonical.toLowerCase()) delete cards[k]; });
+  cards[canonical] = '/uploads/' + req.file.filename;
+  saveAnimatorCards(cards);
+  res.json({ success: true, url: cards[canonical] });
+});
+
+app.delete('/api/animators/:name/card', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const cards = loadAnimatorCards();
+  const key = Object.keys(cards).find(k => k.toLowerCase() === req.params.name.toLowerCase());
+  if (key) {
+    const url = cards[key];
+    if (url && url.startsWith('/uploads/')) fs.unlink(path.join(uploadsDir, path.basename(url)), () => {});
+    delete cards[key];
+    saveAnimatorCards(cards);
   }
   res.json({ success: true });
 });
@@ -2141,6 +2211,7 @@ app.get('/api/backup', (req, res) => {
     DATA_FILE, ANIMATORS_FILE, FILTERS_FILE, EPISODES_FILE, HIDDEN_ANIMATORS_FILE,
     COMMENTS_FILE, NICKNAMES_FILE, VIEWS_FILE, LIKES_FILE, BANNED_USERS_FILE,
     DIRECTORS_FILE, EPISODE_DIRECTORS_FILE,
+    ANIMATOR_BANNERS_FILE, EPISODE_BANNERS_FILE, ANIMATOR_CARDS_FILE,
     USERS_FILE, AUDIT_LOG_FILE
   ];
   let estimatedSize = 0;
@@ -2187,6 +2258,9 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(DIRECTORS_FILE)) archive.file(DIRECTORS_FILE, { name: 'directors.json' });
   // Add episode_directors.json
   if (fs.existsSync(EPISODE_DIRECTORS_FILE)) archive.file(EPISODE_DIRECTORS_FILE, { name: 'episode_directors.json' });
+  if (fs.existsSync(ANIMATOR_BANNERS_FILE)) archive.file(ANIMATOR_BANNERS_FILE, { name: 'animator_banners.json' });
+  if (fs.existsSync(EPISODE_BANNERS_FILE)) archive.file(EPISODE_BANNERS_FILE, { name: 'episode_banners.json' });
+  if (fs.existsSync(ANIMATOR_CARDS_FILE)) archive.file(ANIMATOR_CARDS_FILE, { name: 'animator_cards.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 

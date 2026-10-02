@@ -352,6 +352,7 @@ let DIRECTORS = [];
 let EPISODE_DIRECTORS = {}; // { "1015": "Megumi Ishitani", ... }
 let ANIMATOR_BANNERS = {}; // { "Vincent Chansard": "/uploads/xxx.jpg" }
 let EPISODE_BANNERS = {}; // { "1015": "/uploads/xxx.jpg" }
+let ANIMATOR_CARDS = {}; // { "Vincent Chansard": "/uploads/xxx.webp" } — picture on the animators-grid card
 
 async function loadAnimatorsAndFilters() {
   // Cache-bust to make sure we get fresh data after admin edits.
@@ -366,6 +367,14 @@ async function loadAnimatorsAndFilters() {
   try { EPISODE_DIRECTORS = await (await fetch('/api/episode-directors' + bust)).json(); } catch { EPISODE_DIRECTORS = {}; }
   try { ANIMATOR_BANNERS = await (await fetch('/api/animator-banners' + bust)).json(); } catch { ANIMATOR_BANNERS = {}; }
   try { EPISODE_BANNERS = await (await fetch('/api/episode-banners' + bust)).json(); } catch { EPISODE_BANNERS = {}; }
+  try { ANIMATOR_CARDS = await (await fetch('/api/animator-cards' + bust)).json(); } catch { ANIMATOR_CARDS = {}; }
+}
+
+// Case-insensitive lookup of an animator's card picture URL
+function getAnimatorCard(name) {
+  if (!name || !ANIMATOR_CARDS) return null;
+  const key = Object.keys(ANIMATOR_CARDS).find(k => k.toLowerCase() === name.toLowerCase());
+  return key ? ANIMATOR_CARDS[key] : null;
 }
 
 // Case-insensitive lookup of an animator's banner URL
@@ -1164,15 +1173,29 @@ function renderAnimatorGrid() {
 
   if(!list.length && !isAdmin){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('animators_not_found')}</p></div>`;return}
 
-  grid.innerHTML = adminAddHtml + list.map((a,i)=>`<div class="animator-card animator-card-big${a.hidden?' episode-hidden':''}" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
+  const IMG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg>';
+  const IMG_OFF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M4 4l16 16"/></svg>';
+  grid.innerHTML = adminAddHtml + list.map((a,i)=>{ const cardImg = getAnimatorCard(a.name); return `<div class="animator-card animator-card-big${cardImg?' has-img':''}${a.hidden?' episode-hidden':''}" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
+    ${cardImg ? `<img class="animator-card-img" src="${esc(cardImg)}" alt="" loading="lazy" decoding="async">` : ''}
     <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}${a.hidden?` <span style="font-size:.6rem;color:var(--text-muted)">${t('hidden_label')}</span>`:''}</div><div class="animator-card-count"><span class="animator-card-count-num">${a.count}</span> ${pluralClips(a.count)}</div></div>
-    ${isAdmin ? `<button class="animator-card-edit" data-edit-name="${esc(a.name)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="anim-hide-btn" data-hide-name="${esc(a.name)}" title="${a.hidden?'Показать':'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.2rem">${a.hidden?'👁':'×'}</button><button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить навсегда" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.8rem;margin-right:.3rem">🗑</button>` : ''}
+    ${isAdmin ? `<div class="animator-card-admin"><button class="animator-card-img-btn" data-card-img="${esc(a.name)}" title="${cardImg ? 'Заменить картинку карточки' : 'Добавить картинку на карточку'}">${IMG_ICON}</button>${cardImg ? `<button class="animator-card-img-del" data-card-img-del="${esc(a.name)}" title="Убрать картинку с карточки">${IMG_OFF_ICON}</button>` : ''}<button class="animator-card-edit" data-edit-name="${esc(a.name)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="anim-hide-btn" data-hide-name="${esc(a.name)}" title="${a.hidden?'Показать':'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.2rem">${a.hidden?'👁':'×'}</button><button class="animator-card-delete" data-del-name="${esc(a.name)}" title="Удалить навсегда" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.8rem;margin-right:.3rem">🗑</button></div>` : ''}
     <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-  </div>`).join('');
+  </div>`; }).join('');
 
   grid.querySelectorAll('.animator-card[data-name]').forEach(c=>c.addEventListener('click', e => {
-    if (e.target.closest('.animator-card-delete') || e.target.closest('.animator-card-edit') || e.target.closest('.anim-hide-btn')) return;
+    if (e.target.closest('.animator-card-delete') || e.target.closest('.animator-card-edit') || e.target.closest('.anim-hide-btn')
+      || e.target.closest('.animator-card-img-btn') || e.target.closest('.animator-card-img-del')) return;
     navigateTo('animator-profile',c.dataset.name);
+  }));
+
+  // Admin: card picture — upload (crop modal) / remove
+  grid.querySelectorAll('.animator-card-img-btn').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    pickAnimatorCardImage(btn.dataset.cardImg);
+  }));
+  grid.querySelectorAll('.animator-card-img-del').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    removeAnimatorCardImage(btn.dataset.cardImgDel);
   }));
 
   // Admin: add animator
@@ -1542,7 +1565,7 @@ function renderEpisodeGrid() {
       ? `${e.arc} · ${e.count} ${pluralClips(e.count)}`
       : '';
     return `<div class="animator-card episode-card${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
-      <div class="animator-avatar">${esc(e.episode)}</div>
+      <div class="animator-avatar${/^\d+$/.test(String(e.episode)) ? '' : ' ep-avatar-text'}">${esc(e.episode)}</div>
       <div class="animator-card-info">
         <div class="animator-card-name">${mainLine}</div>
         ${subLine ? `<div class="animator-card-count">${subLine}</div>` : ''}
@@ -1768,7 +1791,7 @@ function getAdjacentEpisodes(currentEp) {
 
 function renderEpisodeProfile(episode) {
   // Two-line format: small "EPISODE" label on top, large number below
-  $('#episodeProfileName').innerHTML = `<span class="ep-prefix">${LANG === 'en' ? 'EPISODE' : 'СЕРИЯ'}</span><span class="ep-number">${esc(String(episode))}</span>`;
+  $('#episodeProfileName').innerHTML = `<span class="ep-prefix">${LANG === 'en' ? 'EPISODE' : 'СЕРИЯ'}</span><span class="ep-number${/^\d+$/.test(String(episode)) ? '' : ' ep-number-text'}">${esc(String(episode))}</span>`;
   const clips = allClips.filter(c => c.episode.trim() === episode);
   const arc = getEpisodeArc(parseInt(episode) || 0);
   const animators = [...new Set(clips.flatMap(c => c.animators))];
@@ -2159,6 +2182,58 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify(t('
   }
 }
 
+// === Animator card picture ===
+// Small picture on the animator's card in the /animators grid. Reuses the banner
+// crop modal with a 21:10 frame (the visible picture area of a card); output 672×320.
+let animatorCardFileInput = null;
+function pickAnimatorCardImage(name) {
+  if (!isAdmin) { notify(t('msg_admin_only'), true); return; }
+  if (!animatorCardFileInput) {
+    animatorCardFileInput = document.createElement('input');
+    animatorCardFileInput.type = 'file';
+    animatorCardFileInput.accept = 'image/*';
+    animatorCardFileInput.style.display = 'none';
+    document.body.appendChild(animatorCardFileInput);
+  }
+  const input = animatorCardFileInput;
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { notify(t('msg_select_image'), true); return; }
+    openBannerCrop(file, {
+      uploadUrl: `/api/animators/${encodeURIComponent(name)}/card`,
+      mode: 'card', outW: 672, outH: 320,
+      title: `Картинка карточки — ${name}`,
+      successMsg: 'Картинка карточки обновлена',
+      onSuccess: (data) => {
+        Object.keys(ANIMATOR_CARDS).forEach(k => { if (k.toLowerCase() === name.toLowerCase()) delete ANIMATOR_CARDS[k]; });
+        ANIMATOR_CARDS[name] = data.url;
+        renderAnimatorGrid();
+      },
+    });
+  };
+  input.click();
+}
+async function removeAnimatorCardImage(name) {
+  if (!isAdmin) return;
+  if (!confirm(`Убрать картинку с карточки «${name}»?`)) return;
+  try {
+    const res = await fetch(`/api/animators/${encodeURIComponent(name)}/card`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Token': adminToken },
+    });
+    const data = await res.json();
+    if (data.success) {
+      Object.keys(ANIMATOR_CARDS).forEach(k => { if (k.toLowerCase() === name.toLowerCase()) delete ANIMATOR_CARDS[k]; });
+      renderAnimatorGrid();
+      notify('Картинка убрана');
+    } else {
+      notify(data.error || 'Не удалось убрать', true);
+    }
+  } catch { notify(t('msg_network_error'), true); }
+}
+
 // === Banner crop modal logic ===
 // Loads the file into an <img>, then lets the user pan + zoom inside a 4:1 frame.
 // "Save" rasterizes the visible region to a JPEG and POSTs it as the new banner.
@@ -2174,6 +2249,12 @@ function openBannerCrop(file, target) {
   const cancelBtn = document.getElementById('bannerCropCancel');
   const closeBtn = document.getElementById('bannerCropClose');
   if (!modal || !stage || !img || !zoomInput) return;
+
+  // Card-picture mode: 21:10 frame + card-like fade preview (see .banner-crop-stage.is-card in CSS).
+  // Set before the modal is shown so the stage is measured with the right shape.
+  stage.classList.toggle('is-card', target?.mode === 'card');
+  const cropTitle = modal.querySelector('.modal-title');
+  if (cropTitle) cropTitle.textContent = target?.title || 'Настройка баннера';
 
   // State held in a closure
   const state = {
@@ -2318,8 +2399,8 @@ function openBannerCrop(file, target) {
 
   saveBtn.onclick = async () => {
     // Render the current view to a canvas, then upload as a Blob.
-    const OUT_W = 1600;
-    const OUT_H = 400; // 4:1
+    const OUT_W = target?.outW || 1600;
+    const OUT_H = target?.outH || 400; // 4:1 banner by default
     const canvas = document.createElement('canvas');
     canvas.width = OUT_W;
     canvas.height = OUT_H;
@@ -2355,7 +2436,7 @@ function openBannerCrop(file, target) {
           ANIMATOR_BANNERS[currentAnimatorProfile] = data.url;
           renderAnimatorProfile(currentAnimatorProfile);
         }
-        notify('Баннер обновлён');
+        notify(target?.successMsg || 'Баннер обновлён');
         close();
       } else {
         notify(data.error || 'Не удалось загрузить', true);
