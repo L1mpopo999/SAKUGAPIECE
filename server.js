@@ -2280,6 +2280,69 @@ app.use((err, req, res, next) => {
 // Run one-time data migrations before accepting requests
 migrateElbafSpelling();
 
+// ===== CLIP HOVER PREVIEWS =====
+// Short light copies of every video for the play-on-hover effect on clip cards:
+// first 5 s, no sound, max 640 px wide, H.264 — a few hundred KB instead of hundreds of MB.
+// Saved as uploads/previews/<video file name>.mp4, so no data file changes, and a replaced
+// video automatically gets a new preview. Made one at a time in the background with the
+// lowest CPU priority. Needs ffmpeg on the server (apt install ffmpeg); without it the site
+// works exactly as before, just without previews.
+const { execFile } = require('child_process');
+const PREVIEWS_DIR = path.join(uploadsDir, 'previews');
+const PREVIEW_SECONDS = 5;
+const previewFailed = new Set(); // files ffmpeg couldn't process (retried after a restart)
+let previewBusy = false;
+
+function previewPathFor(videoUrl) {
+  if (!videoUrl || !videoUrl.startsWith('/uploads/')) return null;
+  return path.join(PREVIEWS_DIR, path.basename(videoUrl).replace(/\.[^.]+$/, '') + '.mp4');
+}
+
+function makePreview(src, dst) {
+  return new Promise(resolve => {
+    const tmp = dst + '.tmp.mp4';
+    const args = ['-n', '19', 'ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
+      '-t', String(PREVIEW_SECONDS), '-i', src, '-an',
+      '-vf', "scale='min(640,iw)':-2,fps=24",
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '30', '-profile:v', 'main', '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart', '-threads', '1', tmp];
+    execFile('nice', args, { timeout: 120000 }, err => {
+      if (err) { fs.unlink(tmp, () => {}); return resolve(false); }
+      fs.rename(tmp, dst, e => resolve(!e));
+    });
+  });
+}
+
+async function processPreviewQueue() {
+  if (previewBusy) return;
+  previewBusy = true;
+  try {
+    if (!fs.existsSync(PREVIEWS_DIR)) fs.mkdirSync(PREVIEWS_DIR, { recursive: true });
+    // Newest clips first, so fresh uploads get their preview soon
+    const clips = loadClips().filter(c => c.videoUrl).sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+    let made = 0;
+    for (const clip of clips) {
+      const dst = previewPathFor(clip.videoUrl);
+      if (!dst || previewFailed.has(dst) || fs.existsSync(dst)) continue;
+      const src = path.join(uploadsDir, path.basename(clip.videoUrl));
+      if (!fs.existsSync(src)) { previewFailed.add(dst); continue; }
+      if (await makePreview(src, dst)) made++;
+      else previewFailed.add(dst);
+    }
+    if (made) console.log(`[previews] made ${made} clip preview(s)`);
+  } catch (e) {
+    console.error('[previews]', e.message);
+  } finally {
+    previewBusy = false;
+  }
+}
+
+execFile('ffmpeg', ['-version'], err => {
+  if (err) { console.log('[previews] ffmpeg not found — hover previews are off (apt install -y ffmpeg)'); return; }
+  setTimeout(processPreviewQueue, 15000);          // after start-up settles
+  setInterval(processPreviewQueue, 5 * 60 * 1000); // pick up new uploads every 5 minutes
+});
+
 app.listen(PORT, () => {
   console.log(`\n  ⚓ Sakuga Piece запущен: http://localhost:${PORT}\n`);
 });

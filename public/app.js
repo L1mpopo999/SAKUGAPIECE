@@ -3788,6 +3788,50 @@ $('#imageViewerOverlay').addEventListener('touchstart',e=>{touchStartX=e.touches
 $('#imageViewerOverlay').addEventListener('touchend',e=>{const diff=e.changedTouches[0].clientX-touchStartX;if(Math.abs(diff)>50){if(diff<0&&viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}if(diff>0&&viewerIndex>0){viewerIndex--;updateImageViewer()}}},{passive:true});
 
 // ===== INIT =====
+// Clip hover previews: hovering a video card plays its short silent preview
+// (uploads/previews/<video name>.mp4, made by the server in the background).
+// Desktop only; does nothing if the preview isn't ready yet.
+(function setupHoverPreviews() {
+  const mq = q => window.matchMedia && window.matchMedia(q).matches;
+  if (!mq('(hover: hover) and (pointer: fine)') || mq('(prefers-reduced-motion: reduce)')) return;
+  if (navigator.connection && navigator.connection.saveData) return;
+  const missing = new Set(); // previews that aren't there yet (asked once per visit)
+  let timer = null, current = null;
+  const previewFor = card => {
+    const clip = allClips.find(c => String(c.id) === card.dataset.id);
+    if (!clip || !clip.videoUrl || !clip.videoUrl.startsWith('/uploads/')) return null;
+    return '/uploads/previews/' + clip.videoUrl.split('/').pop().replace(/\.[^.]+$/, '') + '.mp4';
+  };
+  const stop = () => {
+    clearTimeout(timer); timer = null;
+    if (current) { current.pause(); current.removeAttribute('src'); current.load(); current.remove(); current = null; }
+  };
+  document.addEventListener('pointerover', e => {
+    const card = e.target.closest && e.target.closest('.clip-card[data-id]');
+    if (!card || card.contains(e.relatedTarget)) return;
+    stop();
+    const url = previewFor(card), thumb = card.querySelector('.clip-thumb');
+    if (!url || !thumb || missing.has(url)) return;
+    timer = setTimeout(() => {
+      const v = document.createElement('video');
+      v.className = 'clip-hover-preview';
+      v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+      v.setAttribute('aria-hidden', 'true');
+      v.addEventListener('playing', () => v.classList.add('is-on'), { once: true });
+      v.addEventListener('error', () => { missing.add(url); if (current === v) stop(); }, { once: true });
+      v.src = url;
+      thumb.appendChild(v);
+      current = v;
+      v.play().catch(() => {});
+    }, 250);
+  });
+  document.addEventListener('pointerout', e => {
+    const card = e.target.closest && e.target.closest('.clip-card[data-id]');
+    if (!card || card.contains(e.relatedTarget)) return;
+    stop();
+  });
+})();
+
 async function init() {
   // Read pagination from URL BEFORE anything mutates it (loadClips → applyFilters → renderClips can reset hash)
   const initialHash = window.location.hash.slice(1);

@@ -238,6 +238,11 @@ body.admin-mode .footer-admin{display:none}
 .clip-card:hover .clip-thumb img,.clip-card:hover .clip-thumb video{filter:brightness(.82)}
 .clip-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--ink-1)}
 .clip-thumb-placeholder svg{width:40px;height:40px;color:var(--text-3)}
+/* Hover preview (short silent copy of the clip, see setupHoverPreviews in app.js) */
+.clip-thumb .clip-hover-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .25s ease;z-index:1;pointer-events:none}
+.clip-thumb .clip-hover-preview.is-on{opacity:1}
+.clip-card:hover .clip-thumb .clip-hover-preview{filter:none}
+.clip-card:has(.clip-hover-preview.is-on) .clip-play-overlay{opacity:0}
 .clip-duration,.clip-img-count,.clip-hd-badge{position:absolute;background:rgba(12,11,10,.74);color:#fff;font-size:.75rem;font-weight:600;line-height:1;padding:.32rem .45rem;border-radius:6px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);letter-spacing:.01em;z-index:2}
 .clip-duration{bottom:8px;right:8px}
 .clip-img-count{bottom:8px;left:8px}
