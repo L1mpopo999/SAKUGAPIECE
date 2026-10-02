@@ -1700,6 +1700,7 @@ app.post('/api/featured', (req, res) => {
   const data = { clipId: id, setBy: username, setAt: new Date().toISOString() };
   saveFeatured(data);
   addAudit(username, 'featured', String(id));
+  ensureHqPreviews();
   res.json({ success: true, ...data });
 });
 
@@ -1708,6 +1709,7 @@ app.delete('/api/featured', (req, res) => {
   if (!sess) return;
   saveFeatured({ clipId: null });
   addAudit(sess.username || 'admin', 'featured-auto', null);
+  ensureHqPreviews();
   res.json({ success: true, clipId: null });
 });
 
@@ -2327,19 +2329,26 @@ const PREVIEWS_DIR = path.join(uploadsDir, 'previews');
 const PREVIEW_SECONDS = 5;
 const previewFailed = new Set(); // files ffmpeg couldn't process (retried after a restart)
 let previewBusy = false;
+let ffmpegReady = false;
+// Sharper, longer copy for the big card in the home page header (see ensureHqPreviews)
+const PREVIEWS_HQ_DIR = path.join(PREVIEWS_DIR, 'hq');
+const HQ_OPTS = { width: 960, crf: 21, seconds: 8, preset: 'medium', profile: 'high', keepFps: true };
+let hqBusy = false, hqAgain = false;
 
 function previewPathFor(videoUrl) {
   if (!videoUrl || !videoUrl.startsWith('/uploads/')) return null;
   return path.join(PREVIEWS_DIR, path.basename(videoUrl).replace(/\.[^.]+$/, '') + '.mp4');
 }
 
-function makePreview(src, dst) {
+function makePreview(src, dst, opt = {}) {
   return new Promise(resolve => {
     const tmp = dst + '.tmp.mp4';
+    const width = opt.width || 640;
+    const vf = `scale='min(${width},iw)':-2` + (opt.keepFps ? '' : ',fps=24');
     const args = ['-n', '19', 'ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
-      '-t', String(PREVIEW_SECONDS), '-i', src, '-an',
-      '-vf', "scale='min(640,iw)':-2,fps=24",
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '30', '-profile:v', 'main', '-pix_fmt', 'yuv420p',
+      '-t', String(opt.seconds || PREVIEW_SECONDS), '-i', src, '-an', '-vf', vf,
+      '-c:v', 'libx264', '-preset', opt.preset || 'veryfast', '-crf', String(opt.crf || 30),
+      '-profile:v', opt.profile || 'main', '-pix_fmt', 'yuv420p',
       '-movflags', '+faststart', '-threads', '1', tmp];
     execFile('nice', args, { timeout: 120000 }, err => {
       if (err) { fs.unlink(tmp, () => {}); return resolve(false); }
@@ -2349,7 +2358,7 @@ function makePreview(src, dst) {
 }
 
 async function processPreviewQueue() {
-  if (previewBusy) return;
+  if (!ffmpegReady || previewBusy) return;
   previewBusy = true;
   try {
     if (!fs.existsSync(PREVIEWS_DIR)) fs.mkdirSync(PREVIEWS_DIR, { recursive: true });
@@ -2372,10 +2381,45 @@ async function processPreviewQueue() {
   }
 }
 
+// Header card previews: only for the recommended clip and the newest clip.
+// HQ copies of clips that left the header are deleted.
+async function ensureHqPreviews() {
+  if (!ffmpegReady) return;
+  if (hqBusy) { hqAgain = true; return; }
+  hqBusy = true;
+  try {
+    if (!fs.existsSync(PREVIEWS_HQ_DIR)) fs.mkdirSync(PREVIEWS_HQ_DIR, { recursive: true });
+    const clips = loadClips().filter(c => c.videoUrl && c.videoUrl.startsWith('/uploads/'));
+    const added = c => Date.parse(c.createdAt) || Number(c.id) || 0;
+    const latest = clips.slice().sort((a, b) => added(b) - added(a))[0];
+    const fid = loadFeatured().clipId;
+    const featured = fid != null ? clips.find(c => Number(c.id) === Number(fid)) : null;
+    const wanted = [featured, latest].filter(Boolean);
+    const keep = new Set(wanted.map(c => path.basename(previewPathFor(c.videoUrl))));
+    for (const clip of wanted) {
+      const dst = path.join(PREVIEWS_HQ_DIR, path.basename(previewPathFor(clip.videoUrl)));
+      if (previewFailed.has(dst) || fs.existsSync(dst)) continue;
+      const src = path.join(uploadsDir, path.basename(clip.videoUrl));
+      if (!fs.existsSync(src)) continue;
+      if (!(await makePreview(src, dst, HQ_OPTS))) previewFailed.add(dst);
+    }
+    for (const f of fs.readdirSync(PREVIEWS_HQ_DIR)) {
+      if (!keep.has(f) && !f.endsWith('.tmp.mp4')) fs.unlink(path.join(PREVIEWS_HQ_DIR, f), () => {});
+    }
+  } catch (e) {
+    console.error('[previews hq]', e.message);
+  } finally {
+    hqBusy = false;
+    if (hqAgain) { hqAgain = false; ensureHqPreviews(); }
+  }
+}
+
 execFile('ffmpeg', ['-version'], err => {
   if (err) { console.log('[previews] ffmpeg not found — hover previews are off (apt install -y ffmpeg)'); return; }
-  setTimeout(processPreviewQueue, 15000);          // after start-up settles
-  setInterval(processPreviewQueue, 5 * 60 * 1000); // pick up new uploads every 5 minutes
+  ffmpegReady = true;
+  const run = () => { ensureHqPreviews(); processPreviewQueue(); };
+  setTimeout(run, 15000);          // after start-up settles
+  setInterval(run, 5 * 60 * 1000); // pick up new uploads every 5 minutes
 });
 
 app.listen(PORT, () => {

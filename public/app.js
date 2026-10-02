@@ -3815,10 +3815,13 @@ function renderFeatured() {
   if (!f) return;
   const { clip, manual } = f, en = LANG === 'en';
   const title = (en && clip.titleEn) || clip.title;
-  const preview = clip.videoUrl && clip.videoUrl.startsWith('/uploads/')
-    ? '/uploads/previews/' + clip.videoUrl.split('/').pop().replace(/\.[^.]+$/, '') + '.mp4' : '';
-  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    || (navigator.connection && navigator.connection.saveData);
+  // Preview sources: the sharper header copy first (desktop), then the regular one
+  const base = clip.videoUrl && clip.videoUrl.startsWith('/uploads/')
+    ? clip.videoUrl.split('/').pop().replace(/\.[^.]+$/, '') : '';
+  const sources = !base ? [] : [
+    ...(window.innerWidth > 600 ? [`/uploads/previews/hq/${base}.mp4`] : []),
+    `/uploads/previews/${base}.mp4`,
+  ];
   const card = document.createElement('a');
   card.className = 'hero-featured';
   card.href = `/clip/${clip.id}`;
@@ -3827,6 +3830,7 @@ function renderFeatured() {
       <img src="${esc(clip.thumbnailUrl)}" alt="">
       <span class="hf-badge">${manual ? (en ? 'Recommended' : 'Рекомендуем') : (en ? 'New on the site' : 'Новое на сайте')}</span>
       ${clip.duration ? `<span class="clip-duration">${esc(clip.duration)}</span>` : ''}
+      ${sources.length ? '<button type="button" class="hf-toggle"></button>' : ''}
     </div>
     <div class="hf-info">
       <div class="hf-title">${esc(title)}</div>
@@ -3836,15 +3840,48 @@ function renderFeatured() {
       <span>${manual ? `Рекомендация${FEATURED.setBy ? ' · выбрал ' + esc(FEATURED.setBy) : ''}` : 'Сейчас тут последний добавленный клип · нажми ★ на любом клипе, чтобы рекомендовать его'}</span>
       ${manual ? '<button type="button" class="hf-reset">Сбросить</button>' : ''}
     </div>`;
-  if (preview && !still) {
-    const v = document.createElement('video');
-    v.className = 'hf-video';
-    v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto';
-    v.setAttribute('aria-hidden', 'true');
-    v.addEventListener('playing', () => v.classList.add('is-on'), { once: true });
-    v.addEventListener('error', () => v.remove(), { once: true });
-    v.src = preview;
-    card.querySelector('.hf-media').appendChild(v);
+
+  // Preview playback with a pause / play button; the choice is remembered in this browser
+  const media = card.querySelector('.hf-media'), toggle = card.querySelector('.hf-toggle');
+  let video = null, running = false;
+  const setToggle = () => {
+    if (!toggle) return;
+    toggle.classList.toggle('is-paused', !running);
+    const label = running ? (en ? 'Pause preview' : 'Остановить превью') : (en ? 'Play preview' : 'Включить превью');
+    toggle.title = label; toggle.setAttribute('aria-label', label);
+  };
+  const play = () => {
+    running = true; setToggle();
+    if (video) { video.play().catch(() => {}); return; }
+    let i = 0;
+    video = document.createElement('video');
+    video.className = 'hf-video';
+    video.muted = true; video.loop = true; video.playsInline = true; video.preload = 'auto';
+    video.setAttribute('aria-hidden', 'true');
+    video.addEventListener('playing', () => { if (running) video.classList.add('is-on'); });
+    video.addEventListener('error', () => {
+      if (++i < sources.length) { video.src = sources[i]; video.play().catch(() => {}); return; }
+      video.remove(); video = null; running = false; toggle?.remove();
+    });
+    video.src = sources[0];
+    media.appendChild(video);
+    video.play().catch(() => {});
+  };
+  const pause = () => {
+    running = false; setToggle();
+    if (video) { video.pause(); video.classList.remove('is-on'); }
+  };
+  if (sources.length) {
+    let off = false;
+    try { off = localStorage.getItem('sp_featured_preview') === 'off'; } catch {}
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      || (navigator.connection && navigator.connection.saveData);
+    if (off || still) setToggle(); else play();
+    toggle.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      if (running) pause(); else play();
+      try { localStorage.setItem('sp_featured_preview', running ? 'on' : 'off'); } catch {}
+    });
   }
   card.querySelector('.hf-reset')?.addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation(); setFeaturedClip(null);
