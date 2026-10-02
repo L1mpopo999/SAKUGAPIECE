@@ -282,6 +282,7 @@ function setLang(lang) {
   LANG = lang;
   localStorage.setItem('sp_lang', lang);
   applyI18n();
+  if (typeof renderFeatured === 'function') renderFeatured();
   // Re-render dynamic parts that include translated strings.
   // applyFilters() normally resets pagination to page 1. Preserve the user's
   // current page so a language toggle on page 8 doesn't bounce them to page 1.
@@ -352,6 +353,7 @@ let DIRECTORS = [];
 let EPISODE_DIRECTORS = {}; // { "1015": "Megumi Ishitani", ... }
 let ANIMATOR_BANNERS = {}; // { "Vincent Chansard": "/uploads/xxx.jpg" }
 let EPISODE_BANNERS = {}; // { "1015": "/uploads/xxx.jpg" }
+let FEATURED = { clipId: null }; // clip of the day: admin pick, or null = automatic
 let ANIMATOR_CARDS = {}; // { "Vincent Chansard": "/uploads/xxx.webp" } — picture on the animators-grid card
 
 async function loadAnimatorsAndFilters() {
@@ -368,6 +370,7 @@ async function loadAnimatorsAndFilters() {
   try { ANIMATOR_BANNERS = await (await fetch('/api/animator-banners' + bust)).json(); } catch { ANIMATOR_BANNERS = {}; }
   try { EPISODE_BANNERS = await (await fetch('/api/episode-banners' + bust)).json(); } catch { EPISODE_BANNERS = {}; }
   try { ANIMATOR_CARDS = await (await fetch('/api/animator-cards' + bust)).json(); } catch { ANIMATOR_CARDS = {}; }
+  try { FEATURED = await (await fetch('/api/featured' + bust)).json(); } catch { FEATURED = { clipId: null }; }
 }
 
 // Case-insensitive lookup of an animator's card picture URL
@@ -766,6 +769,7 @@ function renderClipCard(clip, i) {
     <div class="clip-thumb">
       <button class="admin-delete-btn" data-delete-id="${clip.id}" title="Удалить">&times;</button>
       <button class="admin-edit-btn" data-edit-id="${clip.id}" title="Редактировать">✎</button>
+      <button class="admin-feature-btn${FEATURED && Number(FEATURED.clipId) === Number(clip.id) ? ' on' : ''}" data-feature-id="${clip.id}" title="Рекомендовать в шапке главной">★</button>
       ${thumbContent}
       ${clip.duration ? `<span class="clip-duration">${clip.duration}</span>` : ''}
       ${badge ? `<span class="clip-hd-badge">${badge}</span>` : ''}
@@ -826,6 +830,7 @@ function attachClipEvents(container) {
     card.addEventListener('click', e => {
       if (e.target.closest('.admin-delete-btn')) { e.preventDefault(); e.stopPropagation(); confirmDeleteClip(parseInt(e.target.closest('.admin-delete-btn').dataset.deleteId)); return; }
       if (e.target.closest('.admin-edit-btn')) { e.preventDefault(); e.stopPropagation(); openEditModal(parseInt(e.target.closest('.admin-edit-btn').dataset.editId)); return; }
+      if (e.target.closest('.admin-feature-btn')) { e.preventDefault(); e.stopPropagation(); setFeaturedClip(parseInt(e.target.closest('.admin-feature-btn').dataset.featureId)); return; }
       if (e.target.closest('.clip-tag.animator')) {
         e.preventDefault(); e.stopPropagation();
         navigateTo('animator-profile', e.target.closest('.clip-tag.animator').dataset.animator);
@@ -3788,6 +3793,83 @@ $('#imageViewerOverlay').addEventListener('touchstart',e=>{touchStartX=e.touches
 $('#imageViewerOverlay').addEventListener('touchend',e=>{const diff=e.changedTouches[0].clientX-touchStartX;if(Math.abs(diff)>50){if(diff<0&&viewerIndex<viewerImages.length-1){viewerIndex++;updateImageViewer()}if(diff>0&&viewerIndex>0){viewerIndex--;updateImageViewer()}}},{passive:true});
 
 // ===== INIT =====
+// ===== Featured clip (home page header) =====
+// "Recommended": the clip an admin picked with ★ on a clip card (admin mode).
+// Without a pick: the most recently added video clip, labelled "New on the site".
+// Plays its short silent preview.
+function featuredClip() {
+  const picked = FEATURED && FEATURED.clipId != null
+    ? allClips.find(c => Number(c.id) === Number(FEATURED.clipId)) : null;
+  if (picked && picked.thumbnailUrl) return { clip: picked, manual: true };
+  const added = c => Date.parse(c.createdAt) || Number(c.id) || 0;
+  const latest = allClips.filter(c => c.videoUrl && c.thumbnailUrl).sort((a, b) => added(b) - added(a))[0];
+  return latest ? { clip: latest, manual: false } : null;
+}
+
+function renderFeatured() {
+  const hero = document.querySelector('#page-browse .hero');
+  if (!hero) return;
+  hero.querySelector('.hero-featured')?.remove();
+  const f = featuredClip();
+  hero.classList.toggle('has-featured', !!f);
+  if (!f) return;
+  const { clip, manual } = f, en = LANG === 'en';
+  const title = (en && clip.titleEn) || clip.title;
+  const preview = clip.videoUrl && clip.videoUrl.startsWith('/uploads/')
+    ? '/uploads/previews/' + clip.videoUrl.split('/').pop().replace(/\.[^.]+$/, '') + '.mp4' : '';
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    || (navigator.connection && navigator.connection.saveData);
+  const card = document.createElement('a');
+  card.className = 'hero-featured';
+  card.href = `/clip/${clip.id}`;
+  card.innerHTML = `
+    <div class="hf-media">
+      <img src="${esc(clip.thumbnailUrl)}" alt="">
+      <span class="hf-badge">${manual ? (en ? 'Recommended' : 'Рекомендуем') : (en ? 'New on the site' : 'Новое на сайте')}</span>
+      ${clip.duration ? `<span class="clip-duration">${esc(clip.duration)}</span>` : ''}
+    </div>
+    <div class="hf-info">
+      <div class="hf-title">${esc(title)}</div>
+      <div class="hf-meta">${en ? 'Ep.' : 'Эп.'} ${esc(clip.episode)}${clip.arc ? ' · ' + esc(clip.arc) : ''}${(clip.animators || []).length ? ` · <span class="hf-anim">${clip.animators.map(esc).join(', ')}</span>` : ''}</div>
+    </div>
+    <div class="hf-admin">
+      <span>${manual ? `Рекомендация${FEATURED.setBy ? ' · выбрал ' + esc(FEATURED.setBy) : ''}` : 'Сейчас тут последний добавленный клип · нажми ★ на любом клипе, чтобы рекомендовать его'}</span>
+      ${manual ? '<button type="button" class="hf-reset">Сбросить</button>' : ''}
+    </div>`;
+  if (preview && !still) {
+    const v = document.createElement('video');
+    v.className = 'hf-video';
+    v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto';
+    v.setAttribute('aria-hidden', 'true');
+    v.addEventListener('playing', () => v.classList.add('is-on'), { once: true });
+    v.addEventListener('error', () => v.remove(), { once: true });
+    v.src = preview;
+    card.querySelector('.hf-media').appendChild(v);
+  }
+  card.querySelector('.hf-reset')?.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation(); setFeaturedClip(null);
+  });
+  hero.appendChild(card);
+}
+
+async function setFeaturedClip(id) {
+  if (!isAdmin) return;
+  try {
+    const res = await fetch('/api/featured', {
+      method: id == null ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: id == null ? undefined : JSON.stringify({ clipId: id }),
+    });
+    const data = await res.json();
+    if (!data.success) { notify(data.error || 'Не удалось', true); return; }
+    FEATURED = id == null ? { clipId: null } : { clipId: id, setBy: data.setBy, setAt: data.setAt };
+    renderFeatured();
+    document.querySelectorAll('.admin-feature-btn').forEach(b =>
+      b.classList.toggle('on', id != null && Number(b.dataset.featureId) === Number(id)));
+    notify(id == null ? 'В шапке снова последний добавленный клип' : 'Клип теперь в рекомендациях на главной');
+  } catch { notify(t('msg_network_error'), true); }
+}
+
 // Clip hover previews: hovering a video card plays its short silent preview
 // (uploads/previews/<video name>.mp4, made by the server in the background).
 // Desktop only; does nothing if the preview isn't ready yet.
@@ -3859,6 +3941,7 @@ async function init() {
   await loadAnimatorsAndFilters();
   renderFilterChips();
   await loadClips();
+  renderFeatured();
 
   // Check if we're on a clip page
   const clipMatch = window.location.pathname.match(/^\/clip\/(\d+)$/);

@@ -1677,6 +1677,40 @@ app.delete('/api/animators/:name/card', (req, res) => {
   res.json({ success: true });
 });
 
+// ===== FEATURED CLIP (home page header) =====
+// "Recommended" clip shown in the home page header. Admins pick it (★ on a clip card in
+// admin mode); without a pick the site shows the most recently added clip instead.
+// Stored as { clipId, setBy, setAt } — or { clipId: null } for "latest clip".
+const FEATURED_FILE = path.join(dataDir, 'featured.json');
+function loadFeatured() {
+  if (!fs.existsSync(FEATURED_FILE)) return { clipId: null };
+  try { return JSON.parse(fs.readFileSync(FEATURED_FILE, 'utf-8')); }
+  catch { return { clipId: null }; }
+}
+function saveFeatured(data) { writeJsonAtomic(FEATURED_FILE, data); }
+
+app.get('/api/featured', (req, res) => { res.json(loadFeatured()); });
+
+app.post('/api/featured', (req, res) => {
+  const sess = requireAdmin(req, res);
+  if (!sess) return;
+  const id = Number(req.body && req.body.clipId);
+  if (!loadClips().some(c => Number(c.id) === id)) return res.status(404).json({ error: 'Клип не найден' });
+  const username = sess.username || 'admin';
+  const data = { clipId: id, setBy: username, setAt: new Date().toISOString() };
+  saveFeatured(data);
+  addAudit(username, 'featured', String(id));
+  res.json({ success: true, ...data });
+});
+
+app.delete('/api/featured', (req, res) => {
+  const sess = requireAdmin(req, res);
+  if (!sess) return;
+  saveFeatured({ clipId: null });
+  addAudit(sess.username || 'admin', 'featured-auto', null);
+  res.json({ success: true, clipId: null });
+});
+
 // ===== EPISODE BANNER (admin only) =====
 app.get('/api/episodes/:num/banner', (req, res) => {
   res.json({ url: getEpisodeBanner(req.params.num) || null });
@@ -2211,7 +2245,7 @@ app.get('/api/backup', (req, res) => {
     DATA_FILE, ANIMATORS_FILE, FILTERS_FILE, EPISODES_FILE, HIDDEN_ANIMATORS_FILE,
     COMMENTS_FILE, NICKNAMES_FILE, VIEWS_FILE, LIKES_FILE, BANNED_USERS_FILE,
     DIRECTORS_FILE, EPISODE_DIRECTORS_FILE,
-    ANIMATOR_BANNERS_FILE, EPISODE_BANNERS_FILE, ANIMATOR_CARDS_FILE,
+    ANIMATOR_BANNERS_FILE, EPISODE_BANNERS_FILE, ANIMATOR_CARDS_FILE, FEATURED_FILE,
     USERS_FILE, AUDIT_LOG_FILE
   ];
   let estimatedSize = 0;
@@ -2261,6 +2295,7 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(ANIMATOR_BANNERS_FILE)) archive.file(ANIMATOR_BANNERS_FILE, { name: 'animator_banners.json' });
   if (fs.existsSync(EPISODE_BANNERS_FILE)) archive.file(EPISODE_BANNERS_FILE, { name: 'episode_banners.json' });
   if (fs.existsSync(ANIMATOR_CARDS_FILE)) archive.file(ANIMATOR_CARDS_FILE, { name: 'animator_cards.json' });
+  if (fs.existsSync(FEATURED_FILE)) archive.file(FEATURED_FILE, { name: 'featured.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 
