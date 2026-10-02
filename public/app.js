@@ -10,22 +10,22 @@ const I18N = {
   nav_upload: { ru: '+ Загрузить', en: '+ Upload' },
 
   // Hero / search
-  hero_title_main: { ru: 'ONE PIECE', en: 'ONE PIECE' },
-  hero_title_accent: { ru: 'SAKUGA', en: 'SAKUGA' },
-  hero_title_tail: { ru: 'ARCHIVE', en: 'ARCHIVE' },
+  hero_title_main: { ru: 'One Piece', en: 'One Piece' },
+  hero_title_accent: { ru: 'Sakuga', en: 'Sakuga' },
+  hero_title_tail: { ru: 'Archive', en: 'Archive' },
   hero_subtitle: { ru: 'Клипы с сакугой из One Piece в высоком качестве — поиск по аниматорам, аркам и эпизодам', en: 'High-quality sakuga clips from One Piece — search by animator, arc and episode' },
   search_placeholder: { ru: 'Поиск по аниматорам, эпизодам, аркам...', en: 'Search animators, episodes, arcs...' },
 
   // Filter chips
-  filter_all: { ru: 'ВСЕ', en: 'ALL' },
-  filter_video: { ru: 'ВИДЕО', en: 'VIDEO' },
-  filter_photo: { ru: 'ФОТО', en: 'PHOTO' },
+  filter_all: { ru: 'Все', en: 'All' },
+  filter_video: { ru: 'Видео', en: 'Video' },
+  filter_photo: { ru: 'Фото', en: 'Photo' },
   filter_photo_arts: { ru: 'Фото / Арты', en: 'Photos / Arts' },
-  filter_sections: { ru: 'РАЗДЕЛЫ ▾', en: 'CATEGORIES ▾' },
-  filter_views: { ru: 'ПРОСМОТРЫ', en: 'VIEWS' },
+  filter_sections: { ru: 'Разделы ▾', en: 'Categories ▾' },
+  filter_views: { ru: 'Просмотры', en: 'Views' },
 
   // Episodes page
-  episodes_title: { ru: 'СЕРИИ', en: 'EPISODES' },
+  episodes_title: { ru: 'Серии', en: 'Episodes' },
   episodes_subtitle: { ru: 'Все серии с сакуга-моментами — от 890 до последних', en: 'All episodes with sakuga moments — from 890 to latest' },
   episodes_search_placeholder: { ru: 'Найти серию...', en: 'Find episode...' },
   episodes_sort_clips: { ru: 'По клипам', en: 'By clips' },
@@ -39,9 +39,9 @@ const I18N = {
   episodes_back: { ru: 'Все серии', en: 'All episodes' },
 
   // Animators page
-  animators_title: { ru: 'АНИМАТОРЫ', en: 'ANIMATORS' },
-  animators_title_main: { ru: 'АНИМАТОР', en: 'ANIM' },
-  animators_title_accent: { ru: 'Ы', en: 'ATORS' },
+  animators_title: { ru: 'Аниматоры', en: 'Animators' },
+  animators_title_main: { ru: 'Аниматор', en: 'Anim' },
+  animators_title_accent: { ru: 'ы', en: 'ators' },
   animators_subtitle: { ru: 'Все аниматоры, работавшие над сакуга-моментами One Piece', en: 'All animators who worked on One Piece sakuga moments' },
   animators_search_placeholder: { ru: 'Найти аниматора...', en: 'Find animator...' },
   animators_add: { ru: 'Добавить аниматора', en: 'Add animator' },
@@ -50,10 +50,10 @@ const I18N = {
   animators_no_clips: { ru: 'Пока нет клипов с этим аниматором', en: 'No clips with this animator yet' },
   animator_search_placeholder: { ru: 'Поиск по названию или эпизоду…', en: 'Search by title or episode…' },
   animator_no_results: { ru: 'Ничего не найдено по этому запросу', en: 'Nothing matches that query' },
-  filter_all_arcs: { ru: 'ВСЕ АРКИ', en: 'ALL ARCS' },
+  filter_all_arcs: { ru: 'Все арки', en: 'All arcs' },
 
   // Director (on episode profile)
-  director_label: { ru: 'РЕЖИССЁР:', en: 'DIRECTOR:' },
+  director_label: { ru: 'Режиссёр:', en: 'Director:' },
   director_short_label: { ru: 'ED:', en: 'ED:' },
 
   // Counters / units
@@ -65,8 +65,8 @@ const I18N = {
   unit_animators_one: { ru: 'аниматор', en: 'animator' },
 
   // About page
-  about_title_main: { ru: 'О ', en: 'ABOUT ' },
-  about_title_accent: { ru: 'САЙТЕ', en: 'THE SITE' },
+  about_title_main: { ru: 'О ', en: 'About ' },
+  about_title_accent: { ru: 'сайте', en: 'the site' },
   about_p1: { ru: '<strong>Sakuga Piece</strong> — это архив сакуга-моментов (моментов с выдающейся анимацией) из аниме One Piece.', en: '<strong>Sakuga Piece</strong> is an archive of sakuga moments (scenes with outstanding animation) from the One Piece anime.' },
   about_p2: { ru: 'Цель проекта — собрать все значимые сакуга-моменты в высоком качестве с привязкой к аниматорам, эпизодам и аркам. В отличие от других ресурсов, здесь все клипы в HD.', en: 'The goal is to collect every notable sakuga moment in high quality with proper attribution to animators, episodes and arcs. Unlike other resources, all clips here are in HD.' },
   about_p3: { ru: 'Сайт не аффилирован с Toei Animation или Эйитиро Одой. Все права на аниме One Piece принадлежат их правообладателям.', en: 'This site is not affiliated with Toei Animation or Eiichiro Oda. All rights to the One Piece anime belong to their respective owners.' },
@@ -610,7 +610,7 @@ async function backfillDurationsInBackground() {
 
   // Tiny floating indicator — gives feedback without nagging
   const badge = document.createElement('div');
-  badge.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(20,22,30,.95);color:#e7e7ea;font:600 .75rem/1 "Manrope",sans-serif;padding:.55rem .85rem;border-radius:8px;border:1px solid rgba(244,162,38,.4);z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.6)';
+  badge.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(20,22,30,.95);color:#e7e7ea;font:600 .8rem/1 "Onest",sans-serif;padding:.55rem .85rem;border-radius:8px;border:1px solid rgba(244,162,38,.4);z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,.6)';
   badge.textContent = `Длительности: 0 / ${pending.length}`;
   document.body.appendChild(badge);
 
@@ -1315,18 +1315,18 @@ function renderAnimatorProfile(name) {
       if (hiddenArcs.length) {
         html += `<div class="animator-arc-dropdown" id="animatorArcDropdown">`;
         // Inside dropdown: hidden arcs
-        html += hiddenArcs.map(a => `<button class="animator-arc-dropdown-item${animatorProfileArc===a?' active':''}" data-animator-arc="${esc(a)}">${esc(a).toUpperCase()}</button>`).join('');
+        html += hiddenArcs.map(a => `<button class="animator-arc-dropdown-item${animatorProfileArc===a?' active':''}" data-animator-arc="${esc(a)}">${esc(a)}</button>`).join('');
         html += `</div>`;
       }
       html += `</div>`;
       // Default visible arcs
-      html += visibleArcs.map(a => `<button class="filter-chip${animatorProfileArc.toLowerCase()===a.toLowerCase()?' active':''}" data-animator-arc="${esc(a)}">${esc(a).toUpperCase()}</button>`).join('');
+      html += visibleArcs.map(a => `<button class="filter-chip${animatorProfileArc.toLowerCase()===a.toLowerCase()?' active':''}" data-animator-arc="${esc(a)}">${esc(a)}</button>`).join('');
 
       // If a hidden arc is currently selected, show it as a chip too (so the user sees it active)
       if (!isAllActive && !visibleArcs.some(v => v.toLowerCase() === animatorProfileArc.toLowerCase())) {
         const sel = arcs.find(a => a.toLowerCase() === animatorProfileArc.toLowerCase());
         if (sel) {
-          html += `<button class="filter-chip active" data-animator-arc="${esc(sel)}">${esc(sel).toUpperCase()}</button>`;
+          html += `<button class="filter-chip active" data-animator-arc="${esc(sel)}">${esc(sel)}</button>`;
         }
       }
 
@@ -3791,8 +3791,8 @@ function renderFilterChips() {
     <span class="filter-separator"></span>
     ${arcFilters.map(f => `<button class="filter-chip arc-chip${currentArcFilter===f.id?' active':''}" data-arc="${esc(f.id)}">${esc(filterLabel(f))}</button>`).join('')}
     <span class="filter-separator"></span>
-    <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">👁 ${LANG==='en'?'Views':'Просмотры'}</button>
-    <button class="filter-chip sort-chip${currentSort==='likes'?' active':''}" data-sort="likes">❤ ${LANG==='en'?'Likes':'Лайки'}</button>
+    <button class="filter-chip sort-chip${currentSort==='views'?' active':''}" data-sort="views">${LANG==='en'?'Views':'Просмотры'}</button>
+    <button class="filter-chip sort-chip${currentSort==='likes'?' active':''}" data-sort="likes">${LANG==='en'?'Likes':'Лайки'}</button>
     ${isAdmin ? `<button class="filter-chip admin-manage-filters-btn" style="border-color:var(--gold);color:var(--gold)">+ Управление</button>` : ''}
     <span class="results-count" id="resultsCount"></span>
     <div class="filter-tags-dropdown" id="filterTagsDropdown">
@@ -4018,7 +4018,7 @@ function renderClipPage(clip) {
           <span class="clip-meta-divider">·</span>
           <span>${esc(clip.arc)}</span>
           ${clip.quality ? `<span class="clip-meta-divider">·</span><span>${clip.quality}</span>` : ''}
-          ${clip.views ? `<span class="clip-meta-divider">·</span><span>👁 ${clip.views}</span>` : ''}
+          ${clip.views ? `<span class="clip-meta-divider">·</span><span><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>${clip.views}</span>` : ''}
         </div>
 
         <!-- Tags right under the meta line (compact YouTube-like layout) -->
