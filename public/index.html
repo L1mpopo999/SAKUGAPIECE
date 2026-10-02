@@ -591,6 +591,30 @@
   <div class="footer-admin"><a class="footer-support" href="https://www.donationalerts.com/r/j3f999" target="_blank" rel="noopener"><svg class="support-heart" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4h2c.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg><span class="i-ru">Поддержать сайт</span><span class="i-en">Support the site</span></a><button type="button" class="footer-admin-link" onclick="document.getElementById('adminToggleBtn').click()">Вход для админов</button></div>
 </footer>
 
+<!-- Support modal: card via DonationAlerts or crypto (USDT TRC-20) -->
+<div class="modal-overlay" id="supportModal" aria-hidden="true">
+  <div class="modal support-modal" role="dialog" aria-labelledby="supportTitle">
+    <button type="button" class="modal-close" data-support-close aria-label="Close">&times;</button>
+    <h2 class="modal-title" id="supportTitle"><span class="i-ru">Поддержать сайт</span><span class="i-en">Support the site</span></h2>
+    <div class="support-option">
+      <div class="support-option-head"><span class="support-option-title"><span class="i-ru">Картой</span><span class="i-en">By card</span></span><span class="support-option-note">Visa · Mastercard · <span class="i-ru">любая страна</span><span class="i-en">any country</span></span></div>
+      <a class="btn-submit support-da-btn" href="https://www.donationalerts.com/r/j3f999" target="_blank" rel="noopener"><span class="i-ru">Перейти на DonationAlerts</span><span class="i-en">Go to DonationAlerts</span></a>
+    </div>
+    <div class="support-option">
+      <div class="support-option-head"><span class="support-option-title"><span class="i-ru">Криптой</span><span class="i-en">With crypto</span></span><span class="support-option-note">USDT · TRC-20 (Tron)</span></div>
+      <div class="support-crypto">
+        <div class="support-qr" aria-hidden="true"><svg class="segno"><g transform="scale(4)"><path fill="#fff" d="M0 0h31v31h-31z"/><path class="qrline" stroke="#111" d="M1 1.5h7m1 0h1m2 0h2m2 0h2m3 0h1m1 0h7m-29 1h1m5 0h1m1 0h1m1 0h1m1 0h1m1 0h2m1 0h2m3 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m3 0h2m1 0h3m3 0h1m2 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m3 0h1m7 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m3 0h2m1 0h1m3 0h1m1 0h2m1 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h2m1 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-21 1h2m3 0h2m2 0h1m1 0h2m-21 1h1m1 0h2m1 0h3m1 0h1m2 0h3m1 0h5m1 0h1m2 0h1m1 0h2m-29 1h2m7 0h3m3 0h1m1 0h4m2 0h3m2 0h1m-26 1h5m1 0h4m1 0h1m1 0h1m6 0h1m2 0h1m-26 1h1m1 0h1m1 0h1m2 0h1m2 0h1m1 0h2m1 0h1m1 0h2m2 0h2m-20 1h1m1 0h2m3 0h1m4 0h1m2 0h2m2 0h2m1 0h1m-24 1h2m2 0h1m2 0h1m1 0h2m2 0h5m6 0h2m-29 1h1m1 0h1m1 0h3m1 0h1m2 0h2m1 0h1m2 0h3m1 0h1m4 0h3m-29 1h2m1 0h2m2 0h1m2 0h4m1 0h1m3 0h1m1 0h1m2 0h2m-26 1h1m1 0h2m2 0h2m1 0h2m1 0h1m5 0h1m1 0h2m4 0h3m-28 1h2m1 0h2m2 0h1m2 0h3m1 0h1m3 0h2m2 0h1m1 0h1m2 0h1m-29 1h1m4 0h5m1 0h1m3 0h1m5 0h1m3 0h1m-23 1h1m4 0h5m2 0h3m2 0h1m1 0h1m2 0h2m-26 1h2m1 0h1m1 0h2m2 0h2m1 0h1m3 0h1m2 0h9m-21 1h2m3 0h2m1 0h2m2 0h1m3 0h1m1 0h1m-27 1h7m1 0h1m2 0h1m1 0h1m2 0h2m2 0h1m1 0h1m1 0h1m2 0h1m-28 1h1m5 0h1m1 0h2m1 0h2m3 0h1m3 0h1m3 0h2m-26 1h1m1 0h3m1 0h1m2 0h2m1 0h1m1 0h1m5 0h8m-28 1h1m1 0h3m1 0h1m1 0h2m1 0h7m1 0h1m1 0h1m6 0h1m-29 1h1m1 0h3m1 0h1m1 0h6m4 0h2m2 0h2m1 0h1m2 0h1m-29 1h1m5 0h1m3 0h1m2 0h1m1 0h1m2 0h1m3 0h4m1 0h1m-28 1h7m1 0h5m1 0h3m2 0h2m3 0h1m2 0h1"/></g></svg></div>
+        <div class="support-crypto-main">
+          <div class="support-address" id="supportAddress">TMv4kAj8mVPTPLbLCHB9s1TBkWd8D9ivaY</div>
+          <button type="button" class="support-copy" data-copy="TMv4kAj8mVPTPLbLCHB9s1TBkWd8D9ivaY"><span class="i-ru">Скопировать адрес</span><span class="i-en">Copy address</span></button>
+          <p class="support-warn"><span class="i-ru">Отправляйте только USDT в сети TRC-20 (Tron). Перевод в другой сети не дойдёт.</span><span class="i-en">Send only USDT on the TRC-20 (Tron) network. Transfers on any other network will be lost.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- Floating admin backup button (visible only in admin mode) -->
 <button id="backupBtn" class="backup-btn admin-only" title="Скачать полный бэкап всех данных">💾 Бэкап</button>
 

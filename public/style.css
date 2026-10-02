@@ -166,6 +166,21 @@ html[lang="en"] .i-ru,html:not([lang="en"]) .i-en{display:none}
 .clip-action-btn.clip-support-btn:hover{background:var(--red-soft);border-color:transparent}
 .footer-support{display:inline-flex;align-items:center;gap:.35rem;font-size:.8125rem;font-weight:600;color:var(--red);text-decoration:none}
 .footer-support:hover{text-decoration:underline;text-underline-offset:3px}
+.support-modal{max-width:460px}
+.support-option{border:1px solid var(--line);border-radius:14px;padding:1rem;margin-bottom:.75rem;background:var(--ink-0)}
+.support-option-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;margin-bottom:.75rem}
+.support-option-title{font-weight:700;font-size:1rem;color:var(--paper)}
+.support-option-note{font-size:.8125rem;color:var(--text-3);text-align:right}
+.support-da-btn{display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:0}
+.support-crypto{display:flex;gap:1rem;align-items:flex-start}
+.support-qr{flex-shrink:0;width:132px;height:132px;padding:6px;background:#fff;border-radius:10px}
+.support-qr svg{width:100%;height:100%;display:block}
+.support-crypto-main{min-width:0;flex:1}
+.support-address{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8125rem;line-height:1.45;word-break:break-all;background:var(--ink-1);border:1px solid var(--line-strong);border-radius:8px;padding:.55rem .65rem;color:var(--paper);user-select:all}
+.support-copy{margin-top:.5rem;width:100%;height:36px;border-radius:9px;border:1px solid var(--line-strong);background:var(--ink-2);color:var(--paper);font:inherit;font-size:.875rem;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s}
+.support-copy:hover{border-color:var(--straw-line);color:var(--gold)}
+.support-warn{margin-top:.55rem;font-size:.75rem;line-height:1.45;color:var(--text-3)}
+@media(max-width:480px){.support-crypto{flex-direction:column;align-items:center}.support-crypto-main{width:100%}}
 
 /* Primary yellow button — header "+ Upload" and other admin actions */
 .btn-upload{font-family:var(--font-ui);font-size:.875rem;font-weight:600;background:var(--straw);color:var(--straw-ink);border:none;padding:.5rem .95rem;border-radius:10px;cursor:pointer;white-space:nowrap;transition:filter .15s,background-color .15s;margin:0 .35rem;line-height:1.2}

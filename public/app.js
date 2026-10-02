@@ -3907,6 +3907,41 @@ async function setFeaturedClip(id) {
   } catch { notify(t('msg_network_error'), true); }
 }
 
+// Support modal: the support buttons (header, clip page, footer) open a choice of
+// card (DonationAlerts) or crypto (USDT TRC-20). The buttons keep their DonationAlerts
+// link, so Ctrl/middle-click or a click before scripts load still works.
+(function setupSupportModal() {
+  const modal = document.getElementById('supportModal');
+  if (!modal) return;
+  const open = () => { modal.classList.add('visible'); modal.setAttribute('aria-hidden', 'false'); };
+  const close = () => { modal.classList.remove('visible'); modal.setAttribute('aria-hidden', 'true'); };
+  document.addEventListener('click', e => {
+    const trigger = e.target.closest && e.target.closest('.support-btn, .clip-support-btn, .footer-support');
+    if (trigger) {
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      open();
+      return;
+    }
+    if (e.target === modal || (e.target.closest && e.target.closest('[data-support-close]'))) close();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('visible')) close();
+  });
+  modal.querySelector('.support-copy')?.addEventListener('click', async e => {
+    const text = e.currentTarget.dataset.copy;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const r = document.createRange();
+      r.selectNodeContents(document.getElementById('supportAddress'));
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      document.execCommand('copy');
+    }
+    notify(LANG === 'en' ? 'Address copied' : 'Адрес скопирован');
+  });
+})();
+
 // Clip hover previews: hovering a video card plays its short silent preview
 // (uploads/previews/<video name>.mp4, made by the server in the background).
 // Desktop only; does nothing if the preview isn't ready yet.
