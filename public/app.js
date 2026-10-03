@@ -4236,8 +4236,8 @@ function openFilterManager() {
 }
 
 // ===== Download a part of a clip =====
-// «Отрывок» on the clip page opens a panel under the player: two handles on a track
-// (drag them, or step to a frame with ‹ › and press «Сюда»), a preview, then the server
+// «Обрезать» (left of the frame controls) opens a panel under the player: two handles on a
+// track (drag them, or step to a frame with ‹ › and press «Текущий кадр»), a preview, then the server
 // cuts that part frame-accurately (GET /api/clips/:id/cut) and the browser saves it.
 const CUT_MAX_SECONDS = 60;
 function setupCutPanel(page, clip) {
@@ -4328,7 +4328,7 @@ function setupCutPanel(page, clip) {
     video.pause();
     setPoint(Math.abs(t - a) <= Math.abs(t - b) ? 'start' : 'end', t);
   });
-  // «Сюда»: put the start / end on the frame the video is showing now
+  // «Текущий кадр»: put the start / end on the frame the video is showing now
   panel.querySelectorAll('[data-set]').forEach(btn => btn.addEventListener('click', () => {
     const t = snap(video.currentTime);
     if (btn.dataset.set === 'start') { a = t; if (b <= a) b = Math.min(dur(), a + 1); }
@@ -4403,6 +4403,10 @@ function renderClipPage(clip) {
           </video>
           <div class="timecode-bar" id="clipPageTimecodeBar"></div>
           <div class="frame-controls">
+            <button type="button" class="clip-action-btn clip-cut-toggle" id="cutToggleBtn" title="${LANG === 'en' ? 'Download only a part of the clip' : 'Скачать только часть клипа'}">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>
+              <span>${LANG === 'en' ? 'Trim' : 'Обрезать'}</span>
+            </button>
             <div class="frame-stepper">
               <button class="frame-btn" id="framePrevBtn" title="Предыдущий кадр (←)" aria-label="Previous frame">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -4425,8 +4429,8 @@ function renderClipPage(clip) {
               <button type="button" class="cut-handle" data-h="end" aria-label="${LANG === 'en' ? 'End' : 'Конец'}"></button>
             </div>
             <div class="cut-row">
-              <div class="cut-point"><span class="cut-label">${LANG === 'en' ? 'Start' : 'Начало'}</span><span class="cut-time" id="cutStartTime">0:00.000</span><button type="button" class="cut-set" data-set="start">${LANG === 'en' ? 'Here' : 'Сюда'}</button></div>
-              <div class="cut-point"><span class="cut-label">${LANG === 'en' ? 'End' : 'Конец'}</span><span class="cut-time" id="cutEndTime">0:00.000</span><button type="button" class="cut-set" data-set="end">${LANG === 'en' ? 'Here' : 'Сюда'}</button></div>
+              <div class="cut-point"><span class="cut-label">${LANG === 'en' ? 'Start' : 'Начало'}</span><span class="cut-time" id="cutStartTime">0:00.000</span><button type="button" class="cut-set" data-set="start">${LANG === 'en' ? 'Current frame' : 'Текущий кадр'}</button></div>
+              <div class="cut-point"><span class="cut-label">${LANG === 'en' ? 'End' : 'Конец'}</span><span class="cut-time" id="cutEndTime">0:00.000</span><button type="button" class="cut-set" data-set="end">${LANG === 'en' ? 'Current frame' : 'Текущий кадр'}</button></div>
               <div class="cut-len" id="cutLen"></div>
             </div>
             <div class="cut-actions">
@@ -4434,8 +4438,8 @@ function renderClipPage(clip) {
               <button type="button" class="btn-submit cut-download" id="cutDownloadBtn">${LANG === 'en' ? 'Download the part' : 'Скачать отрывок'}</button>
             </div>
             <p class="cut-hint">${LANG === 'en'
-              ? 'Drag the handles, or step to the exact frame with ‹ › and press “Here”. Up to 60 seconds.'
-              : 'Перетащи ползунки или поставь видео на нужный кадр стрелками ‹ › и нажми «Сюда». До 60 секунд.'}</p>
+              ? 'Drag the handles or the yellow part. For frame accuracy: pause, step to the frame with ‹ › and press “Current frame” at Start or End. Up to 60 seconds.'
+              : 'Тяни ползунки или весь жёлтый кусок. Для точности до кадра: пауза, стрелками ‹ › выбери кадр и нажми «Текущий кадр» у начала или конца. До 60 секунд.'}</p>
           </div>
         </div>
       ` : ''}
@@ -4477,10 +4481,7 @@ function renderClipPage(clip) {
             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>${LANG === 'en' ? 'Download' : 'Скачать'}</span>
           </a>
-          <button type="button" class="clip-action-btn clip-cut-toggle" id="cutToggleBtn" title="${LANG === 'en' ? 'Download only a part of the clip' : 'Скачать только часть клипа'}">
-            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>
-            <span>${LANG === 'en' ? 'Part' : 'Отрывок'}</span>
-          </button>` : ''}
+` : ''}
           <div class="clip-share-wrap">
             <button class="clip-action-btn clip-share-toggle" data-action="share-toggle" title="${LANG === 'en' ? 'Share' : 'Поделиться'}">
               <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>

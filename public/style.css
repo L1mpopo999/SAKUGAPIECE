@@ -680,7 +680,12 @@ body.admin-mode .animator-profile-stats{font-size:.9375rem;margin-bottom:.6rem}
 .clip-page-gallery-item:hover img{filter:brightness(.85)}
 
 /* Download a part of a clip (panel under the player) */
+/* «Обрезать» sits on the left of the frame controls, styled like them */
+.frame-controls{position:relative}
+.frame-controls .clip-cut-toggle{position:absolute;left:0;top:50%;transform:translateY(-50%);height:40px;border-radius:12px;padding:0 1rem}
+.frame-controls .clip-cut-toggle .action-icon{color:var(--gold)}
 .clip-action-btn.clip-cut-toggle.is-active{border-color:var(--straw-line);color:var(--gold)}
+@media(max-width:700px){.frame-controls .clip-cut-toggle{position:static;transform:none;order:3}}
 .cut-panel{margin:.1rem 0 .9rem;padding:1rem 1.1rem;background:var(--ink-1);border:1px solid var(--line);border-radius:14px}
 .cut-panel[hidden]{display:none}
 .cut-track{position:relative;height:34px;margin:0 8px;border-radius:8px;background:var(--ink-0);border:1px solid var(--line);cursor:pointer;touch-action:none}
