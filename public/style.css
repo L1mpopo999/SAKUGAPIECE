@@ -395,6 +395,18 @@ body.admin-mode .admin-only{display:inline-flex !important}
 .animator-card-big > :not(.animator-card-img){position:relative;z-index:1}
 .animator-card-big.has-img .animator-card-name,.animator-card-big.has-img .animator-card-count{text-shadow:0 1px 10px rgba(0,0,0,.65)}
 :root[data-theme="light"] .animator-card-big.has-img .animator-card-name,:root[data-theme="light"] .animator-card-big.has-img .animator-card-count{text-shadow:0 0 10px rgba(255,255,255,.95),0 0 2px rgba(255,255,255,.9)}
+/* Episode cards: number on top, then "ED: director" and arc — a text column on the left,
+   so the director stays readable when the card has a picture on the right */
+.episode-card{height:124px;min-height:0;flex-direction:column;align-items:flex-start;justify-content:center;gap:.3rem;padding:.9rem 1.15rem;overflow:hidden;isolation:isolate}
+.episode-card > :not(.animator-card-img){position:relative;z-index:1}
+.episode-card .animator-avatar{font-size:1.75rem;min-width:0;line-height:1}
+.episode-card .animator-avatar.ep-avatar-text{width:auto;min-width:0;font-size:1.05rem;-webkit-line-clamp:2}
+.episode-card .animator-card-info{flex:0 0 auto;width:62%;max-width:62%}
+.episode-card .animator-card-name{font-size:.9375rem;margin-bottom:.15rem;-webkit-line-clamp:2}
+.episode-card.has-img .animator-avatar,.episode-card.has-img .animator-card-name,.episode-card.has-img .animator-card-count{text-shadow:0 1px 10px rgba(0,0,0,.7)}
+:root[data-theme="light"] .episode-card.has-img .animator-avatar,:root[data-theme="light"] .episode-card.has-img .animator-card-name,:root[data-theme="light"] .episode-card.has-img .animator-card-count{text-shadow:0 0 10px rgba(255,255,255,.95),0 0 2px rgba(255,255,255,.9)}
+.episode-card > .animator-card-admin{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:2}
+
 /* Admin tools on an animator card: compact toolbar in the bottom-right corner,
    so the name keeps its width (buttons come with inline styles from app.js) */
 .animator-card-big > .animator-card-admin{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:2}
@@ -868,8 +880,9 @@ body.admin-mode .header-socials{display:none}
   .animator-card,.animator-card-big{padding:.85rem 1rem;gap:.85rem;min-height:auto}
   .animator-card-big .animator-card-name{font-size:1rem}
   .episode-card .animator-avatar{font-size:1.5rem;min-width:70px}
-  .episode-card .animator-avatar.ep-avatar-text{font-size:.875rem;width:74px;min-width:74px}
+  .episode-card .animator-avatar.ep-avatar-text{font-size:.95rem;width:auto;min-width:0}
   .animator-card-big{height:100px}
+  .episode-card{height:116px;gap:.25rem;padding:.8rem 1rem}
   .animator-profile-header{padding:1rem 1rem .75rem;min-height:0}
   .animator-profile-banner{display:none}
   .episode-profile-header .animator-profile-name{margin-top:1.5rem}

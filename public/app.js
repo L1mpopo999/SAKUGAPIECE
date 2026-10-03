@@ -354,7 +354,8 @@ let EPISODE_DIRECTORS = {}; // { "1015": "Megumi Ishitani", ... }
 let ANIMATOR_BANNERS = {}; // { "Vincent Chansard": "/uploads/xxx.jpg" }
 let EPISODE_BANNERS = {}; // { "1015": "/uploads/xxx.jpg" }
 let FEATURED = { clipId: null }; // clip of the day: admin pick, or null = automatic
-let ANIMATOR_CARDS = {}; // { "Vincent Chansard": "/uploads/xxx.webp" } — picture on the animators-grid card
+let ANIMATOR_CARDS = {};
+let EPISODE_CARDS = {}; // { "1180": "/uploads/xxx.webp" } — picture on the episodes-grid card // { "Vincent Chansard": "/uploads/xxx.webp" } — picture on the animators-grid card
 
 async function loadAnimatorsAndFilters() {
   // Cache-bust to make sure we get fresh data after admin edits.
@@ -370,9 +371,19 @@ async function loadAnimatorsAndFilters() {
   try { ANIMATOR_BANNERS = await (await fetch('/api/animator-banners' + bust)).json(); } catch { ANIMATOR_BANNERS = {}; }
   try { EPISODE_BANNERS = await (await fetch('/api/episode-banners' + bust)).json(); } catch { EPISODE_BANNERS = {}; }
   try { ANIMATOR_CARDS = await (await fetch('/api/animator-cards' + bust)).json(); } catch { ANIMATOR_CARDS = {}; }
+  try { EPISODE_CARDS = await (await fetch('/api/episode-cards' + bust)).json(); } catch { EPISODE_CARDS = {}; }
   try {
     FEATURED = await (await fetch('/api/featured' + bust, { headers: adminToken ? { 'X-Admin-Token': adminToken } : {} })).json();
   } catch { FEATURED = { clipId: null }; }
+}
+
+// Picture for an episode card: its own card picture, or else the episode banner.
+// own=false means it's the banner (the admin "remove" button only removes own pictures).
+function getEpisodeCard(ep) {
+  const key = String(ep);
+  if (EPISODE_CARDS && EPISODE_CARDS[key]) return { url: EPISODE_CARDS[key], own: true };
+  if (EPISODE_BANNERS && EPISODE_BANNERS[key]) return { url: EPISODE_BANNERS[key], own: false };
+  return null;
 }
 
 // Case-insensitive lookup of an animator's card picture URL
@@ -1180,8 +1191,6 @@ function renderAnimatorGrid() {
 
   if(!list.length && !isAdmin){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('animators_not_found')}</p></div>`;return}
 
-  const IMG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg>';
-  const IMG_OFF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M4 4l16 16"/></svg>';
   grid.innerHTML = adminAddHtml + list.map((a,i)=>{ const cardImg = getAnimatorCard(a.name); return `<div class="animator-card animator-card-big${cardImg?' has-img':''}${a.hidden?' episode-hidden':''}" data-name="${esc(a.name)}" style="animation-delay:${i*0.025}s">
     ${cardImg ? `<img class="animator-card-img" src="${esc(cardImg)}" alt="" loading="lazy" decoding="async">` : ''}
     <div class="animator-card-info"><div class="animator-card-name">${esc(a.name)}${a.hidden?` <span style="font-size:.6rem;color:var(--text-muted)">${t('hidden_label')}</span>`:''}</div><div class="animator-card-count"><span class="animator-card-count-num">${a.count}</span> ${pluralClips(a.count)}</div></div>
@@ -1571,20 +1580,33 @@ function renderEpisodeGrid() {
     const subLine = dirArr.length
       ? `${e.arc} · ${e.count} ${pluralClips(e.count)}`
       : '';
-    return `<div class="animator-card episode-card${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
+    const pic = getEpisodeCard(e.episode);
+    return `<div class="animator-card episode-card${pic ? ' has-img' : ''}${isHidden(e.episode) ? ' episode-hidden' : ''}" data-episode="${esc(e.episode)}" style="animation-delay:${i * 0.02}s">
+      ${pic ? `<img class="animator-card-img" src="${esc(pic.url)}" alt="" loading="lazy" decoding="async">` : ''}
       <div class="animator-avatar${/^\d+$/.test(String(e.episode)) ? '' : ' ep-avatar-text'}">${esc(e.episode)}</div>
       <div class="animator-card-info">
         <div class="animator-card-name">${mainLine}</div>
         ${subLine ? `<div class="animator-card-count">${subLine}</div>` : ''}
       </div>
-      ${isAdmin ? `<button class="animator-card-edit" data-edit-ep="${esc(e.episode)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="animator-card-delete ep-hide-btn" data-del-ep="${esc(e.episode)}" title="${isHidden(e.episode) ? 'Показать' : 'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">${isHidden(e.episode) ? '👁' : '×'}</button>` : ''}
+      ${isAdmin ? `<div class="animator-card-admin"><button class="animator-card-img-btn" data-ep-card-img="${esc(e.episode)}" title="${pic && pic.own ? 'Заменить картинку карточки' : 'Добавить картинку на карточку'}">${IMG_ICON}</button>${pic && pic.own ? `<button class="animator-card-img-del" data-ep-card-img-del="${esc(e.episode)}" title="Убрать картинку с карточки">${IMG_OFF_ICON}</button>` : ''}<button class="animator-card-edit" data-edit-ep="${esc(e.episode)}" title="Переименовать" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:.9rem;margin-right:.2rem">✎</button><button class="animator-card-delete ep-hide-btn" data-del-ep="${esc(e.episode)}" title="${isHidden(e.episode) ? 'Показать' : 'Скрыть'}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;margin-right:.3rem">${isHidden(e.episode) ? '👁' : '×'}</button></div>` : ''}
       <svg class="animator-card-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
     </div>`;
   }).join('');
 
   grid.querySelectorAll('.episode-card[data-episode]').forEach(c => c.addEventListener('click', (ev) => {
-    if (ev.target.closest('.animator-card-delete') || ev.target.closest('.animator-card-edit')) return;
+    if (ev.target.closest('.animator-card-delete') || ev.target.closest('.animator-card-edit')
+      || ev.target.closest('.animator-card-img-btn') || ev.target.closest('.animator-card-img-del')) return;
     navigateTo('episode-profile', c.dataset.episode);
+  }));
+
+  // Admin: card picture — upload (crop modal) / remove
+  grid.querySelectorAll('[data-ep-card-img]').forEach(btn => btn.addEventListener('click', ev => {
+    ev.stopPropagation();
+    pickEpisodeCardImage(btn.dataset.epCardImg);
+  }));
+  grid.querySelectorAll('[data-ep-card-img-del]').forEach(btn => btn.addEventListener('click', ev => {
+    ev.stopPropagation();
+    removeEpisodeCardImage(btn.dataset.epCardImgDel);
   }));
 
   // Admin: rename episode
@@ -2187,6 +2209,49 @@ $('#uploadForAnimatorBtn').addEventListener('click',()=>{if(!isAdmin){notify(t('
       }
     });
   }
+}
+
+// Icons for the admin "card picture" buttons (animator and episode cards)
+const IMG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg>';
+const IMG_OFF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M4 4l16 16"/></svg>';
+
+// === Episode card picture === (same flow as animator cards; crop 21:10, 672×320)
+function pickEpisodeCardImage(ep) {
+  if (!isAdmin) { notify(t('msg_admin_only'), true); return; }
+  if (!animatorCardFileInput) {
+    animatorCardFileInput = document.createElement('input');
+    animatorCardFileInput.type = 'file';
+    animatorCardFileInput.accept = 'image/*';
+    animatorCardFileInput.style.display = 'none';
+    document.body.appendChild(animatorCardFileInput);
+  }
+  const input = animatorCardFileInput;
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { notify(t('msg_select_image'), true); return; }
+    openBannerCrop(file, {
+      uploadUrl: `/api/episodes/${encodeURIComponent(ep)}/card`,
+      mode: 'card', outW: 672, outH: 320,
+      title: `Картинка карточки — серия ${ep}`,
+      successMsg: 'Картинка карточки обновлена',
+      onSuccess: (data) => { EPISODE_CARDS[String(ep)] = data.url; renderEpisodeGrid(); },
+    });
+  };
+  input.click();
+}
+async function removeEpisodeCardImage(ep) {
+  if (!isAdmin) return;
+  if (!confirm(`Убрать картинку с карточки серии «${ep}»?`)) return;
+  try {
+    const res = await fetch(`/api/episodes/${encodeURIComponent(ep)}/card`, {
+      method: 'DELETE', headers: { 'X-Admin-Token': adminToken },
+    });
+    const data = await res.json();
+    if (data.success) { delete EPISODE_CARDS[String(ep)]; renderEpisodeGrid(); notify('Картинка убрана'); }
+    else notify(data.error || 'Не удалось убрать', true);
+  } catch { notify(t('msg_network_error'), true); }
 }
 
 // === Animator card picture ===

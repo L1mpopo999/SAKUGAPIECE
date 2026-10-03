@@ -352,6 +352,17 @@ function loadAnimatorCards() {
 }
 function saveAnimatorCards(data) { writeJsonAtomic(ANIMATOR_CARDS_FILE, data); }
 
+// ===== EPISODE CARD IMAGES =====
+// Picture on an episode's card in the /episodes grid (same idea as animator cards).
+// Map of { "1180": '/uploads/<file>' }. Without one, the site shows the episode banner.
+const EPISODE_CARDS_FILE = path.join(dataDir, 'episode_cards.json');
+function loadEpisodeCards() {
+  if (!fs.existsSync(EPISODE_CARDS_FILE)) { saveEpisodeCards({}); return {}; }
+  try { return JSON.parse(fs.readFileSync(EPISODE_CARDS_FILE, 'utf-8')); }
+  catch { return {}; }
+}
+function saveEpisodeCards(data) { writeJsonAtomic(EPISODE_CARDS_FILE, data); }
+
 // ===== DIRECTORS =====
 const DIRECTORS_FILE = path.join(dataDir, 'directors.json');
 const EPISODE_DIRECTORS_FILE = path.join(dataDir, 'episode_directors.json');
@@ -1723,6 +1734,39 @@ app.delete('/api/featured', (req, res) => {
   res.json({ success: true, clipId: null });
 });
 
+// ===== EPISODE CARD IMAGE (admin only) =====
+app.get('/api/episode-cards', (req, res) => { res.json(loadEpisodeCards()); });
+
+// The client crops the picture in the banner crop modal, so the multipart field is "banner"
+app.post('/api/episodes/:num/card', uploadFiles.single('banner'), async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+  if (!/image\//.test(req.file.mimetype)) {
+    return res.status(400).json({ error: 'Загрузите изображение (JPG/PNG/WebP)' });
+  }
+  const ep = String(req.params.num || '').trim();
+  if (!ep) return res.status(400).json({ error: 'Номер серии обязателен' });
+  await convertImageToWebp(req.file);
+  const cards = loadEpisodeCards();
+  const prev = cards[ep];
+  if (prev && prev.startsWith('/uploads/')) fs.unlink(path.join(uploadsDir, path.basename(prev)), () => {});
+  cards[ep] = '/uploads/' + req.file.filename;
+  saveEpisodeCards(cards);
+  res.json({ success: true, url: cards[ep] });
+});
+
+app.delete('/api/episodes/:num/card', (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const ep = String(req.params.num || '').trim();
+  const cards = loadEpisodeCards();
+  if (cards[ep]) {
+    if (cards[ep].startsWith('/uploads/')) fs.unlink(path.join(uploadsDir, path.basename(cards[ep])), () => {});
+    delete cards[ep];
+    saveEpisodeCards(cards);
+  }
+  res.json({ success: true });
+});
+
 // ===== EPISODE BANNER (admin only) =====
 app.get('/api/episodes/:num/banner', (req, res) => {
   res.json({ url: getEpisodeBanner(req.params.num) || null });
@@ -2006,6 +2050,12 @@ app.post('/api/episodes/rename', (req, res) => {
     if (clip.episode.trim() === oldEpisode) { clip.episode = newEpisode; changed++; }
   });
   if (changed) saveClips(clips);
+  const epCards = loadEpisodeCards();
+  if (epCards[oldEpisode] && oldEpisode !== newEpisode) {
+    epCards[newEpisode] = epCards[oldEpisode];
+    delete epCards[oldEpisode];
+    saveEpisodeCards(epCards);
+  }
   res.json({ success: true, renamed: changed });
 });
 
@@ -2257,7 +2307,7 @@ app.get('/api/backup', (req, res) => {
     DATA_FILE, ANIMATORS_FILE, FILTERS_FILE, EPISODES_FILE, HIDDEN_ANIMATORS_FILE,
     COMMENTS_FILE, NICKNAMES_FILE, VIEWS_FILE, LIKES_FILE, BANNED_USERS_FILE,
     DIRECTORS_FILE, EPISODE_DIRECTORS_FILE,
-    ANIMATOR_BANNERS_FILE, EPISODE_BANNERS_FILE, ANIMATOR_CARDS_FILE, FEATURED_FILE,
+    ANIMATOR_BANNERS_FILE, EPISODE_BANNERS_FILE, ANIMATOR_CARDS_FILE, FEATURED_FILE, EPISODE_CARDS_FILE,
     USERS_FILE, AUDIT_LOG_FILE
   ];
   let estimatedSize = 0;
@@ -2308,6 +2358,7 @@ app.get('/api/backup', (req, res) => {
   if (fs.existsSync(EPISODE_BANNERS_FILE)) archive.file(EPISODE_BANNERS_FILE, { name: 'episode_banners.json' });
   if (fs.existsSync(ANIMATOR_CARDS_FILE)) archive.file(ANIMATOR_CARDS_FILE, { name: 'animator_cards.json' });
   if (fs.existsSync(FEATURED_FILE)) archive.file(FEATURED_FILE, { name: 'featured.json' });
+  if (fs.existsSync(EPISODE_CARDS_FILE)) archive.file(EPISODE_CARDS_FILE, { name: 'episode_cards.json' });
   // Add uploads folder
   if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
 
