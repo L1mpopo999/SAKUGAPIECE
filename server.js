@@ -616,7 +616,10 @@ const AUDIT_LOG_FILE = path.join(dataDir, 'audit_log.json');
 
 // Owner credentials come from environment. The OWNER user is implicit and not stored in users.json.
 const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'jef999').toLowerCase();
-const OWNER_PASSWORD = process.env.OWNER_PASSWORD || process.env.ADMIN_PASSWORD || 'jefp1ece2005';
+// The owner password lives only in the server settings (pm2 env OWNER_PASSWORD), never in
+// the code: the repository is public. Without it, owner login is simply switched off.
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD || process.env.ADMIN_PASSWORD || '';
+if (!OWNER_PASSWORD) console.warn('[auth] OWNER_PASSWORD is not set — owner login is disabled');
 
 // Hash a password with a per-user random salt. Format: <salt>:<hash>
 function hashPassword(password) {
@@ -742,7 +745,7 @@ app.post('/api/login', (req, res) => {
   const u = String(username).trim().toLowerCase();
 
   // Owner login
-  if (u === OWNER_USERNAME && password === OWNER_PASSWORD) {
+  if (OWNER_PASSWORD && u === OWNER_USERNAME && password === OWNER_PASSWORD) {
     const token = crypto.randomBytes(32).toString('hex');
     sessionTokens.set(token, { username: OWNER_USERNAME, role: 'owner', canBackup: true, createdAt: Date.now() });
     addAudit(OWNER_USERNAME, 'login', null);
