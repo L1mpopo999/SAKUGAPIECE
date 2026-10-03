@@ -684,7 +684,9 @@ body.admin-mode .animator-profile-stats{font-size:.9375rem;margin-bottom:.6rem}
 .cut-panel{margin:.1rem 0 .9rem;padding:1rem 1.1rem;background:var(--ink-1);border:1px solid var(--line);border-radius:14px}
 .cut-panel[hidden]{display:none}
 .cut-track{position:relative;height:34px;margin:0 8px;border-radius:8px;background:var(--ink-0);border:1px solid var(--line);cursor:pointer;touch-action:none}
-.cut-range{position:absolute;top:0;bottom:0;background:var(--straw-soft);border-top:2px solid var(--straw);border-bottom:2px solid var(--straw)}
+.cut-range{position:absolute;top:0;bottom:0;background:var(--straw-soft);border-top:2px solid var(--straw);border-bottom:2px solid var(--straw);cursor:grab;touch-action:none;transition:background-color .15s}
+.cut-range:hover{background:rgba(255,201,60,.22)}
+.cut-range.is-grabbing{cursor:grabbing;background:rgba(255,201,60,.3)}
 .cut-handle{position:absolute;top:-5px;bottom:-5px;width:14px;margin-left:-7px;padding:0;border:none;border-radius:5px;background:var(--straw);cursor:ew-resize;touch-action:none}
 .cut-handle::after{content:'';position:absolute;left:4px;right:4px;top:32%;bottom:32%;border-left:1.5px solid rgba(0,0,0,.45);border-right:1.5px solid rgba(0,0,0,.45)}
 .cut-row{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.25rem;margin-top:.9rem}

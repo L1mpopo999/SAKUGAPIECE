@@ -4298,9 +4298,32 @@ function setupCutPanel(page, clip) {
     });
     h.addEventListener('pointermove', e => { if (dragging) setPoint(dragging, timeAt(e.clientX)); });
     h.addEventListener('pointerup', () => { dragging = null; });
+    h.addEventListener('pointercancel', () => { dragging = null; });
   });
+  // Drag the whole selected part left / right — its length stays the same
+  let grabOffset = 0;
+  range.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    dragging = 'range';
+    grabOffset = timeAt(e.clientX) - a;
+    range.setPointerCapture(e.pointerId);
+    range.classList.add('is-grabbing');
+    video.pause();
+  });
+  range.addEventListener('pointermove', e => {
+    if (dragging !== 'range') return;
+    const len = b - a;
+    a = snap(Math.max(0, Math.min(dur() - len, timeAt(e.clientX) - grabOffset)));
+    if (a + len > dur()) a = dur() - len;
+    b = a + len;
+    video.currentTime = a;
+    paint();
+  });
+  const stopRangeDrag = () => { if (dragging === 'range') dragging = null; range.classList.remove('is-grabbing'); };
+  range.addEventListener('pointerup', stopRangeDrag);
+  range.addEventListener('pointercancel', stopRangeDrag);
   track.addEventListener('pointerdown', e => {
-    if (e.target.closest('.cut-handle')) return;
+    if (e.target.closest('.cut-handle') || e.target.closest('.cut-range')) return;
     const t = timeAt(e.clientX);
     video.pause();
     setPoint(Math.abs(t - a) <= Math.abs(t - b) ? 'start' : 'end', t);
