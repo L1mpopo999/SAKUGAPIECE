@@ -2422,6 +2422,86 @@ execFile('ffmpeg', ['-version'], err => {
   setInterval(run, 5 * 60 * 1000); // pick up new uploads every 5 minutes
 });
 
+// ===== DOWNLOAD A PART OF A CLIP =====
+// Cuts [start, end] out of a clip's video with ffmpeg — frame-accurately (re-encoded at
+// high quality) — and sends it as a file. Limits keep the site fast: up to 60 s per cut,
+// at most 2 cuts at a time, 10 cuts per 10 minutes per visitor. Finished cuts are kept
+// for an hour (the same part downloads instantly), then deleted.
+const CUTS_DIR = path.join(require('os').tmpdir(), 'sakuga-cuts');
+const CUT_MAX_SECONDS = 60;
+const CUT_MAX_JOBS = 2;
+let cutJobs = 0;
+const cutHits = new Map(); // ip -> [timestamps]
+
+function cutSegment(src, dst, start, duration) {
+  return new Promise(resolve => {
+    const tmp = dst + '.tmp.mp4';
+    const args = ['-n', '10', 'ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
+      '-ss', start.toFixed(3), '-i', src, '-t', duration.toFixed(3),
+      '-map', '0:v:0', '-map', '0:a:0?',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-threads', '2', tmp];
+    execFile('nice', args, { timeout: 170000 }, err => {
+      if (err) { fs.unlink(tmp, () => {}); return resolve(false); }
+      fs.rename(tmp, dst, e => resolve(!e));
+    });
+  });
+}
+
+app.get('/api/clips/:id/cut', async (req, res) => {
+  if (!ffmpegReady) return res.status(503).json({ error: 'Скачивание отрывков сейчас недоступно' });
+  const clip = loadClips().find(c => String(c.id) === String(req.params.id));
+  if (!clip || !clip.videoUrl || !clip.videoUrl.startsWith('/uploads/')) {
+    return res.status(404).json({ error: 'Видео не найдено' });
+  }
+  const start = Number(req.query.start), end = Number(req.query.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) {
+    return res.status(400).json({ error: 'Неверный отрезок' });
+  }
+  if (end - start > CUT_MAX_SECONDS + 0.01) {
+    return res.status(400).json({ error: `Отрывок должен быть не длиннее ${CUT_MAX_SECONDS} секунд` });
+  }
+  const src = path.join(uploadsDir, path.basename(clip.videoUrl));
+  if (!fs.existsSync(src)) return res.status(404).json({ error: 'Видео не найдено' });
+
+  const base = path.basename(src).replace(/\.[^.]+$/, '');
+  const out = path.join(CUTS_DIR, `${base}_${start.toFixed(3)}-${end.toFixed(3)}.mp4`);
+  const fileName = `sakugapiece_${clip.id}_${start.toFixed(2)}-${end.toFixed(2)}.mp4`;
+  if (fs.existsSync(out)) return res.download(out, fileName, () => {}); // already cut recently
+
+  const now = Date.now();
+  const hits = (cutHits.get(req.ip) || []).filter(t => now - t < 10 * 60 * 1000);
+  if (hits.length >= 10) {
+    return res.status(429).json({ error: 'Слишком много отрывков подряд — попробуйте через несколько минут' });
+  }
+  if (cutJobs >= CUT_MAX_JOBS) {
+    return res.status(503).json({ error: 'Сервер сейчас нарезает другие отрывки — попробуйте через минуту' });
+  }
+  hits.push(now);
+  cutHits.set(req.ip, hits);
+  cutJobs++;
+  try {
+    fs.mkdirSync(CUTS_DIR, { recursive: true });
+    if (!(await cutSegment(src, out, start, end - start))) {
+      return res.status(500).json({ error: 'Не удалось вырезать отрывок' });
+    }
+    res.download(out, fileName, () => {});
+  } finally {
+    cutJobs--;
+  }
+});
+
+// Delete cuts older than an hour
+setInterval(() => {
+  fs.readdir(CUTS_DIR, (err, files) => {
+    if (err) return;
+    for (const f of files) {
+      const fp = path.join(CUTS_DIR, f);
+      fs.stat(fp, (e, st) => { if (!e && Date.now() - st.mtimeMs > 60 * 60 * 1000) fs.unlink(fp, () => {}); });
+    }
+  });
+}, 15 * 60 * 1000);
+
 app.listen(PORT, () => {
   console.log(`\n  ⚓ Sakuga Piece запущен: http://localhost:${PORT}\n`);
 });

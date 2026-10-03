@@ -4235,6 +4235,124 @@ function openFilterManager() {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
+// ===== Download a part of a clip =====
+// «Отрывок» on the clip page opens a panel under the player: two handles on a track
+// (drag them, or step to a frame with ‹ › and press «Сюда»), a preview, then the server
+// cuts that part frame-accurately (GET /api/clips/:id/cut) and the browser saves it.
+const CUT_MAX_SECONDS = 60;
+function setupCutPanel(page, clip) {
+  const video = page.querySelector('#clipPageVideo');
+  const panel = page.querySelector('#cutPanel');
+  const toggle = page.querySelector('#cutToggleBtn');
+  if (!video || !panel || !toggle) return;
+  const en = LANG === 'en';
+  const track = panel.querySelector('#cutTrack'), range = panel.querySelector('#cutRange');
+  const hStart = panel.querySelector('[data-h="start"]'), hEnd = panel.querySelector('[data-h="end"]');
+  const tStart = panel.querySelector('#cutStartTime'), tEnd = panel.querySelector('#cutEndTime');
+  const tLen = panel.querySelector('#cutLen');
+  const dl = panel.querySelector('#cutDownloadBtn'), pv = panel.querySelector('#cutPreviewBtn');
+  const FRAME = 1 / 24;
+  let a = 0, b = 0, dragging = null, previewStop = null;
+  const dur = () => video.duration || 0;
+  const snap = t => Math.max(0, Math.min(dur(), Math.round(t * 24) / 24));
+  const fmt = t => { const m = Math.floor(t / 60); return `${m}:${(t - m * 60).toFixed(3).padStart(6, '0')}`; };
+  const paint = () => {
+    const d = dur() || 1;
+    hStart.style.left = (a / d * 100) + '%';
+    hEnd.style.left = (b / d * 100) + '%';
+    range.style.left = (a / d * 100) + '%';
+    range.style.width = ((b - a) / d * 100) + '%';
+    tStart.textContent = fmt(a);
+    tEnd.textContent = fmt(b);
+    const len = b - a, bad = len > CUT_MAX_SECONDS + 1e-6 || len <= 0;
+    tLen.textContent = (en ? 'Length ' : 'Длина ') + len.toFixed(2) + (en ? ' s' : ' с')
+      + (len > CUT_MAX_SECONDS + 1e-6 ? (en ? ` — max ${CUT_MAX_SECONDS} s` : ` — максимум ${CUT_MAX_SECONDS} с`) : '');
+    tLen.classList.toggle('is-bad', bad);
+    if (!dl.dataset.busy) dl.disabled = bad;
+  };
+  const init = () => {
+    a = snap(video.currentTime || 0);
+    b = Math.min(dur(), a + 5);
+    if (b - a < 1) a = Math.max(0, b - 5);
+    paint();
+  };
+  toggle.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    toggle.classList.toggle('is-active', !panel.hidden);
+    if (panel.hidden) return;
+    if (dur()) init(); else video.addEventListener('loadedmetadata', init, { once: true });
+    panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+
+  // Dragging a handle seeks the video, so you see the exact frame you're on
+  const timeAt = x => { const r = track.getBoundingClientRect(); return snap((x - r.left) / r.width * dur()); };
+  const setPoint = (which, t) => {
+    if (which === 'start') a = Math.max(0, Math.min(t, b - FRAME));
+    else b = Math.min(dur(), Math.max(t, a + FRAME));
+    video.currentTime = which === 'start' ? a : b;
+    paint();
+  };
+  [hStart, hEnd].forEach(h => {
+    h.addEventListener('pointerdown', e => {
+      e.preventDefault(); dragging = h.dataset.h; h.setPointerCapture(e.pointerId); video.pause();
+    });
+    h.addEventListener('pointermove', e => { if (dragging) setPoint(dragging, timeAt(e.clientX)); });
+    h.addEventListener('pointerup', () => { dragging = null; });
+  });
+  track.addEventListener('pointerdown', e => {
+    if (e.target.closest('.cut-handle')) return;
+    const t = timeAt(e.clientX);
+    video.pause();
+    setPoint(Math.abs(t - a) <= Math.abs(t - b) ? 'start' : 'end', t);
+  });
+  // «Сюда»: put the start / end on the frame the video is showing now
+  panel.querySelectorAll('[data-set]').forEach(btn => btn.addEventListener('click', () => {
+    const t = snap(video.currentTime);
+    if (btn.dataset.set === 'start') { a = t; if (b <= a) b = Math.min(dur(), a + 1); }
+    else { b = t; if (b <= a) a = Math.max(0, b - 1); }
+    paint();
+  }));
+  // Preview: play from start, stop at end
+  pv.addEventListener('click', () => {
+    if (previewStop) video.removeEventListener('timeupdate', previewStop);
+    previewStop = () => {
+      if (video.currentTime < b) return;
+      video.pause(); video.currentTime = b;
+      video.removeEventListener('timeupdate', previewStop); previewStop = null;
+    };
+    video.addEventListener('timeupdate', previewStop);
+    video.currentTime = a;
+    video.play().catch(() => {});
+  });
+  // Download: the server cuts the part, the browser saves it
+  dl.addEventListener('click', async () => {
+    const label = dl.textContent;
+    dl.dataset.busy = '1'; dl.disabled = true;
+    dl.textContent = en ? 'Cutting…' : 'Готовим отрывок…';
+    try {
+      const res = await fetch(`/api/clips/${clip.id}/cut?start=${a.toFixed(3)}&end=${b.toFixed(3)}`);
+      if (!res.ok) {
+        let msg = '';
+        try { msg = (await res.json()).error; } catch {}
+        notify(msg || (en ? 'Could not cut the clip' : 'Не удалось вырезать отрывок'), true);
+        return;
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sakugapiece_${clip.id}_${a.toFixed(2)}-${b.toFixed(2)}.mp4`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      notify(t('msg_network_error'), true);
+    } finally {
+      delete dl.dataset.busy;
+      dl.textContent = label;
+      paint();
+    }
+  });
+}
+
 function renderClipPage(clip) {
   // Track current clip-page so setLang() can re-render after language switch.
   currentClipPage = clip;
@@ -4277,6 +4395,25 @@ function renderClipPage(clip) {
               <option value="8">8 fps (3s)</option>
             </select>
           </div>
+          <div class="cut-panel" id="cutPanel" hidden>
+            <div class="cut-track" id="cutTrack">
+              <div class="cut-range" id="cutRange"></div>
+              <button type="button" class="cut-handle" data-h="start" aria-label="${LANG === 'en' ? 'Start' : 'Начало'}"></button>
+              <button type="button" class="cut-handle" data-h="end" aria-label="${LANG === 'en' ? 'End' : 'Конец'}"></button>
+            </div>
+            <div class="cut-row">
+              <div class="cut-point"><span class="cut-label">${LANG === 'en' ? 'Start' : 'Начало'}</span><span class="cut-time" id="cutStartTime">0:00.000</span><button type="button" class="cut-set" data-set="start">${LANG === 'en' ? 'Here' : 'Сюда'}</button></div>
+              <div class="cut-point"><span class="cut-label">${LANG === 'en' ? 'End' : 'Конец'}</span><span class="cut-time" id="cutEndTime">0:00.000</span><button type="button" class="cut-set" data-set="end">${LANG === 'en' ? 'Here' : 'Сюда'}</button></div>
+              <div class="cut-len" id="cutLen"></div>
+            </div>
+            <div class="cut-actions">
+              <button type="button" class="clip-action-btn" id="cutPreviewBtn">${LANG === 'en' ? '▶ Preview the part' : '▶ Посмотреть отрывок'}</button>
+              <button type="button" class="btn-submit cut-download" id="cutDownloadBtn">${LANG === 'en' ? 'Download the part' : 'Скачать отрывок'}</button>
+            </div>
+            <p class="cut-hint">${LANG === 'en'
+              ? 'Drag the handles, or step to the exact frame with ‹ › and press “Here”. Up to 60 seconds.'
+              : 'Перетащи ползунки или поставь видео на нужный кадр стрелками ‹ › и нажми «Сюда». До 60 секунд.'}</p>
+          </div>
         </div>
       ` : ''}
 
@@ -4316,7 +4453,11 @@ function renderClipPage(clip) {
           ${clip.videoUrl ? `<a class="clip-action-btn" href="${esc(clip.videoUrl)}" download title="${LANG === 'en' ? 'Download video' : 'Скачать видео'}">
             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>${LANG === 'en' ? 'Download' : 'Скачать'}</span>
-          </a>` : ''}
+          </a>
+          <button type="button" class="clip-action-btn clip-cut-toggle" id="cutToggleBtn" title="${LANG === 'en' ? 'Download only a part of the clip' : 'Скачать только часть клипа'}">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>
+            <span>${LANG === 'en' ? 'Part' : 'Отрывок'}</span>
+          </button>` : ''}
           <div class="clip-share-wrap">
             <button class="clip-action-btn clip-share-toggle" data-action="share-toggle" title="${LANG === 'en' ? 'Share' : 'Поделиться'}">
               <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -4479,6 +4620,8 @@ function renderClipPage(clip) {
       }
     });
   });
+
+  setupCutPanel(page, clip);
 
   // Frame-by-frame controls
   const frameVideo = page.querySelector('#clipPageVideo');

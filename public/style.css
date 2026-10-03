@@ -679,6 +679,27 @@ body.admin-mode .animator-profile-stats{font-size:.9375rem;margin-bottom:.6rem}
 .clip-page-gallery-item img{width:100%;display:block;cursor:pointer;transition:filter .2s}
 .clip-page-gallery-item:hover img{filter:brightness(.85)}
 
+/* Download a part of a clip (panel under the player) */
+.clip-action-btn.clip-cut-toggle.is-active{border-color:var(--straw-line);color:var(--gold)}
+.cut-panel{margin:.1rem 0 .9rem;padding:1rem 1.1rem;background:var(--ink-1);border:1px solid var(--line);border-radius:14px}
+.cut-panel[hidden]{display:none}
+.cut-track{position:relative;height:34px;margin:0 8px;border-radius:8px;background:var(--ink-0);border:1px solid var(--line);cursor:pointer;touch-action:none}
+.cut-range{position:absolute;top:0;bottom:0;background:var(--straw-soft);border-top:2px solid var(--straw);border-bottom:2px solid var(--straw)}
+.cut-handle{position:absolute;top:-5px;bottom:-5px;width:14px;margin-left:-7px;padding:0;border:none;border-radius:5px;background:var(--straw);cursor:ew-resize;touch-action:none}
+.cut-handle::after{content:'';position:absolute;left:4px;right:4px;top:32%;bottom:32%;border-left:1.5px solid rgba(0,0,0,.45);border-right:1.5px solid rgba(0,0,0,.45)}
+.cut-row{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.25rem;margin-top:.9rem}
+.cut-point{display:flex;align-items:center;gap:.45rem}
+.cut-label{font-size:.8125rem;color:var(--text-3)}
+.cut-time{min-width:4.8em;font-size:.9375rem;font-weight:600;color:var(--paper)}
+.cut-set{height:28px;padding:0 .6rem;border-radius:8px;border:1px solid var(--line-strong);background:var(--ink-2);color:var(--paper);font:inherit;font-size:.8125rem;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s}
+.cut-set:hover{border-color:var(--straw-line);color:var(--gold)}
+.cut-len{margin-left:auto;font-size:.8125rem;color:var(--text-2)}
+.cut-len.is-bad{color:var(--red)}
+.cut-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.9rem}
+.cut-download{width:auto;min-height:40px;margin-top:0;padding:0 1.1rem}
+.cut-hint{margin-top:.6rem;font-size:.75rem;line-height:1.45;color:var(--text-3)}
+@media(max-width:600px){.cut-len{margin-left:0;flex-basis:100%}}
+
 /* Action row: like / download / share */
 .clip-page-action-row{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.1rem 0 1.5rem;align-items:center}
 .clip-action-btn,.clip-like-btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--ink-1);border:1px solid var(--line);color:var(--paper);height:40px;padding:0 1rem;border-radius:999px;font-family:var(--font-ui);font-weight:600;font-size:.875rem;cursor:pointer;text-decoration:none;transition:background-color .15s,border-color .15s,color .15s}
