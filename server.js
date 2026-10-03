@@ -603,7 +603,9 @@ Sitemap: ${SITE_BASE_URL}/sitemap.xml
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(uploadsDir));
+// Uploaded files never change under the same name (a replaced video, banner or picture
+// always gets a new file name), so browsers may keep them for 30 days without re-asking.
+app.use('/uploads', express.static(uploadsDir, { maxAge: '30d', immutable: true }));
 
 // ===== API =====
 const crypto = require('crypto');
@@ -1689,7 +1691,12 @@ function loadFeatured() {
 }
 function saveFeatured(data) { writeJsonAtomic(FEATURED_FILE, data); }
 
-app.get('/api/featured', (req, res) => { res.json(loadFeatured()); });
+// Who picked the clip is only shown to admins — admin logins must not be public
+app.get('/api/featured', (req, res) => {
+  const data = loadFeatured();
+  if (getSession(req)) return res.json(data);
+  res.json({ clipId: data.clipId ?? null });
+});
 
 app.post('/api/featured', (req, res) => {
   const sess = requireAdmin(req, res);
@@ -2502,6 +2509,10 @@ setInterval(() => {
   });
 }, 15 * 60 * 1000);
 
-app.listen(PORT, () => {
+// Listen only on the internal address: the site is reached through nginx
+// (proxy_pass http://127.0.0.1:3000), so port 3000 must not be open to the internet —
+// otherwise nginx (and the login limit that relies on the real visitor IP) could be bypassed.
+// Set HOST=0.0.0.0 to open it again if ever needed.
+app.listen(PORT, process.env.HOST || '127.0.0.1', () => {
   console.log(`\n  ⚓ Sakuga Piece запущен: http://localhost:${PORT}\n`);
 });

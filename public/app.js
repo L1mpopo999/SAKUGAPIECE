@@ -370,7 +370,9 @@ async function loadAnimatorsAndFilters() {
   try { ANIMATOR_BANNERS = await (await fetch('/api/animator-banners' + bust)).json(); } catch { ANIMATOR_BANNERS = {}; }
   try { EPISODE_BANNERS = await (await fetch('/api/episode-banners' + bust)).json(); } catch { EPISODE_BANNERS = {}; }
   try { ANIMATOR_CARDS = await (await fetch('/api/animator-cards' + bust)).json(); } catch { ANIMATOR_CARDS = {}; }
-  try { FEATURED = await (await fetch('/api/featured' + bust)).json(); } catch { FEATURED = { clipId: null }; }
+  try {
+    FEATURED = await (await fetch('/api/featured' + bust, { headers: adminToken ? { 'X-Admin-Token': adminToken } : {} })).json();
+  } catch { FEATURED = { clipId: null }; }
 }
 
 // Case-insensitive lookup of an animator's card picture URL
