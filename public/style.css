@@ -290,6 +290,12 @@ body.admin-mode .admin-feature-btn{display:flex}
 .filter-chip:hover .chip-count{color:var(--paper)}
 .filter-chip.active .chip-count{background:rgba(0,0,0,.14);color:var(--straw-ink)}
 :root[data-theme="light"] .chip-count{background:var(--ink-2)}
+/* …on top of the episode banner: glass chips, like the animator page filter row */
+.episode-profile-header .ep-kind-filter{margin:0 0 1.1rem}
+.episode-profile-header .ep-kind-filter .filter-chip:not(.active){background:var(--glass);border-color:var(--line);color:var(--paper);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.episode-profile-header .ep-kind-filter .filter-chip:not(.active):hover{border-color:var(--straw-line);color:var(--gold)}
+.episode-profile-header .ep-kind-filter .filter-chip:not(.active) .chip-count{background:rgba(255,255,255,.12);color:var(--paper)}
+:root[data-theme="light"] .episode-profile-header .ep-kind-filter .filter-chip:not(.active) .chip-count{background:var(--ink-2);color:var(--text-2)}
 
 /* Category description (shown under filters when a category is selected) */
 .filter-description{max-width:1440px;margin:.25rem auto 1.25rem;padding:0 2rem}

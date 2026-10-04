@@ -1895,7 +1895,9 @@ function renderEpisodeProfile(episode) {
     bar = document.createElement('div');
     bar.id = 'episodeKindFilter';
     bar.className = 'ep-kind-filter';
-    grid.parentNode.insertBefore(bar, grid);
+    // Sits in the episode header, on top of the banner (like the animator page filters)
+    const head = document.querySelector('#page-episode-profile .episode-profile-header');
+    if (head) head.appendChild(bar); else grid.parentNode.insertBefore(bar, grid);
   }
   const en = LANG === 'en';
   const kinds = [
