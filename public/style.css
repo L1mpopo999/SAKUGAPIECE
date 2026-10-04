@@ -283,6 +283,14 @@ body.admin-mode .admin-feature-btn{display:flex}
 .director-chip-count{font-size:.75rem;font-weight:600;color:var(--text-2);background:var(--ink-0);padding:.15rem .45rem;border-radius:999px;line-height:1.1}
 .director-chip.active .director-chip-count{background:rgba(0,0,0,.14);color:var(--straw-ink)}
 
+/* Episode page: Все · Видео · Генга · Фото with counts */
+.ep-kind-filter{display:flex;flex-wrap:wrap;gap:.5rem;margin:.25rem 0 1.25rem}
+.ep-kind-filter:empty{display:none}
+.chip-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.4rem;height:20px;padding:0 .4rem;margin-left:.1rem;border-radius:999px;background:var(--ink-0);color:var(--text-2);font-size:.75rem;font-weight:600;line-height:1}
+.filter-chip:hover .chip-count{color:var(--paper)}
+.filter-chip.active .chip-count{background:rgba(0,0,0,.14);color:var(--straw-ink)}
+:root[data-theme="light"] .chip-count{background:var(--ink-2)}
+
 /* Category description (shown under filters when a category is selected) */
 .filter-description{max-width:1440px;margin:.25rem auto 1.25rem;padding:0 2rem}
 .filter-description:empty{display:none}

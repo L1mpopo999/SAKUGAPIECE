@@ -377,6 +377,16 @@ async function loadAnimatorsAndFilters() {
   } catch { FEATURED = { clipId: null }; }
 }
 
+// What a clip is: 'genga' (tagged genga — key-animation sheets, video or picture),
+// 'photo' (art / stills without video) or 'video' (a full anime scene).
+// Episode cards count only 'video'; the episode page can filter by kind.
+function clipKind(c) {
+  const tags = (c.tags || []).map(x => String(x).trim().toLowerCase());
+  if (tags.includes('genga') || tags.includes('генга')) return 'genga';
+  if (c.type === 'image' || !c.videoUrl) return 'photo';
+  return 'video';
+}
+
 // Picture for an episode card: its own card picture, or else the episode banner.
 // own=false means it's the banner (the admin "remove" button only removes own pictures).
 function getEpisodeCard(ep) {
@@ -1499,26 +1509,23 @@ function renderEpisodeGrid() {
   const q = ($('#episodeSearchInput')?.value || '').trim();
   const grid = $('#episodeGrid');
 
-  // Count clips per episode. We keep two counters:
-  //   - count:      total clips (video + photo). Used for the "X клипов" label
-  //                 on the card so the displayed number matches what the user
-  //                 actually sees on the episode page.
-  //   - videoCount: only clips with a video. Used as the PRIMARY sort key so
-  //                 episodes with lots of real video sakuga rise above episodes
-  //                 that are padded with photo-only entries (genga, art).
+  // Count clips per episode:
+  //   - count: only full anime scenes (clipKind === 'video' — no genga, no photos).
+  //            Shown as "X клипов" on the card and used as the PRIMARY sort key.
+  //   - total: everything (scenes + genga + photos), the tie-breaker.
   const counts = new Map();
-  const videoCounts = new Map();
+  const totals = new Map();
   allClips.forEach(c => {
     const ep = c.episode.trim();
-    counts.set(ep, (counts.get(ep) || 0) + 1);
-    if (c.type === 'video') videoCounts.set(ep, (videoCounts.get(ep) || 0) + 1);
+    totals.set(ep, (totals.get(ep) || 0) + 1);
+    if (clipKind(c) === 'video') counts.set(ep, (counts.get(ep) || 0) + 1);
   });
 
   let list = getEpisodeList().map(ep => ({
     episode: ep,
     num: parseInt(ep) || 0,
     count: counts.get(ep) || 0,
-    videoCount: videoCounts.get(ep) || 0,
+    total: totals.get(ep) || 0,
     arc: getEpisodeArc(parseInt(ep) || 0),
     director: getEpisodeDirector(ep)
   }));
@@ -1536,14 +1543,12 @@ function renderEpisodeGrid() {
 
   // Sort
   if (episodeSortMode === 'clips') {
-    // Primary:   number of VIDEO clips desc (so episodes with real sakuga win
-    //            over episodes padded with photo-only entries like genga/art)
-    // Tie 1:     total clips desc (if same video count, the one with more
-    //            extras still ranks higher)
+    // Primary:   number of full scenes desc (genga / art don't count)
+    // Tie 1:     everything incl. genga and photos desc
     // Tie 2:     episode number desc (newer first as a final fallback)
     list.sort((a, b) => {
-      if (b.videoCount !== a.videoCount) return b.videoCount - a.videoCount;
       if (b.count !== a.count) return b.count - a.count;
+      if (b.total !== a.total) return b.total - a.total;
       return b.num - a.num;
     });
   } else {
@@ -1824,12 +1829,13 @@ function renderEpisodeProfile(episode) {
   const clips = allClips.filter(c => c.episode.trim() === episode);
   const arc = getEpisodeArc(parseInt(episode) || 0);
   const animators = [...new Set(clips.flatMap(c => c.animators))];
-  let stats = `${arc} · ${clips.length} ${pluralClips(clips.length)}`;
+  const scenes = clips.filter(c => clipKind(c) === 'video');
+  let stats = `${arc} · ${scenes.length} ${pluralClips(scenes.length)}`;
   if (animators.length) stats += ` · ${animators.length} ${pluralAnimators(animators.length)}`;
   // Total sakuga runtime — sum of every video clip's duration. We only show
   // this if at least one clip in the episode actually has a duration set,
   // otherwise the label would just say "0 sec" which looks broken.
-  const totalSecs = sumClipDurations(clips);
+  const totalSecs = sumClipDurations(scenes);
   if (totalSecs > 0) stats += ` · ${formatTotalRuntime(totalSecs)}`;
   $('#episodeProfileStats').textContent = stats;
 
@@ -1877,11 +1883,43 @@ function renderEpisodeProfile(episode) {
   const grid = $('#episodeClipGrid');
   if (!clips.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 0"><p style="color:var(--text-muted)">${t('episodes_no_clips')}</p></div>`;
-  } else {
-    grid.innerHTML = clips.map((c, i) => renderClipCard(c, i)).join('');
-    attachClipEvents(grid);
+    const oldBar = $('#episodeKindFilter'); if (oldBar) oldBar.innerHTML = '';
+    return;
   }
+
+  // Kind filter: Все · Видео · Генга · Фото, each with its count (empty kinds hidden;
+  // no filter at all when the episode has only one kind). Resets on another episode.
+  if (episodeKindFor !== episode) { episodeKindFilter = 'all'; episodeKindFor = episode; }
+  let bar = $('#episodeKindFilter');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'episodeKindFilter';
+    bar.className = 'ep-kind-filter';
+    grid.parentNode.insertBefore(bar, grid);
+  }
+  const en = LANG === 'en';
+  const kinds = [
+    ['all', en ? 'All' : 'Все', clips.length],
+    ['video', en ? 'Video' : 'Видео', scenes.length],
+    ['genga', en ? 'Genga' : 'Генга', clips.filter(c => clipKind(c) === 'genga').length],
+    ['photo', en ? 'Photos' : 'Фото', clips.filter(c => clipKind(c) === 'photo').length],
+  ];
+  const nonEmpty = kinds.filter(k => k[0] !== 'all' && k[2] > 0);
+  if (!kinds.some(k => k[0] === episodeKindFilter && k[2] > 0)) episodeKindFilter = 'all';
+  const draw = () => {
+    bar.innerHTML = nonEmpty.length < 2 ? '' : kinds.filter(k => k[0] === 'all' || k[2] > 0).map(([id, label, n]) =>
+      `<button type="button" class="filter-chip ep-kind-chip${episodeKindFilter === id ? ' active' : ''}" data-kind="${id}">${label}<span class="chip-count">${n}</span></button>`).join('');
+    const shown = episodeKindFilter === 'all' ? clips : clips.filter(c => clipKind(c) === episodeKindFilter);
+    grid.innerHTML = shown.map((c, i) => renderClipCard(c, i)).join('');
+    attachClipEvents(grid);
+    bar.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => {
+      episodeKindFilter = b.dataset.kind;
+      draw();
+    }));
+  };
+  draw();
 }
+let episodeKindFilter = 'all', episodeKindFor = null;
 
 // Renders the director block on the episode profile page.
 // Episodes can have multiple directors (e.g. "Nanami Michibata" + "Kouhei Kureta").
